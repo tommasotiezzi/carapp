@@ -6,18 +6,22 @@ import '../../../core/theme/tokens.dart';
 
 /// Full-screen video of one listing.
 /// - shows the cover instantly, the video fades in once ready
-/// - tap: pause / resume
+/// - tap: pause / resume (the pager owns that state, see [pausedByUser])
 /// - pinch or double tap: zoom on the paused frame; releasing resumes
 class FeedVideoView extends StatefulWidget {
   const FeedVideoView({
     super.key,
     required this.controller,
     required this.coverUrl,
+    required this.pausedByUser,
+    required this.onTogglePause,
     required this.onZoom,
   });
 
   final VideoPlayerController? controller;
   final String? coverUrl;
+  final bool pausedByUser;
+  final VoidCallback onTogglePause;
   final VoidCallback onZoom;
 
   @override
@@ -29,7 +33,6 @@ class _FeedVideoViewState extends State<FeedVideoView>
   final _transform = TransformationController();
   late final AnimationController _resetAnim;
   Animation<Matrix4>? _resetTween;
-  bool _pausedByUser = false;
   bool _zooming = false;
   TapDownDetails? _doubleTapDetails;
 
@@ -53,20 +56,6 @@ class _FeedVideoViewState extends State<FeedVideoView>
 
   VideoPlayerController? get _video => widget.controller;
 
-  void _togglePause() {
-    final v = _video;
-    if (v == null || !v.value.isInitialized) return;
-    setState(() {
-      if (v.value.isPlaying) {
-        v.pause();
-        _pausedByUser = true;
-      } else {
-        v.play();
-        _pausedByUser = false;
-      }
-    });
-  }
-
   void _zoomStarted() {
     if (_zooming) return;
     _zooming = true;
@@ -79,7 +68,7 @@ class _FeedVideoViewState extends State<FeedVideoView>
     _resetTween = Matrix4Tween(begin: _transform.value, end: Matrix4.identity())
         .animate(CurvedAnimation(parent: _resetAnim, curve: Curves.easeOut));
     _resetAnim.forward(from: 0);
-    if (!_pausedByUser) _video?.play();
+    if (!widget.pausedByUser) _video?.play();
   }
 
   void _onDoubleTap() {
@@ -102,7 +91,9 @@ class _FeedVideoViewState extends State<FeedVideoView>
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: _togglePause,
+      onTap: () {
+        if (v != null && v.value.isInitialized) widget.onTogglePause();
+      },
       onDoubleTapDown: (d) => _doubleTapDetails = d,
       onDoubleTap: _onDoubleTap,
       child: InteractiveViewer(
@@ -150,13 +141,13 @@ class _FeedVideoViewState extends State<FeedVideoView>
                   );
                 },
               ),
-            if (_pausedByUser)
+            if (widget.pausedByUser)
               const Center(
                 child: Icon(Icons.play_arrow_rounded, size: 84, color: Color(0xCCFFFFFF)),
               ),
             // Progress shows only while paused: during playback a bar at the
             // bottom edge reads like a loading indicator.
-            if (v != null && _pausedByUser)
+            if (v != null && widget.pausedByUser)
               Positioned(
                 left: 0,
                 right: 0,
