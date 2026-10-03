@@ -58,28 +58,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: Text(t.profileLogin),
               ),
             const SizedBox(height: AppSpacing.xl),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.l),
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text(t.profileWhatILookFor, style: text.titleSmall)),
-                      TextButton(
-                        onPressed: () => context.push('${AppRoutes.onboardingPreferences}?edit=1'),
-                        child: Text(hasPrefs ? t.profileEdit : t.profileSetPreferences),
-                      ),
-                    ],
-                  ),
-                  if (!hasPrefs) Text(t.profileNoPreferences, style: text.bodyMedium),
-                ],
-              ),
-            ),
+            _WhatILookForCard(loggedIn: user != null, hasPrefs: hasPrefs),
             if (user != null) ...[
               const SizedBox(height: AppSpacing.xxl),
               OutlinedButton(
@@ -89,6 +68,61 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "Cosa cerco". Always visible; guests are asked to sign up first,
+/// because preferences live on the account (and drive alerts).
+class _WhatILookForCard extends StatelessWidget {
+  const _WhatILookForCard({required this.loggedIn, required this.hasPrefs});
+
+  final bool loggedIn;
+  final bool hasPrefs;
+
+  static const _editPath = '${AppRoutes.onboardingPreferences}?edit=1';
+
+  Future<void> _signUpThenEdit(BuildContext context) async {
+    final ok = await showLoginSheet(context);
+    if (ok && context.mounted) context.push(_editPath);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.l),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(t.profileWhatILookFor, style: text.titleSmall)),
+              if (loggedIn)
+                TextButton(
+                  onPressed: () => context.push(_editPath),
+                  child: Text(hasPrefs ? t.profileEdit : t.profileSetPreferences),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          if (!loggedIn) ...[
+            Text(t.profilePrefsGuest, style: text.bodyMedium),
+            const SizedBox(height: AppSpacing.m),
+            FilledButton(
+              onPressed: () => _signUpThenEdit(context),
+              child: Text(t.profilePrefsGuestCta),
+            ),
+          ] else if (!hasPrefs)
+            Text(t.profileNoPreferences, style: text.bodyMedium),
+        ],
       ),
     );
   }

@@ -101,6 +101,8 @@
   "profileEdit": "Modifica",
   "profileNoPreferences": "Dicci budget e marche: il feed ti mostrerà prima i veicoli giusti.",
   "profileSetPreferences": "Imposta in 30 secondi",
+  "profilePrefsGuest": "Registrati per salvare cosa cerchi: il feed ti mostrerà prima i veicoli giusti e ti avviseremo quando arrivano.",
+  "profilePrefsGuestCta": "Registrati e imposta",
 
   "priceBelowAverage": "{percent}% sotto la media",
   "@priceBelowAverage": {"placeholders": {"percent": {"type": "int"}}}

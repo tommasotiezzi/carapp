@@ -293,6 +293,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get profileSetPreferences => 'Imposta in 30 secondi';
 
   @override
+  String get profilePrefsGuest =>
+      'Registrati per salvare cosa cerchi: il feed ti mostrerà prima i veicoli giusti e ti avviseremo quando arrivano.';
+
+  @override
+  String get profilePrefsGuestCta => 'Registrati e imposta';
+
+  @override
   String priceBelowAverage(int percent) {
     return '$percent% sotto la media';
   }

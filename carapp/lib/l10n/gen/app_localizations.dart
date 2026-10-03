@@ -616,6 +616,18 @@ abstract class AppLocalizations {
   /// **'Imposta in 30 secondi'**
   String get profileSetPreferences;
 
+  /// No description provided for @profilePrefsGuest.
+  ///
+  /// In it, this message translates to:
+  /// **'Registrati per salvare cosa cerchi: il feed ti mostrerà prima i veicoli giusti e ti avviseremo quando arrivano.'**
+  String get profilePrefsGuest;
+
+  /// No description provided for @profilePrefsGuestCta.
+  ///
+  /// In it, this message translates to:
+  /// **'Registrati e imposta'**
+  String get profilePrefsGuestCta;
+
   /// No description provided for @priceBelowAverage.
   ///
   /// In it, this message translates to:
