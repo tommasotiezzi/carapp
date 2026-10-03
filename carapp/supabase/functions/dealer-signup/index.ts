@@ -113,34 +113,42 @@ Deno.serve(async (req) => {
   if (dealerError?.code === "23505") return json(409, { error: "vat_taken" });
   if (dealerError || !dealer) return json(500, { error: "server_error" });
 
-  const results = await Promise.all([
-    admin.from("dealer_members").insert({
-      dealer_id: dealer.id,
-      profile_id: user.id,
-      role: "owner",
-    }),
-    admin.from("subscriptions").insert({
-      dealer_id: dealer.id,
-      plan_id: "base",
-      status: "trial",
-      trial_started_at: now.toISOString(),
-      trial_ends_at: trialEnds.toISOString(),
-      conditional_ends_at: conditionalEnds.toISOString(),
-      contact_threshold: trial.contact_threshold_total ?? 30,
-      founder_price_cents: trial.founder_price_cents ?? 2900,
-      is_founder: true,
-    }),
-    admin
-      .from("profiles")
-      .update({ account_type: "dealer_member", intent: "dealer" })
-      .eq("id", user.id),
-  ]);
-
-  if (results.some((r) => r.error)) {
-    // Roll back so the user can retry with the same VAT number.
+  // Undo everything created above, explicitly (does not rely on CASCADE),
+  // so the user can retry with the same VAT number.
+  const rollback = async () => {
+    await admin.from("subscriptions").delete().eq("dealer_id", dealer.id);
+    await admin.from("dealer_members").delete().eq("dealer_id", dealer.id);
     await admin.from("dealers").delete().eq("id", dealer.id);
     return json(500, { error: "server_error" });
-  }
+  };
+
+  // Sequential on purpose: the profile update stays last, so a failure never
+  // leaves the profile as dealer_member without a dealer.
+  const { error: memberError } = await admin.from("dealer_members").insert({
+    dealer_id: dealer.id,
+    profile_id: user.id,
+    role: "owner",
+  });
+  if (memberError) return rollback();
+
+  const { error: subscriptionError } = await admin.from("subscriptions").insert({
+    dealer_id: dealer.id,
+    plan_id: "base",
+    status: "trial",
+    trial_started_at: now.toISOString(),
+    trial_ends_at: trialEnds.toISOString(),
+    conditional_ends_at: conditionalEnds.toISOString(),
+    contact_threshold: trial.contact_threshold_total ?? 30,
+    founder_price_cents: trial.founder_price_cents ?? 2900,
+    is_founder: true,
+  });
+  if (subscriptionError) return rollback();
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ account_type: "dealer_member", intent: "dealer" })
+    .eq("id", user.id);
+  if (profileError) return rollback();
 
   return json(200, { dealer });
 });

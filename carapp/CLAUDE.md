@@ -77,6 +77,7 @@ Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`,
 `account_type` consumer | dealer_member · `user_intent` buy | sell | browse | dealer · `seller_type` private | dealer · `listing_status` draft | active | sold | expired | removed · `media_kind` video | photo | cover · `fuel_type` petrol | diesel | hybrid | plugin_hybrid | electric | lpg | cng | other · `transmission_type` manual | automatic | semi_automatic · `dealer_role` owner | seller · `subscription_status` trial | conditional_free | active | past_due | canceled · `billing_method` manual_invoice | card · `event_type` impression | view | watch_time | zoom | open_detail | save | unsave | share | contact_chat | contact_whatsapp · `notification_type` new_message | price_drop | listing_sold | saved_search_match | new_contact | listing_expiring · `report_reason` scam | misleading_info | already_sold | inappropriate | other · `report_status` open | reviewed | actioned | dismissed · `platform` ios | android | web
 
 ### Tables (key columns)
+Column defaults worth knowing: all UUID PKs `gen_random_uuid()`; `created_at`/`updated_at` default `now()`; listings `status` default `draft`, `currency` `EUR`, `attributes` `{}`; profiles `account_type` default `consumer`, `whatsapp_public` false, `locale` `it`; subscriptions `status` default `trial`, `billing_method` `manual_invoice`; saved_searches `notify` true; listing_questions `is_public` false; notification_preferences `enabled` true. `events` and `listing_price_history` use bigint identity PKs.
 - **profiles** id (= auth.users), account_type, intent, display_name, avatar_path, phone, whatsapp_public, city, location (geography), locale, onboarding_completed_at. Row created by trigger `on_auth_user_created`.
 - **buyer_preferences** profile_id PK, category_ids[], make_ids[], price_min/max_cents, year_min, mileage_max_km, fuel_types[], max_distance_km, novice_driver
 - **dealers** legal_name, display_name, vat_number (unique, `IT…`), vat_verified_at, vies_payload, address, city, province, location, phone, whatsapp, website, logo_path, description
@@ -102,8 +103,94 @@ Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`,
 
 Extensions: postgis (geography + GIST indexes), moddatetime (`updated_at` triggers). Feed indexes are partial on `status = 'active'`.
 
+### Foreign keys and ON DELETE behaviour
+
+`CASCADE` = child rows are deleted with the parent · `SET NULL` = child kept, column nulled · `NO ACTION` = delete of the parent fails while children exist.
+
+| Child column | References | On delete |
+|---|---|---|
+| profiles.id | auth.users.id | CASCADE |
+| buyer_preferences.profile_id | profiles | CASCADE |
+| dealer_members.dealer_id | dealers | CASCADE |
+| dealer_members.profile_id | profiles | CASCADE |
+| subscriptions.dealer_id | dealers | CASCADE |
+| subscriptions.plan_id | plans | NO ACTION |
+| makes.category_id | vehicle_categories | NO ACTION |
+| models.make_id | makes | CASCADE |
+| listings.owner_id | profiles | CASCADE |
+| listings.dealer_id | dealers | CASCADE |
+| listings.category_id / make_id / model_id | vehicle_categories / makes / models | NO ACTION |
+| listing_media.listing_id | listings | CASCADE |
+| listing_price_history.listing_id | listings | CASCADE |
+| listing_questions.listing_id | listings | CASCADE |
+| listing_questions.asker_id | profiles | SET NULL |
+| favorites.profile_id / listing_id | profiles / listings | CASCADE / CASCADE |
+| saved_searches.profile_id | profiles | CASCADE |
+| conversations.listing_id / buyer_id / seller_id / dealer_id | listings / profiles / profiles / dealers | CASCADE (all) |
+| messages.conversation_id / sender_id | conversations / profiles | CASCADE / CASCADE |
+| reviews.dealer_id / author_id / conversation_id | dealers / profiles / conversations | CASCADE (all) |
+| reports.listing_id | listings | CASCADE |
+| reports.reporter_id | profiles | SET NULL |
+| events.listing_id | listings | CASCADE |
+| events.profile_id | profiles | SET NULL |
+| listing_stats_daily.listing_id | listings | CASCADE |
+| notifications.profile_id / listing_id | profiles / listings | CASCADE / CASCADE |
+| notification_preferences.profile_id | profiles | CASCADE |
+
+Consequences to keep in mind:
+- **Deleting an auth user** removes the profile and, through it, the user's listings, favorites, searches, conversations, messages, reviews and notifications. Reports and events survive with a null user.
+- **Deleting a dealer** removes its memberships, subscription, listings (and their media, chats, stats) and reviews.
+- **Catalogue rows in use cannot be deleted** (makes/models/categories referenced by listings, plans referenced by subscriptions): deactivate instead (`is_visible`, `is_active`).
+- Hard deletes of listings also wipe their analytics; normal lifecycle uses `status` (`sold`, `expired`, `removed`), not DELETE.
+
+### Constraints (beyond NOT NULL / PK)
+
+- **Unique:** dealers.vat_number · subscriptions.dealer_id (one per dealer) · makes (category_id, slug) · models (make_id, slug) · conversations (listing_id, buyer_id) · reviews (dealer_id, author_id)
+- **Checks:** listings `listings_seller_consistency` (dealer ⇔ dealer_id not null; private ⇔ dealer_id null) · listings year 1900-2100, mileage/price/power/owners/warranty ≥ 0, euro_class 0-6, description ≤ 3000 · conversations buyer_id ≠ seller_id · messages body 1-2000 chars · reviews rating 1-5, body ≤ 1000 · listing_questions question ≤ 500, answer ≤ 1000 · reports details ≤ 1000 · profiles display_name ≤ 60 · buyer_preferences numeric fields ≥ 0 (max_distance_km > 0)
+
+### Triggers
+
+- `set_updated_at` (moddatetime) before update on: profiles, buyer_preferences, dealers, subscriptions, listings, app_config
+- `on_auth_user_created` after insert on auth.users → `handle_new_user()` (security definer) inserts the `profiles` row
+
 ### RLS (summary)
 RLS on every table. Active listings, media, price history, dealers, reviews, catalogue, active plans and public config are readable by anon. Drafts / sold / expired only by owner or dealer members. Users manage their own profile, preferences, favorites, saved searches, notification prefs. Chat visible only to participants (buyer, seller, dealer members). Reviews only by buyers who chatted with that dealer. Events: insert-only (anon allowed). Stats: seller only. **No client write policy** for: dealer creation/membership, subscriptions, publishing, notifications, stats, price history: these go through functions / Edge Functions.
+
+### RLS policies (exact)
+
+"member" = exists a `dealer_members` row for that dealer with `profile_id = auth.uid()`. Policies use `(select auth.uid())`. Subqueries on other tables inherit those tables' RLS.
+
+| Table | SELECT | INSERT | UPDATE | DELETE |
+|---|---|---|---|---|
+| profiles | own; or a chat partner (exists visible conversation with them) | own id | own | — |
+| buyer_preferences | own | own | own | own |
+| dealers | anon + auth, all | — (edge function) | members with role owner | — |
+| dealer_members | own rows only (avoids recursion) | — | — | — |
+| plans | anon + auth, `is_active` | — | — | — |
+| subscriptions | members | — | — | — |
+| vehicle_categories | anon + auth, `is_visible` | — | — | — |
+| makes, models | anon + auth, all | — | — | — |
+| listings | `status = active`, or owner, or member | owner, `status = draft`, private ⇒ no dealer_id, dealer ⇒ member | owner or member | owner, only drafts |
+| listing_media | if parent listing visible | owner/member of listing (ALL) | same | same |
+| listing_price_history | if parent listing visible | — (trigger later) | — | — |
+| listing_questions | public answered, or asker, or listing owner/member | asker = self, no answer, not public | listing owner/member | — |
+| favorites, saved_searches, notification_preferences | own | own | own | own |
+| conversations | buyer, seller, or member of dealer | buyer = self, listing active, seller = listing owner, not own listing, dealer_id matches | participants (read markers) | — |
+| messages | if conversation visible | sender = self and conversation visible | — | — |
+| reviews | anon + auth, all | author = self and own conversation with that dealer | own | own |
+| reports | — | reporter = self, status open | — | — |
+| events | — | anon + auth, profile_id null or self | — | — |
+| listing_stats_daily | listing owner/member | — | — | — |
+| notifications | own | — | own (mark read) | — |
+| app_config | anon + auth, `is_public` | — | — | — |
+
+Storage policies: `listing-drafts` select/insert/update/delete only when first folder = `auth.uid()`; `avatars` insert/update/delete same rule (public read); `listing-media` no client write policy (public read via bucket flag).
+
+Known loose spots to tighten with SQL functions: listings UPDATE lets the seller change `status`, `published_at`, `sponsored_until`, `expires_at`; conversations UPDATE allows any column for participants; profiles UPDATE allows `account_type`.
+
+### Indexes
+
+listings: partial `where status = 'active'` on (published_at desc), (category_id, price_cents), (make_id, model_id), (year), (mileage_km), (expires_at), (sponsored_until) where not null; GIST (location); (owner_id, created_at desc); (dealer_id, created_at desc) where dealer_id not null · listing_media (listing_id, sort_order) · listing_price_history (listing_id, changed_at desc) · listing_questions (listing_id, created_at desc) · favorites (listing_id) · saved_searches (profile_id), (last_notified_at) where notify · conversations (buyer_id | seller_id | dealer_id, last_message_at desc) · messages (conversation_id, created_at desc) · dealer_members (profile_id) · dealers GIST (location) · subscriptions (status) · reviews (dealer_id, created_at desc) · makes (category_id, is_popular desc, name) · models (make_id, name) · reports (created_at) where open · events (listing_id, created_at) + BRIN (created_at) · notifications (profile_id, created_at desc), (profile_id) where unread
 
 ### Storage
 - `listing-drafts` (private): `{auth.uid}/{uuid}.ext`, owner-only
@@ -115,11 +202,28 @@ RLS on every table. Active listings, media, price history, dealers, reviews, cat
 
 ## Edge Functions
 
-- **dealer-signup** (`supabase/functions/dealer-signup/index.ts`): authenticated user + `{vat_number, display_name}` → normalizes IT VAT → rejects if already registered (409 `vat_taken`) → checks VIES REST (`vies_unavailable` 503 / `vat_invalid` 422) → with service role creates dealer, owner membership, `base` subscription in `trial` (dates and threshold from `app_config.dealer_trial`), sets profile `account_type = dealer_member`. Rolls back the dealer on partial failure.
+### dealer-signup (`supabase/functions/dealer-signup/index.ts`)
+
+Input: `POST { vat_number, display_name }` with the user's JWT. Uses the anon client to identify the user and a service-role client for writes (bypasses RLS).
+
+Flow (sequential, no Promise.all):
+1. Auth check → 401 `unauthorized`. Body validation (11-digit IT VAT, non-empty name ≤ 60) → 400 `bad_request`.
+2. `dealers.vat_number = 'IT' || vat` already exists → 409 `vat_taken`.
+3. VIES REST `GET https://ec.europa.eu/taxation_customs/vies/rest-api/ms/IT/vat/{vat}` (8 s timeout). Network/HTTP error → 503 `vies_unavailable`; `isValid = false` → 422 `vat_invalid`. VIES name/address `"---"` treated as missing (legal_name falls back to display_name).
+4. Reads `app_config.dealer_trial` for trial dates and threshold.
+5. Insert **dealer** (vat_verified_at = now, vies_payload stored). A unique violation (`23505`, same VAT registered concurrently since step 2) → 409 `vat_taken`.
+6. Insert **dealer_members** (owner).
+7. Insert **subscriptions** (plan `base`, status `trial`, trial_ends_at = now + trial_months, conditional_ends_at = trial_ends_at + conditional_free_months, contact_threshold = contact_threshold_total, founder price, is_founder = true).
+8. Update **profiles** (`account_type = dealer_member`, `intent = dealer`) — deliberately the **last** write.
+
+Rollback: any failure in steps 6-8 deletes subscriptions, then dealer_members, then the dealer, **explicitly** (does not rely on CASCADE). Because the profile update is last, a failure never leaves the profile as `dealer_member` without a dealer; if step 8 itself fails the profile is unchanged. Returns 500 `server_error`. Not wrapped in a DB transaction: if atomicity becomes critical, move steps 5-8 into a `security definer` SQL function called via RPC.
+
+Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a user change their own `account_type`; VAT is trusted from VIES only at signup (no periodic re-check).
 
 ## Database functions
 
-- `handle_new_user()` trigger on `auth.users` insert → creates `profiles` row.
+- `handle_new_user()` trigger function on `auth.users` insert → creates `profiles` row (`security definer`, `search_path = ''`, `on conflict do nothing`). Migration `08_auth_profiles.sql` also backfills profiles for pre-existing users.
+- No other SQL functions yet. Planned: feed RPC (returns listings + seller display info, since profiles are not readable by others), dealer entitlements, publish listing (moves media from `listing-drafts` to `listing-media`), get-or-create conversation, seller contact for WhatsApp, price-history trigger, nightly stats aggregation, listing expiry.
 
 ## Status
 
