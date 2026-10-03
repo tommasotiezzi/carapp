@@ -67,12 +67,31 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
   bool _onboardingOpen = false;
   DateTime _shownAt = DateTime.now();
 
+  // The current video plays only when all three allow it.
+  bool _visible = true; // false on another tab or under a full-screen route
+  bool _appActive = true;
+  bool _pausedByUser = false;
+
+  bool get _canPlay => _visible && _appActive && !_pausedByUser;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _syncPlayers();
     _trackView(_current);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // go_router turns tickers off for inactive tabs, and the Navigator does
+    // the same for pages covered by a full-screen route (/sell, /listing...).
+    final visible = TickerMode.of(context);
+    if (visible != _visible) {
+      _visible = visible;
+      _updatePlayback();
+    }
   }
 
   @override
@@ -95,9 +114,20 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
+    _updatePlayback();
+  }
+
+  /// Plays or pauses the current video according to [_canPlay].
+  void _updatePlayback() {
     final p = _players[_current];
-    if (state == AppLifecycleState.paused) p?.pause();
-    if (state == AppLifecycleState.resumed && (p?.value.isInitialized ?? false)) p?.play();
+    if (p == null || !p.value.isInitialized) return;
+    _canPlay ? p.play() : p.pause();
+  }
+
+  void _togglePause() {
+    setState(() => _pausedByUser = !_pausedByUser);
+    _updatePlayback();
   }
 
   String? _videoUrl(int i) =>
@@ -130,14 +160,14 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
         ..setLooping(true)
         ..initialize().then((_) {
           if (!mounted || !_players.containsValue(player)) return;
-          if (i == _current) player.play();
+          if (i == _current && _canPlay) player.play();
           setState(() {});
         }).catchError((_) {});
     }
 
     for (final entry in _players.entries) {
       if (entry.key == _current) {
-        if (entry.value.value.isInitialized) entry.value.play();
+        if (entry.value.value.isInitialized && _canPlay) entry.value.play();
       } else {
         entry.value
           ..pause()
@@ -148,7 +178,10 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
 
   void _onPageChanged(int index) {
     _trackWatchTime(_current);
-    setState(() => _current = index);
+    setState(() {
+      _current = index;
+      _pausedByUser = false;
+    });
     _syncPlayers();
     _trackView(index);
 
@@ -173,7 +206,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     _players[_current]?.pause();
     context.push(AppRoutes.onboarding).then((_) {
       _onboardingOpen = false;
-      if (mounted) _players[_current]?.play();
+      if (mounted) _updatePlayback();
     });
     return true;
   }
@@ -204,7 +237,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     _players[_current]?.pause();
     ref.read(eventTrackerProvider).track(AnalyticsEvent.openDetail, listingId: item.id);
     context.push(AppRoutes.listingPath(item.id)).then((_) {
-      if (mounted) _players[_current]?.play();
+      if (mounted) _updatePlayback();
     });
   }
 
@@ -235,6 +268,8 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
                 key: ValueKey(item.id),
                 controller: _players[i],
                 coverUrl: _coverUrl(i),
+                pausedByUser: i == _current && _pausedByUser,
+                onTogglePause: _togglePause,
                 onZoom: () => ref
                     .read(eventTrackerProvider)
                     .track(AnalyticsEvent.zoom, listingId: item.id),
