@@ -85,17 +85,42 @@ class EventTracker with WidgetsBindingObserver {
     if (_flushing || _queue.isEmpty) return;
 
     _flushing = true;
-    final batch = List<Map<String, dynamic>>.of(_queue);
+    // RLS accepts profile_id only if null or the signed-in user: events
+    // queued before a logout or account switch keep only their anon_id.
+    final userId = _client.auth.currentUser?.id;
+    final batch = [
+      for (final e in _queue)
+        e['profile_id'] == null || e['profile_id'] == userId
+            ? e
+            : {...e, 'profile_id': null},
+    ];
     _queue.clear();
     try {
       await _client.from('events').insert(batch);
     } catch (e) {
-      // Offline or transient error: put the batch back, retry later.
-      _queue.insertAll(0, batch);
-      if (kDebugMode) debugPrint('EventTracker flush failed: $e');
+      if (_isPermanent(e)) {
+        // Retrying would fail forever and block every later event: drop it.
+        if (kDebugMode) debugPrint('EventTracker dropped a batch: $e');
+      } else {
+        // Offline or transient error: put the batch back, retry later.
+        _queue.insertAll(0, batch);
+        if (kDebugMode) debugPrint('EventTracker flush failed: $e');
+      }
     } finally {
       _flushing = false;
     }
+  }
+
+  /// Errors the database will return again on retry: data exceptions (22),
+  /// integrity violations such as a deleted listing (23), access rules
+  /// such as RLS (42). Network errors, 5xx and 429 stay retryable.
+  static bool _isPermanent(Object error) {
+    if (error is! PostgrestException) return false;
+    // Postgres SQLSTATE codes have 5 chars; non-JSON responses carry the
+    // 3-digit HTTP status here instead (429 must not match '42').
+    final code = error.code ?? '';
+    if (code.length != 5) return false;
+    return code.startsWith('22') || code.startsWith('23') || code.startsWith('42');
   }
 
   @override
