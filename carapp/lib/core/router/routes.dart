@@ -18,8 +18,12 @@ class AppRoutes {
   static const sellDetails = '/sell/shots/details';
   static const sellDone = '/sell/done/:id';
   static const listing = '/listing/:id';
+  static const editListing = '/listing/:id/edit';
+  static const editMedia = '/listing/:id/media';
+  static const editMediaCapture = '/listing/:id/media/capture';
   static const chat = '/chat/:id';
   static const newChat = '/chat/new/:listingId';
+  static const archivedChats = '/chats/archived';
   static const dealerDashboard = '/dealer';
   static const settings = '/settings';
   static const dealerPage = '/dealers/:id';
@@ -29,12 +33,22 @@ class AppRoutes {
   static const shareShort = '/l/:id';
 
   static String listingPath(String id) => '/listing/$id';
+  static String editListingPath(String id) => '/listing/$id/edit';
+  static String editMediaPath(String id) => '/listing/$id/media';
+
+  /// The camera of "Foto e video" (same parameters as [sellCapturePath]).
+  static String editMediaCapturePath(String id, {String? step, bool photos = false, bool single = false}) {
+    final query = {'step': ?step, if (photos) 'photos': '1', if (single) 'single': '1'};
+    return Uri(path: '/listing/$id/media/capture', queryParameters: query.isEmpty ? null : query).toString();
+  }
   static String chatPath(String id) => '/chat/$id';
 
   /// [step] null = the first step still missing; [single] = retake one
   /// step and come back to the summary.
-  static String sellCapturePath({String? step, bool single = false}) {
-    final query = {'step': ?step, if (single) 'single': '1'};
+  /// Video steps, or with [photos] the guided carousel photos ([step] =
+  /// the slot to start from).
+  static String sellCapturePath({String? step, bool photos = false, bool single = false}) {
+    final query = {'step': ?step, if (photos) 'photos': '1', if (single) 'single': '1'};
     return Uri(path: sellCapture, queryParameters: query.isEmpty ? null : query).toString();
   }
   static String sellDonePath(String listingId) => '/sell/done/$listingId';

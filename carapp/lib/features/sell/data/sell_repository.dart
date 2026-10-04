@@ -8,8 +8,19 @@ import '../../../core/supabase/supabase_client.dart';
 import 'capture_step.dart';
 import 'sell_draft.dart';
 
-/// Why publishing stopped.
-enum PublishFailure { incomplete, missingMedia, notDraft, network, other }
+/// Why publishing (or saving changed media) stopped.
+enum PublishFailure { incomplete, missingMedia, notDraft, notEditable, network, other }
+
+/// A listing's media as they are online, to edit them.
+class EditableMedia {
+  const EditableMedia({required this.categoryId, this.coverPath, this.photos = const []});
+
+  final String categoryId;
+  final String? coverPath;
+
+  /// Carousel order.
+  final List<({String id, String path, String? step})> photos;
+}
 
 class PublishException implements Exception {
   const PublishException(this.failure);
@@ -130,6 +141,55 @@ class SellRepository {
           _ => 'web',
         },
       });
+
+  /// The listing's category, cover and photos (RLS: own or dealer's
+  /// listings, also sold). null when it is not the user's.
+  Future<EditableMedia?> editableMedia(String listingId) async {
+    final row = await _client
+        .from('listings')
+        .select('category_id, cover_path, media:listing_media(id, kind, storage_path, capture_step, sort_order)')
+        .eq('id', listingId)
+        .maybeSingle();
+    if (row == null) return null;
+    final media = ((row['media'] as List?) ?? const []).cast<Map<String, dynamic>>()
+        .where((m) => m['kind'] == 'photo')
+        .toList()
+      ..sort((a, b) => ((a['sort_order'] as num?) ?? 0).compareTo((b['sort_order'] as num?) ?? 0));
+    return EditableMedia(
+      categoryId: row['category_id'] as String,
+      coverPath: row['cover_path'] as String?,
+      photos: [
+        for (final m in media)
+          (id: m['id'] as String, path: m['storage_path'] as String, step: m['capture_step'] as String?),
+      ],
+    );
+  }
+
+  /// Puts the changed media online (`update-listing-media`): [video] =
+  /// a new video.mp4 + cover.jpg were uploaded; [photos] = the whole
+  /// carousel, `{'media_id': ...}` (kept) or `{'file': ...}` (uploaded).
+  Future<void> applyMediaEdit({
+    required String listingId,
+    required bool video,
+    int? videoDurationMs,
+    required List<Map<String, String>> photos,
+  }) async {
+    try {
+      await _client.functions.invoke('update-listing-media', body: {
+        'listing_id': listingId,
+        'video': video,
+        if (video) 'video_duration_ms': ?videoDurationMs,
+        'photos': photos,
+      });
+    } on FunctionException catch (e) {
+      final code = e.details is Map ? (e.details as Map)['error'] : null;
+      throw PublishException(switch (code) {
+        'missing_media' => PublishFailure.missingMedia,
+        'not_editable' || 'not_found' => PublishFailure.notEditable,
+        _ => PublishFailure.other,
+      });
+    }
+  }
 
   Future<void> publish({required String draftId, int? videoDurationMs}) async {
     try {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/media/media_url.dart';
+import '../../../core/supabase/supabase_client.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -18,21 +21,40 @@ import '../state/sell_controller.dart';
 import 'sell_labels.dart';
 import 'silhouette.dart';
 
-/// `/sell/capture` (screen 2): one step at a time, video (5 s, stops by
-/// itself) or photo, with the step's outline over the camera. After a
-/// shot it moves to the next step still missing; with `single` (a retake
-/// from the summary) it goes back instead.
+/// `/sell/capture` (screen 2): one step at a time, always a video (5 s,
+/// stops by itself), with the step's outline over the camera. With
+/// [photos] the same camera takes the guided carousel photos instead (one
+/// per [PhotoSlot], all optional). After a shot it moves to the next one
+/// still missing; with `single` (a retake from the summary) it goes back.
 class CaptureScreen extends ConsumerStatefulWidget {
-  const CaptureScreen({super.key, this.stepId, this.single = false});
+  const CaptureScreen({super.key, this.stepId, this.photos = false, this.single = false, this.provider});
 
+  /// Step id, or slot id with [photos].
   final String? stepId;
+  final bool photos;
   final bool single;
+
+  /// The session: a new listing (default) or [mediaEditControllerProvider]
+  /// ("Foto e video" of an online listing: every exit goes back).
+  final NotifierProvider<SellController, SellState>? provider;
 
   @override
   ConsumerState<CaptureScreen> createState() => _CaptureScreenState();
 }
 
 enum _CameraIssue { denied, failed }
+
+/// What the camera is shooting: a video step or a photo slot.
+class _Target {
+  const _Target({required this.id, this.silhouette, this.plateTip = false, this.step});
+
+  final String id;
+  final String? silhouette;
+  final bool plateTip;
+
+  /// Video steps only.
+  final CaptureStep? step;
+}
 
 class _CaptureScreenState extends ConsumerState<CaptureScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
@@ -42,7 +64,6 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   Timer? _stopTimer;
 
   String? _stepId;
-  ShotKind _mode = ShotKind.video;
   bool _recording = false;
   bool _saving = false;
   bool _torch = false;
@@ -51,16 +72,17 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    final s = ref.read(sellControllerProvider);
+    final s = ref.read(_provider);
     if (s.draft == null) {
       // Opened without a draft (e.g. the app was restarted here).
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.go(AppRoutes.sell);
+        if (!mounted) return;
+        widget.provider == null ? context.go(AppRoutes.sell) : context.pop();
       });
       return;
     }
-    _stepId = widget.stepId ?? _firstMissing(s)?.id ?? s.steps.first.id;
-    _mode = s.draft!.shots[_stepId]?.kind ?? ShotKind.video;
+    final targets = _targetsOf(s);
+    _stepId = widget.stepId ?? targets.where((x) => !_isDone(s, x.id)).firstOrNull?.id ?? targets.first.id;
     _initCamera();
   }
 
@@ -91,26 +113,28 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
 
   // ---- steps ----------------------------------------------------------
 
-  List<CaptureStep> get _steps => ref.read(sellControllerProvider).steps;
+  bool get _photoMode => widget.photos;
 
-  CaptureStep get _step => _steps.firstWhere((s) => s.id == _stepId, orElse: () => _steps.first);
+  NotifierProvider<SellController, SellState> get _provider => widget.provider ?? sellControllerProvider;
 
-  static CaptureStep? _firstMissing(SellState s) {
-    for (final step in s.steps) {
-      if (!s.draft!.shots.containsKey(step.id)) return step;
-    }
-    return null;
-  }
+  bool get _editing => ref.read(_provider).draft?.editing ?? false;
 
-  /// The next step without a shot, after the current one, then from the
-  /// start (steps skipped earlier).
-  CaptureStep? _nextMissing() {
-    final s = ref.read(sellControllerProvider);
-    final steps = s.steps;
-    final i = steps.indexWhere((x) => x.id == _stepId);
-    for (var k = 1; k <= steps.length; k++) {
-      final step = steps[(i + k) % steps.length];
-      if (step.id != _stepId && !s.draft!.shots.containsKey(step.id)) return step;
+  List<_Target> _targetsOf(SellState s) => _photoMode
+      ? [for (final slot in s.slots) _Target(id: slot.id, silhouette: slot.silhouette, plateTip: slot.plateTip)]
+      : [for (final step in s.steps) _Target(id: step.id, silhouette: step.silhouette, plateTip: step.plateTip, step: step)];
+
+  bool _isDone(SellState s, String id) =>
+      _photoMode ? s.draft!.photoFor(id) != null : s.draft!.shots.containsKey(id);
+
+  /// The next target without a shot, after the current one, then from the
+  /// start (skipped ones).
+  _Target? _nextMissing() {
+    final s = ref.read(_provider);
+    final targets = _targetsOf(s);
+    final i = targets.indexWhere((x) => x.id == _stepId);
+    for (var k = 1; k <= targets.length; k++) {
+      final target = targets[(i + k) % targets.length];
+      if (target.id != _stepId && !_isDone(s, target.id)) return target;
     }
     return null;
   }
@@ -124,15 +148,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     if (next == null) {
       _openShots();
     } else {
-      setState(() {
-        _stepId = next.id;
-        _mode = ShotKind.video;
-      });
+      setState(() => _stepId = next.id);
     }
   }
 
   void _openShots() {
-    if (widget.single) {
+    if (widget.single || _editing) {
       context.pop();
     } else {
       context.pushReplacement(AppRoutes.sellShots);
@@ -140,8 +161,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   }
 
   void _close() {
-    final hasShots = ref.read(sellControllerProvider).draft?.shots.isNotEmpty ?? false;
-    if (hasShots && !widget.single) {
+    final hasShots = ref.read(_provider).draft?.shots.isNotEmpty ?? false;
+    if (hasShots && !widget.single && !_photoMode && !_editing) {
       _openShots();
     } else {
       context.canPop() ? context.pop() : context.go(AppRoutes.sell);
@@ -201,18 +222,18 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     if (camera == null || !camera.value.isInitialized || _saving || _recording) return;
     HapticFeedback.mediumImpact();
 
-    if (_mode == ShotKind.photo) {
+    if (_photoMode) {
       setState(() => _saving = true);
       try {
         final file = await camera.takePicture();
-        await _save(ShotKind.photo, file.path);
+        await _save(file.path);
       } on CameraException {
         _failed();
       }
       return;
     }
 
-    final seconds = _step.seconds;
+    final seconds = ref.read(_provider).steps.firstWhere((x) => x.id == _stepId).seconds;
     try {
       await camera.startVideoRecording();
     } on CameraException {
@@ -236,17 +257,21 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     });
     try {
       final file = await camera.stopVideoRecording();
-      await _save(ShotKind.video, file.path);
+      await _save(file.path);
     } on CameraException {
       _failed();
     }
   }
 
-  Future<void> _save(ShotKind kind, String path) async {
-    final controller = ref.read(sellControllerProvider.notifier);
-    final stepId = _stepId!;
+  Future<void> _save(String path) async {
+    final controller = ref.read(_provider.notifier);
+    final id = _stepId!;
     try {
-      await controller.addShot(stepId, kind, path);
+      if (_photoMode) {
+        await controller.addPhoto(id, path, fromCamera: true);
+      } else {
+        await controller.addClip(id, path);
+      }
     } catch (_) {
       _failed();
       return;
@@ -274,14 +299,19 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final s = ref.watch(sellControllerProvider);
+    final s = ref.watch(_provider);
     final draft = s.draft;
     if (draft == null || _stepId == null) {
       return const Scaffold(backgroundColor: AppColors.feedBackground);
     }
-    final step = _step;
-    final index = s.steps.indexOf(step);
+    final targets = _targetsOf(s);
+    final index = targets.indexWhere((x) => x.id == _stepId).clamp(0, targets.length - 1);
+    final target = targets[index];
+    final step = target.step;
+    final seconds = step?.seconds ?? 0;
     final next = _recording || _saving ? null : _nextMissing();
+    String label(String id) => _photoMode ? t.photoSlotLabel(id) : t.stepLabel(id);
+    final done = {for (final x in targets) if (_isDone(s, x.id)) x.id};
 
     return PopScope(
       canPop: !_recording,
@@ -294,29 +324,31 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                 fit: StackFit.expand,
                 children: [
                   _Preview(camera: _camera, issue: _issue, onRetry: _initCamera),
-                  if (_camera != null) Silhouette(name: step.silhouette),
+                  if (_camera != null) Silhouette(name: target.silhouette),
                   const _TopScrim(),
                   SafeArea(
                     bottom: false,
                     child: Column(
                       children: [
                         _TopBar(
-                          stepLabel: t.captureStepOf(index + 1, s.steps.length),
+                          stepLabel: _photoMode
+                              ? t.capturePhotoOf(index + 1, targets.length)
+                              : t.captureStepOf(index + 1, targets.length),
                           torch: _torch,
                           onClose: _recording ? null : _close,
                           onTorch: _camera == null ? null : _toggleTorch,
                         ),
-                        _Segments(steps: s.steps, current: index, done: draft.shots.keys.toSet()),
+                        _Segments(ids: [for (final x in targets) x.id], current: index, done: done),
                         const SizedBox(height: AppSpacing.l),
                         Text(
-                          t.stepLabel(step.id),
+                          label(target.id),
                           style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: AppSpacing.xxs),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
                           child: Text(
-                            t.stepInstruction(step, draft.categoryId),
+                            step == null ? t.photoSlotHint(target.id) : t.stepInstruction(step, draft.categoryId),
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: AppColors.onFeedSecondary, fontSize: 14),
                           ),
@@ -334,9 +366,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                         builder: (context, _) => _StatusPill(
                           text: _recording
                               ? t.captureRecording(
-                                  (step.seconds * (1 - _progress.value)).ceil().clamp(1, step.seconds),
+                                  (seconds * (1 - _progress.value)).ceil().clamp(1, seconds),
                                 )
-                              : step.plateTip
+                              : target.plateTip
                                   ? t.capturePlateTip
                                   : t.captureHoldStill,
                           live: _recording,
@@ -348,21 +380,20 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
               ),
             ),
             _BottomPanel(
-              mode: _mode,
-              seconds: step.seconds,
+              photo: _photoMode,
+              seconds: seconds,
               recording: _recording,
               saving: _saving,
               progress: _progress,
               enabled: _camera != null,
-              lastShot: _lastShot(draft),
+              lastShot: _lastShot(_photoMode ? draft.photos : draft.shots.values),
               draftId: draft.id,
-              doneCount: draft.shots.length,
-              total: s.steps.length,
-              nextLabel: next == null ? t.captureLast : t.captureNext(t.stepLabel(next.id).toLowerCase()),
-              onMode: (m) => setState(() => _mode = m),
+              doneCount: done.length,
+              total: targets.length,
+              nextLabel: next == null ? t.captureLast : t.captureNext(label(next.id).toLowerCase()),
               onShoot: _shoot,
               onSkip: _recording || _saving ? null : _advance,
-              onShots: _recording || _saving || draft.shots.isEmpty ? null : _openShots,
+              onShots: _recording || _saving || (draft.shots.isEmpty && !_photoMode) ? null : _openShots,
             ),
           ],
         ),
@@ -370,9 +401,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     );
   }
 
-  static Shot? _lastShot(SellDraft draft) {
+  static Shot? _lastShot(Iterable<Shot> shots) {
     Shot? last;
-    for (final shot in draft.shots.values) {
+    for (final shot in shots) {
       if (last == null || (shot.takenAt ?? DateTime(0)).isAfter(last.takenAt ?? DateTime(0))) last = shot;
     }
     return last;
@@ -527,9 +558,9 @@ class _GlassButton extends StatelessWidget {
 
 /// One bar per step: blue = done, white = current, grey = to do.
 class _Segments extends StatelessWidget {
-  const _Segments({required this.steps, required this.current, required this.done});
+  const _Segments({required this.ids, required this.current, required this.done});
 
-  final List<CaptureStep> steps;
+  final List<String> ids;
   final int current;
   final Set<String> done;
 
@@ -538,7 +569,7 @@ class _Segments extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xs),
         child: Row(
           children: [
-            for (var i = 0; i < steps.length; i++) ...[
+            for (var i = 0; i < ids.length; i++) ...[
               if (i > 0) const SizedBox(width: 4),
               Expanded(
                 child: Container(
@@ -547,7 +578,7 @@ class _Segments extends StatelessWidget {
                     borderRadius: BorderRadius.circular(2),
                     color: i == current
                         ? Colors.white
-                        : done.contains(steps[i].id)
+                        : done.contains(ids[i])
                             ? AppColors.primary
                             : const Color(0x40FFFFFF),
                   ),
@@ -592,7 +623,7 @@ class _StatusPill extends StatelessWidget {
 
 class _BottomPanel extends ConsumerWidget {
   const _BottomPanel({
-    required this.mode,
+    required this.photo,
     required this.seconds,
     required this.recording,
     required this.saving,
@@ -603,13 +634,13 @@ class _BottomPanel extends ConsumerWidget {
     required this.doneCount,
     required this.total,
     required this.nextLabel,
-    required this.onMode,
     required this.onShoot,
     this.onSkip,
     this.onShots,
   });
 
-  final ShotKind mode;
+  /// Guided photos instead of the video steps.
+  final bool photo;
   final int seconds;
   final bool recording;
   final bool saving;
@@ -620,7 +651,6 @@ class _BottomPanel extends ConsumerWidget {
   final int doneCount;
   final int total;
   final String nextLabel;
-  final ValueChanged<ShotKind> onMode;
   final VoidCallback onShoot;
   final VoidCallback? onSkip;
   final VoidCallback? onShots;
@@ -639,12 +669,7 @@ class _BottomPanel extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _ModeToggle(
-                mode: mode,
-                videoLabel: t.captureVideo(seconds),
-                photoLabel: t.capturePhoto,
-                onChanged: busy ? null : onMode,
-              ),
+              _ModeLabel(label: photo ? t.capturePhoto : t.captureVideo(seconds)),
               const SizedBox(height: AppSpacing.l),
               Row(
                 children: [
@@ -657,7 +682,7 @@ class _BottomPanel extends ConsumerWidget {
                   ),
                   const Spacer(),
                   _Shutter(
-                    mode: mode,
+                    photo: photo,
                     recording: recording,
                     saving: saving,
                     progress: progress,
@@ -697,69 +722,34 @@ class _BottomPanel extends ConsumerWidget {
   }
 }
 
-class _ModeToggle extends StatelessWidget {
-  const _ModeToggle({
-    required this.mode,
-    required this.videoLabel,
-    required this.photoLabel,
-    required this.onChanged,
-  });
+/// "Video · 5 s" or "Foto": what the shutter takes (no choice: steps
+/// are always videos).
+class _ModeLabel extends StatelessWidget {
+  const _ModeLabel({required this.label});
 
-  final ShotKind mode;
-  final String videoLabel;
-  final String photoLabel;
-  final ValueChanged<ShotKind>? onChanged;
+  final String label;
 
   @override
-  Widget build(BuildContext context) {
-    Widget option(ShotKind value, String label) {
-      final selected = mode == value;
-      return Semantics(
-        button: true,
-        selected: selected,
-        child: GestureDetector(
-          onTap: onChanged == null ? null : () => onChanged!(value),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xs),
-            decoration: BoxDecoration(
-              color: selected ? Colors.white : Colors.transparent,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected ? AppColors.ink : Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xs),
+        decoration: BoxDecoration(color: const Color(0xFF2A2E35), borderRadius: BorderRadius.circular(999)),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
         ),
       );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: const Color(0xFF2A2E35), borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [option(ShotKind.video, videoLabel), option(ShotKind.photo, photoLabel)],
-      ),
-    );
-  }
 }
 
 class _Shutter extends StatelessWidget {
   const _Shutter({
-    required this.mode,
+    required this.photo,
     required this.recording,
     required this.saving,
     required this.progress,
     this.onTap,
   });
 
-  final ShotKind mode;
+  final bool photo;
   final bool recording;
   final bool saving;
   final Animation<double> progress;
@@ -767,7 +757,7 @@ class _Shutter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final video = mode == ShotKind.video;
+    final video = !photo;
     return Semantics(
       button: true,
       label: video ? AppLocalizations.of(context).captureRecord : AppLocalizations.of(context).captureTakePhoto,
@@ -836,7 +826,6 @@ class _ShotsButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final preview = shot == null ? null : (shot!.kind == ShotKind.photo ? shot!.file : shot!.thumb);
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -853,7 +842,7 @@ class _ShotsButton extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (preview != null) ShotImage(draftId: draftId, file: preview, width: 52),
+              if (shot != null) ShotThumb(draftId: draftId, shot: shot!, width: 52),
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
@@ -872,6 +861,33 @@ class _ShotsButton extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// A shot's picture: the clip's thumbnail, a photo of the draft folder, or
+/// (editing) a photo already online.
+class ShotThumb extends ConsumerWidget {
+  const ShotThumb({super.key, required this.draftId, required this.shot, required this.width});
+
+  final String draftId;
+  final Shot shot;
+  final double width;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (shot.isRemote) {
+      final url = MediaUrl.resolve(ref.read(supabaseProvider), shot.remotePath);
+      if (url == null) return const SizedBox.shrink();
+      return CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        memCacheWidth: (width * MediaQuery.devicePixelRatioOf(context)).round(),
+        errorWidget: (_, _, _) => const SizedBox.shrink(),
+      );
+    }
+    final file = shot.kind == ShotKind.photo ? shot.file : shot.thumb;
+    if (file == null) return const SizedBox.shrink();
+    return ShotImage(draftId: draftId, file: file, width: width);
   }
 }
 

@@ -4,7 +4,8 @@ import '../data/capture_step.dart';
 /// Italian labels for the capture steps and the category fields.
 extension SellLabels on AppLocalizations {
   String stepLabel(String stepId) => switch (stepId) {
-        'front_three_quarter' => sellStepFront3q,
+        'front' => sellStepFront,
+        'front_three_quarter' => sellStepFront3q, // drafts from before 15
         'right_side' => sellStepRightSide,
         'left_side' => sellStepLeftSide,
         'rear' => sellStepRear,
@@ -17,8 +18,44 @@ extension SellLabels on AppLocalizations {
         _ => stepId.replaceAll('_', ' '),
       };
 
+  String photoSlotLabel(String slotId) => switch (slotId) {
+        'front_three_quarter' => photoFront3q,
+        'front' => photoFront,
+        'side' => photoSide,
+        'rear_three_quarter' => photoRear3q,
+        'rear' => photoRear,
+        'dashboard' => photoDashboard,
+        'interior' => photoInterior,
+        'rear_seats' => photoRearSeats,
+        'trunk' => photoTrunk,
+        'wheels' => photoWheels,
+        'tank' => photoTank,
+        'chain_tyres' => photoChainTyres,
+        'exhaust' => photoExhaust,
+        _ => photoOther,
+      };
+
+  /// How to take it: under the title on the camera and in the summary.
+  String photoSlotHint(String slotId) => switch (slotId) {
+        'front_three_quarter' => photoFront3qHint,
+        'front' => photoFrontHint,
+        'side' => photoSideHint,
+        'rear_three_quarter' => photoRear3qHint,
+        'rear' => photoRearHint,
+        'dashboard' => photoDashboardHint,
+        'interior' => photoInteriorHint,
+        'rear_seats' => photoRearSeatsHint,
+        'trunk' => photoTrunkHint,
+        'wheels' => photoWheelsHint,
+        'tank' => photoTankHint,
+        'chain_tyres' => photoChainTyresHint,
+        'exhaust' => photoExhaustHint,
+        _ => captureHoldStill,
+      };
+
   /// The line under the step title on the camera.
   String stepInstruction(CaptureStep step, String categoryId) {
+    if (step.id == 'front') return captureAlignFront;
     if (step.silhouette != null) {
       return categoryId == 'motorcycle' ? captureAlignMoto : captureAlignCar;
     }

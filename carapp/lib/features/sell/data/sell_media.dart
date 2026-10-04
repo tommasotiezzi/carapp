@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' show Size;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -120,6 +121,40 @@ class NativeSellMedia implements SellMedia {
 }
 
 final sellMediaProvider = Provider<SellMedia>((ref) => NativeSellMedia());
+
+/// Carousel photos: one from the camera or up to [limit] from the
+/// gallery, long side at most [maxSide]. Paths of the picked files
+/// (temporary copies); empty when cancelled.
+typedef PhotoPicker = Future<List<String>> Function({
+  required bool camera,
+  required int limit,
+  required int maxSide,
+});
+
+final photoPickerProvider = Provider<PhotoPicker>(
+  (ref) => ({required camera, required limit, required maxSide}) async {
+    final picker = ImagePicker();
+    final side = maxSide.toDouble();
+    if (camera || limit < 2) {
+      final file = await picker.pickImage(
+        source: camera ? ImageSource.camera : ImageSource.gallery,
+        maxWidth: side,
+        maxHeight: side,
+        imageQuality: 85,
+        requestFullMetadata: false,
+      );
+      return [?file?.path];
+    }
+    final files = await picker.pickMultiImage(
+      maxWidth: side,
+      maxHeight: side,
+      imageQuality: 85,
+      limit: limit,
+      requestFullMetadata: false,
+    );
+    return [for (final f in files) f.path];
+  },
+);
 
 /// Full path of a file in a draft folder: (draft id, file name).
 final draftFilePathProvider = FutureProvider.autoDispose.family<String, (String, String)>((ref, key) async {

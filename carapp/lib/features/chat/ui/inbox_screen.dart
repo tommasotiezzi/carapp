@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,28 +65,54 @@ class InboxScreen extends ConsumerWidget {
       );
     } else {
       final state = inbox.value!;
+      final archivedRow = state.archivedCount > 0 ? 1 : 0;
       body = RefreshIndicator(
         onRefresh: () => ref.read(inboxProvider.notifier).refresh(),
         child: ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: state.items.length + (state.hasMore ? 1 : 0),
+          itemCount: archivedRow + state.items.length + (state.hasMore ? 1 : 0),
           separatorBuilder: (_, _) => const Divider(height: 1, indent: 84),
-          itemBuilder: (context, i) {
-            if (i == state.items.length) {
-              WidgetsBinding.instance.addPostFrameCallback(
-                (_) => ref.read(inboxProvider.notifier).loadMore(),
+          itemBuilder: (context, index) {
+            if (archivedRow == 1 && index == 0) {
+              return ListTile(
+                key: const ValueKey('archived-row'),
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                leading: const SizedBox(width: 56, child: Icon(Icons.archive_outlined, color: AppColors.inkSecondary)),
+                title: Text(t.inboxArchived(state.archivedCount)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push(AppRoutes.archivedChats),
               );
+            }
+            final i = index - archivedRow;
+            if (i == state.items.length) {
+              WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(inboxProvider.notifier).loadMore());
               return const Padding(
                 padding: EdgeInsets.all(AppSpacing.l),
-                child: Center(
-                  child: SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
+                child: Center(child: SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2))),
               );
             }
             final c = state.items[i];
-            return _ConversationTile(
-              conversation: c,
-              onTap: () => context.push(AppRoutes.chatPath(c.id)),
+            return Dismissible(
+              key: ValueKey('chat-${c.id}'),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                color: AppColors.inkSecondary,
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.archive_outlined, color: Colors.white),
+                    const SizedBox(width: AppSpacing.s),
+                    Text(
+                      t.inboxArchive,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+              onDismissed: (_) => _archive(context, ref, c),
+              child: _ConversationTile(conversation: c, onTap: () => context.push(AppRoutes.chatPath(c.id))),
             );
           },
         ),
@@ -95,6 +123,105 @@ class InboxScreen extends ConsumerWidget {
       backgroundColor: AppColors.surface,
       appBar: AppBar(title: Text(t.inboxTitle)),
       body: body,
+    );
+  }
+}
+
+/// Archives at once; the snackbar offers "Annulla".
+Future<void> _archive(BuildContext context, WidgetRef ref, ConversationSummary c) async {
+  final t = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final controller = ref.read(inboxProvider.notifier);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(t.inboxArchivedDone),
+        action: SnackBarAction(
+          label: t.commonUndo,
+          onPressed: () => unawaited(controller.unarchive(c).catchError((_) {})),
+        ),
+      ),
+    );
+  try {
+    await controller.archive(c.id);
+  } catch (_) {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(t.inboxArchiveError)));
+  }
+}
+
+/// `/chats/archived`: the archived chats; tap opens one, swipe brings it
+/// back to the Inbox. A new message brings a chat back by itself.
+class ArchivedChatsScreen extends ConsumerWidget {
+  const ArchivedChatsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final chats = ref.watch(archivedChatsProvider);
+
+    Future<void> restore(ConversationSummary c) async {
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        await ref.read(inboxProvider.notifier).unarchive(c);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(t.inboxRestored)));
+      } catch (_) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(t.inboxArchiveError)));
+      }
+      ref.invalidate(archivedChatsProvider);
+    }
+
+    final list = chats.value;
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(title: Text(t.inboxArchivedTitle)),
+      body: list == null
+          ? (chats.hasError
+                ? _InboxMessage(
+                    icon: Icons.wifi_off_outlined,
+                    title: t.errorTitle,
+                    body: t.errorBody,
+                    actionLabel: t.commonRetry,
+                    onAction: () => ref.invalidate(archivedChatsProvider),
+                  )
+                : const Center(child: CircularProgressIndicator()))
+          : list.isEmpty
+          ? Center(child: Text(t.inboxArchivedEmpty, style: Theme.of(context).textTheme.bodyLarge))
+          : ListView.separated(
+              itemCount: list.length,
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 84),
+              itemBuilder: (context, i) {
+                final c = list[i];
+                return Dismissible(
+                  key: ValueKey('archived-${c.id}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: AppColors.primary,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.unarchive_outlined, color: Colors.white),
+                        const SizedBox(width: AppSpacing.s),
+                        Text(
+                          t.inboxRestore,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                  onDismissed: (_) => restore(c),
+                  child: _ConversationTile(conversation: c, onTap: () => context.push(AppRoutes.chatPath(c.id))),
+                );
+              },
+            ),
     );
   }
 }
@@ -114,8 +241,9 @@ class _ConversationTile extends StatelessWidget {
     final preview = c.lastMessageBody == null
         ? ''
         : c.lastMessageMine
-            ? t.inboxYou(c.lastMessageBody!)
-            : c.lastMessageBody!;
+        ? t.inboxYou(c.lastMessageBody!)
+        : c.lastMessageBody!;
+    final offer = c.lastMessageIsOffer && !c.lastMessageMine;
     final weight = c.unread ? FontWeight.w700 : null;
 
     return InkWell(
@@ -156,28 +284,26 @@ class _ConversationTile extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          [c.listingTitle, Formatters.price(c.listingPriceCents)]
-                              .whereType<String>()
-                              .where((s) => s.isNotEmpty)
-                              .join(' · '),
+                          [
+                            c.listingTitle,
+                            Formatters.price(c.listingPriceCents),
+                          ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
                           style: text.bodySmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (!c.isBuyer) ...[
-                        const SizedBox(width: AppSpacing.xs),
-                        ChatTag(t.inboxYourListing),
-                      ],
-                      if (statusLabel != null) ...[
-                        const SizedBox(width: AppSpacing.xs),
-                        ChatTag(statusLabel),
-                      ],
+                      if (!c.isBuyer) ...[const SizedBox(width: AppSpacing.xs), ChatTag(t.inboxYourListing)],
+                      if (statusLabel != null) ...[const SizedBox(width: AppSpacing.xs), ChatTag(statusLabel)],
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Row(
                     children: [
+                      if (offer) ...[
+                        const Icon(Icons.local_offer_outlined, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                      ],
                       Expanded(
                         child: Text(
                           preview,

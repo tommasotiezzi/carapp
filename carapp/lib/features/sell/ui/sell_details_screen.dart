@@ -10,6 +10,7 @@ import '../../../core/geo/italian_capitals.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/thousands_formatter.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../feed/data/feed_filters.dart';
 import '../../onboarding/data/catalog_repository.dart';
@@ -21,6 +22,8 @@ import '../data/sell_repository.dart';
 import '../state/sell_controller.dart';
 import 'sell_labels.dart';
 
+export '../../../core/utils/thousands_formatter.dart';
+
 /// Contact data and dealer membership of the seller (one request each).
 final sellerProfileProvider = FutureProvider.autoDispose<SellerProfile>(
   (ref) => ref.watch(sellRepositoryProvider).sellerProfile(),
@@ -31,31 +34,30 @@ final sellerAgeConsentProvider = FutureProvider.autoDispose<bool>(
   (ref) => ref.watch(sellRepositoryProvider).hasSellerAgeConsent(),
 );
 
-/// "1234567" -> "1.234.567" while typing.
-class ThousandsFormatter extends TextInputFormatter {
-  const ThousandsFormatter();
+/// An online listing being edited ("Modifica annuncio"): the same form,
+/// without media and age tick, saved through [onSave] ([newPhone]: the
+/// WhatsApp number to save in the profile, when it changed).
+class ListingEdit {
+  const ListingEdit({
+    required this.listingId,
+    required this.categoryId,
+    required this.details,
+    required this.onSave,
+  });
 
-  static String format(int value) =>
-      value.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
-
-  static int? parse(String text) => int.tryParse(text.replaceAll(RegExp(r'\D'), ''));
-
-  @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return const TextEditingValue();
-    final text = format(int.parse(digits.length > 12 ? digits.substring(0, 12) : digits));
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
+  final String listingId;
+  final String categoryId;
+  final SellDetails details;
+  final Future<void> Function(SellDetails details, {String? newPhone}) onSave;
 }
 
 /// `/sell/shots/details` (screen 4): the listing data while the video is
-/// made and uploaded; "Pubblica annuncio" waits for it if needed.
+/// made and uploaded; "Pubblica annuncio" waits for it if needed. With
+/// [edit], the data of an online listing ("Salva modifiche").
 class SellDetailsScreen extends ConsumerStatefulWidget {
-  const SellDetailsScreen({super.key});
+  const SellDetailsScreen({super.key, this.edit});
+
+  final ListingEdit? edit;
 
   @override
   ConsumerState<SellDetailsScreen> createState() => _SellDetailsScreenState();
@@ -86,9 +88,10 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    final draft = ref.read(sellControllerProvider).draft;
-    _d = draft?.details ?? SellDetails.empty;
-    _categoryId = draft?.categoryId ?? 'car';
+    final edit = widget.edit;
+    final draft = edit == null ? ref.read(sellControllerProvider).draft : null;
+    _d = edit?.details ?? draft?.details ?? SellDetails.empty;
+    _categoryId = edit?.categoryId ?? draft?.categoryId ?? 'car';
     String n(int? v, {bool thousands = false}) =>
         v == null ? '' : (thousands ? ThousandsFormatter.format(v) : '$v');
     _year.text = n(_d.year);
@@ -129,6 +132,7 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
   /// Every change is kept in the draft (saved on the phone shortly after).
   void _update(SellDetails Function(SellDetails d) change) {
     setState(() => _d = change(_d));
+    if (widget.edit != null) return; // saved only on "Salva modifiche"
     final controller = ref.read(sellControllerProvider.notifier);
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 400), () => controller.updateDetails(_d));
@@ -137,7 +141,7 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
   void _prefill(SellerProfile p) {
     if (_prefilled) return;
     _prefilled = true;
-    final home = ref.read(homeProvinceProvider);
+    final home = widget.edit == null ? ref.read(homeProvinceProvider) : null;
     if (_d.province == null && home != null) {
       _d = _d.copyWith(province: home);
       if (_city.text.isEmpty) {
@@ -160,6 +164,43 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
   bool get _yearValid => _d.year != null && _d.year! >= 1950 && _d.year! <= _maxYear;
 
   bool _phoneValid(String text) => RegExp(r'^\+?[\d\s]{8,16}$').hasMatch(text.trim());
+
+  /// The WhatsApp number to save in the profile: private seller, WhatsApp
+  /// on, and a number that is new or not public yet.
+  String? _newPhone(SellerProfile? profile) {
+    final phoneNeeded = profile?.dealerId == null && _d.whatsapp;
+    return phoneNeeded && (_phone.text.trim() != (profile?.phone ?? '') || !(profile?.whatsappPublic ?? false))
+        ? _phone.text.trim()
+        : null;
+  }
+
+  Future<void> _saveEdit(SellerProfile? profile) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final phoneNeeded = profile?.dealerId == null && _d.whatsapp;
+    if (!_d.isComplete || !_yearValid || (phoneNeeded && !_phoneValid(_phone.text))) {
+      setState(() => _showErrors = true);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(t.detailsFixFields)));
+      return;
+    }
+    setState(() => _publishing = true);
+    try {
+      await widget.edit!.onSave(_d, newPhone: _newPhone(profile));
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(t.editListingSaved)));
+      context.pop(true);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _publishing = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(t.myListingError)));
+    }
+  }
 
   Future<void> _publish(SellerProfile? profile, bool needsAgeTick) async {
     final t = AppLocalizations.of(context);
@@ -185,10 +226,7 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
 
     setState(() => _publishing = true);
     try {
-      final newPhone =
-          phoneNeeded && (_phone.text.trim() != (profile?.phone ?? '') || !(profile?.whatsappPublic ?? false))
-          ? _phone.text.trim()
-          : null;
+      final newPhone = _newPhone(profile);
       final id = await controller.publish(
         dealerId: profile?.dealerId,
         newPhone: newPhone,
@@ -218,13 +256,14 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final editing = widget.edit != null;
     final s = ref.watch(sellControllerProvider);
     // No draft: just published (this page is leaving), or discarded.
-    if (s.draft == null) return const Scaffold(backgroundColor: AppColors.surface);
+    if (!editing && s.draft == null) return const Scaffold(backgroundColor: AppColors.surface);
     final profile = ref.watch(sellerProfileProvider).value;
     if (profile != null) _prefill(profile);
     final private = profile?.dealerId == null;
-    final needsAgeTick = private && ref.watch(sellerAgeConsentProvider).value == false;
+    final needsAgeTick = !editing && private && ref.watch(sellerAgeConsentProvider).value == false;
     final catalog = ref.watch(catalogProvider).value;
     final makes = ref.watch(makesProvider(_categoryId)).value ?? const <Make>[];
     final makeName = makes.where((m) => m.id == _d.makeId).firstOrNull?.name;
@@ -239,7 +278,9 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: _publishing
               ? null
-              : () => context.canPop() ? context.pop() : context.go(AppRoutes.sellShots),
+              : () => context.canPop()
+                  ? context.pop()
+                  : context.go(editing ? AppRoutes.profile : AppRoutes.sellShots),
         ),
       ),
       body: GestureDetector(
@@ -247,9 +288,18 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(AppSpacing.page, 0, AppSpacing.page, AppSpacing.xxl),
           children: [
-            Text(t.detailsTitle, style: text.headlineSmall),
+            Text(editing ? t.editListingTitle : t.detailsTitle, style: text.headlineSmall),
             const SizedBox(height: AppSpacing.s),
-            _MediaProgress(state: s, onRetry: () => ref.read(sellControllerProvider.notifier).startMedia()),
+            if (editing) ...[
+              Text(t.editListingNote, style: text.bodySmall),
+              const SizedBox(height: AppSpacing.s),
+              OutlinedButton.icon(
+                onPressed: () => context.push(AppRoutes.editMediaPath(widget.edit!.listingId)),
+                icon: const Icon(Icons.photo_library_outlined, size: 18),
+                label: Text(t.editListingMedia),
+              ),
+            ] else
+              _MediaProgress(state: s, onRetry: () => ref.read(sellControllerProvider.notifier).startMedia()),
             const SizedBox(height: AppSpacing.xl),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,7 +509,9 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.s, AppSpacing.page, AppSpacing.m),
           child: FilledButton(
-            onPressed: _publishing || profile == null ? null : () => _publish(profile, needsAgeTick),
+            onPressed: _publishing || profile == null
+                ? null
+                : () => editing ? _saveEdit(profile) : _publish(profile, needsAgeTick),
             child: _publishing
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
@@ -469,10 +521,10 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       ),
                       const SizedBox(width: AppSpacing.s),
-                      Text(t.detailsPublishing),
+                      Text(editing ? t.editListingSaving : t.detailsPublishing),
                     ],
                   )
-                : Text(t.detailsPublish),
+                : Text(editing ? t.editListingSave : t.detailsPublish),
           ),
         ),
       ),
@@ -769,13 +821,20 @@ class _PickerField extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
+        // Label always on top: with an empty value it would otherwise sit
+        // on "Scegli" (two texts in the same spot).
         decoration: InputDecoration(
           labelText: label,
           errorText: error,
+          floatingLabelBehavior: FloatingLabelBehavior.always,
           suffixIcon: const Icon(Icons.expand_more),
         ),
-        isEmpty: value == null,
-        child: Text(value ?? t.detailsChoose, maxLines: 1, overflow: TextOverflow.ellipsis),
+        child: Text(
+          value ?? t.detailsChoose,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: value == null ? const TextStyle(color: AppColors.inkMuted) : null,
+        ),
       ),
     );
   }

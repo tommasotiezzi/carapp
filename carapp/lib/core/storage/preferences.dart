@@ -20,4 +20,6 @@ class PrefKeys {
   static const recentSearches = 'recent_searches_v1';
   static const pendingConsents = 'pending_consents_v1';
   static const sellDraft = 'sell_draft_v1';
+  /// "Foto e video" of an online listing being changed (one at a time).
+  static const mediaEditDraft = 'media_edit_draft';
 }
