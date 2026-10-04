@@ -1209,6 +1209,25 @@ class AppLocalizationsIt extends AppLocalizations {
   String get profileDealerPage => 'Vedi la pagina del concessionario';
 
   @override
+  String get editListingTitle => 'Modifica annuncio';
+
+  @override
+  String get editListingNote =>
+      'Video e foto restano quelli pubblicati. Se abbassi il prezzo, chi l\'ha salvato lo vede.';
+
+  @override
+  String get editListingSave => 'Salva modifiche';
+
+  @override
+  String get editListingSaving => 'Salvataggio…';
+
+  @override
+  String get editListingSaved => 'Modifiche salvate';
+
+  @override
+  String get editListingNotFound => 'Questo annuncio non si può modificare.';
+
+  @override
   String get inboxTitle => 'Messaggi';
 
   @override

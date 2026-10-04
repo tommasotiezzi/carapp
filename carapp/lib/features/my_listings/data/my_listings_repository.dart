@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_client.dart';
+import '../../sell/data/sell_draft.dart';
 
 /// One of the user's listings (own, or their dealer's), from
 /// `my_listings()`: what the seller may know about it.
@@ -136,6 +137,27 @@ class MyListingsRepository {
 
   Future<void> setStatus(String listingId, String status) =>
       _client.from('listings').update({'status': status}).eq('id', listingId);
+
+  /// The listing's data as the sell form edits it ("Modifica annuncio").
+  /// null when it is not the user's (RLS) or does not exist.
+  Future<({String categoryId, String status, SellDetails details})?> fetchForEdit(String listingId) async {
+    final row = await _client.from('listings').select(editColumns).eq('id', listingId).maybeSingle();
+    if (row == null) return null;
+    return (
+      categoryId: row['category_id'] as String,
+      status: row['status'] as String,
+      details: SellDetails.fromJson(row),
+    );
+  }
+
+  static const editColumns = 'category_id, status, make_id, model_id, version, year, mileage_km, price_cents, '
+      'fuel_type, transmission, power_kw, euro_class, owners_count, color, has_service_history, description, '
+      'city, province, whatsapp_enabled, attributes';
+
+  /// Saves the edited data (the `protect_listing_fields` trigger allows
+  /// data and price; never media, dates or status).
+  Future<void> updateDetails(String listingId, SellDetails details) =>
+      _client.from('listings').update(details.toListingRow()).eq('id', listingId);
 
   Future<void> updatePrice(String listingId, int priceCents) =>
       _client.from('listings').update({'price_cents': priceCents}).eq('id', listingId);

@@ -20,6 +20,7 @@ import '../../features/sell/ui/sell_done_screen.dart';
 import '../../features/sell/ui/sell_start_screen.dart';
 import '../../features/sell/ui/shots_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
+import '../../features/my_listings/ui/edit_listing_screen.dart';
 import '../media/shared_video.dart';
 import '../widgets/placeholder_screen.dart';
 import 'main_shell.dart';
@@ -128,6 +129,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => SellDoneScreen(listingId: state.pathParameters['id']!),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.editListing,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => EditListingScreen(listingId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.listing,

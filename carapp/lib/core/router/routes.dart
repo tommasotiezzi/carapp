@@ -18,6 +18,7 @@ class AppRoutes {
   static const sellDetails = '/sell/shots/details';
   static const sellDone = '/sell/done/:id';
   static const listing = '/listing/:id';
+  static const editListing = '/listing/:id/edit';
   static const chat = '/chat/:id';
   static const newChat = '/chat/new/:listingId';
   static const archivedChats = '/chats/archived';
@@ -30,6 +31,7 @@ class AppRoutes {
   static const shareShort = '/l/:id';
 
   static String listingPath(String id) => '/listing/$id';
+  static String editListingPath(String id) => '/listing/$id/edit';
   static String chatPath(String id) => '/chat/$id';
 
   /// [step] null = the first step still missing; [single] = retake one

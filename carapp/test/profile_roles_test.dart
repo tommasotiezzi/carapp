@@ -6,9 +6,14 @@ import 'package:carapp/features/listing/data/listing_detail.dart';
 import 'package:carapp/features/listing/state/listing_providers.dart';
 import 'package:carapp/features/listing/ui/listing_screen.dart';
 import 'package:carapp/features/my_listings/data/my_listings_repository.dart';
+import 'package:carapp/features/my_listings/ui/edit_listing_screen.dart';
+import 'package:carapp/features/onboarding/data/catalog_repository.dart';
 import 'package:carapp/features/onboarding/state/onboarding_controller.dart';
 import 'package:carapp/features/profile/ui/profile_screen.dart';
 import 'package:carapp/features/saved/data/favorites_repository.dart';
+import 'package:carapp/features/search/data/catalog.dart';
+import 'package:carapp/features/sell/data/sell_draft.dart';
+import 'package:carapp/features/sell/data/sell_repository.dart';
 import 'package:carapp/features/saved/state/saved_controller.dart';
 import 'package:carapp/features/settings/data/account_repository.dart';
 import 'package:carapp/features/settings/state/settings_providers.dart';
@@ -21,6 +26,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'sell_test.dart' show FakeSellRepository;
 
 const _me = 'me';
 
@@ -41,6 +48,15 @@ class FakeMyListingsRepository implements MyListingsRepository {
 
   @override
   Future<void> updatePrice(String listingId, int priceCents) async => prices.add((listingId, priceCents));
+
+  ({String categoryId, String status, SellDetails details})? editable;
+  final updated = <(String, SellDetails)>[];
+
+  @override
+  Future<({String categoryId, String status, SellDetails details})?> fetchForEdit(String listingId) async => editable;
+
+  @override
+  Future<void> updateDetails(String listingId, SellDetails details) async => updated.add((listingId, details));
 
   @override
   Future<int> offerToSavers(String listingId, int priceCents) async {
@@ -341,6 +357,114 @@ void main() {
     });
   });
 
+  testWidgets('edit: the sell form filled with the listing, saved with one update', (tester) async {
+    tester.view.physicalSize = const Size(430, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    repo.editable = (
+      categoryId: 'car',
+      status: 'active',
+      details: SellDetails.fromJson({
+        'make_id': 'vw',
+        'model_id': 'golf',
+        'year': 2019,
+        'mileage_km': 78400,
+        'price_cents': 1490000,
+        'fuel_type': 'diesel',
+        'city': 'Milano',
+        'province': 'MI',
+        'whatsapp_enabled': false,
+        'attributes': {'novice_ok': true},
+      }),
+    );
+    final router = GoRouter(routes: [
+      GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('profile'))),
+      GoRoute(path: '/edit', builder: (_, _) => const EditListingScreen(listingId: 'l1')),
+    ]);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        supabaseProvider.overrideWithValue(SupabaseClient(
+          'https://test.supabase.co',
+          'anon',
+          authOptions: const AuthClientOptions(autoRefreshToken: false),
+        )),
+        homeProvinceProvider.overrideWithValue('SI'),
+        currentUserIdProvider.overrideWithValue(_me),
+        appConfigProvider.overrideWith((ref) async => AppConfig.empty),
+        myListingsRepositoryProvider.overrideWithValue(repo),
+        sellRepositoryProvider.overrideWithValue(FakeSellRepository()),
+        catalogProvider.overrideWith((ref) async => Catalog(
+              makes: const [CatalogMake(id: 'vw', name: 'Volkswagen', categoryId: 'car')],
+              models: const [CatalogModel(id: 'golf', makeId: 'vw', name: 'Golf')],
+            )),
+        makesProvider('car').overrideWith((ref) async => const [Make(id: 'vw', name: 'Volkswagen', categoryId: 'car')]),
+      ],
+      child: MaterialApp.router(
+        theme: AppTheme.light(),
+        routerConfig: router,
+        locale: const Locale('it'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+      ),
+    ));
+    await tester.pumpAndSettle();
+    router.push('/edit');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Modifica annuncio'), findsOneWidget);
+    expect(find.textContaining('Video e foto restano'), findsOneWidget);
+    expect(find.text('Volkswagen'), findsOneWidget);
+    expect(find.text('Golf'), findsOneWidget);
+    expect(find.text('78.400'), findsOneWidget);
+    expect(find.text('14.900'), findsOneWidget);
+    expect(find.text('Milano'), findsOneWidget, reason: 'not replaced by the home capital');
+    expect(find.textContaining('Stiamo preparando'), findsNothing);
+    expect(find.textContaining('Ho almeno 18 anni'), findsNothing);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Chilometri'), '81000');
+    await tester.enterText(find.byType(TextField).at(2), '13900');
+    await tester.tap(find.text('Salva modifiche'));
+    await tester.pumpAndSettle();
+
+    final (id, saved) = repo.updated.single;
+    expect(id, 'l1');
+    final row = saved.toListingRow();
+    expect(row['mileage_km'], 81000);
+    expect(row['price_cents'], 1390000);
+    expect(row['province'], 'MI');
+    expect(row['attributes'], {'novice_ok': true});
+    expect(find.text('profile'), findsOneWidget);
+    expect(find.text('Modifiche salvate'), findsOneWidget);
+  });
+
+  testWidgets('edit: a listing that is not the user\'s', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        myListingsRepositoryProvider.overrideWithValue(repo),
+      ],
+      child: const MaterialApp(
+        locale: Locale('it'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: EditListingScreen(listingId: 'x'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Questo annuncio non si può modificare.'), findsOneWidget);
+  });
+
   testWidgets('own listing page: the offer to the savers in the bar', (tester) async {
     final container = ProviderContainer(overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
@@ -383,6 +507,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text("Offerta a chi l'ha salvato (12)"), findsOneWidget);
+    expect(find.byTooltip('Modifica annuncio'), findsOneWidget);
     await tester.tap(find.text("Offerta a chi l'ha salvato (12)"));
     await tester.pumpAndSettle();
     expect(find.text('Prezzo riservato'), findsOneWidget);

@@ -2152,6 +2152,42 @@ abstract class AppLocalizations {
   /// **'Vedi la pagina del concessionario'**
   String get profileDealerPage;
 
+  /// No description provided for @editListingTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica annuncio'**
+  String get editListingTitle;
+
+  /// No description provided for @editListingNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Video e foto restano quelli pubblicati. Se abbassi il prezzo, chi l\'ha salvato lo vede.'**
+  String get editListingNote;
+
+  /// No description provided for @editListingSave.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva modifiche'**
+  String get editListingSave;
+
+  /// No description provided for @editListingSaving.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvataggio…'**
+  String get editListingSaving;
+
+  /// No description provided for @editListingSaved.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifiche salvate'**
+  String get editListingSaved;
+
+  /// No description provided for @editListingNotFound.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo annuncio non si può modificare.'**
+  String get editListingNotFound;
+
   /// No description provided for @inboxTitle.
   ///
   /// In it, this message translates to:

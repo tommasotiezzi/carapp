@@ -244,6 +244,7 @@ class _Menu extends ConsumerWidget {
     }
 
     final items = <(String, String)>[
+      if (l.isActive || l.status == 'sold') ('edit', t.editListingTitle),
       if (l.isActive) ('price', t.myListingEditPrice),
       if (l.isActive) ('sold', t.myListingMarkSold),
       if (l.status == 'sold') ('relist', t.myListingRelist),
@@ -257,6 +258,8 @@ class _Menu extends ConsumerWidget {
       onSelected: (value) {
         final controller = ref.read(myListingsProvider.notifier);
         switch (value) {
+          case 'edit':
+            context.push(AppRoutes.editListingPath(l.id));
           case 'price':
             showPriceSheet(context, l);
           case 'sold':

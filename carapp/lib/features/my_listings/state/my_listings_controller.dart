@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/supabase/supabase_client.dart';
 import '../../feed/state/feed_controller.dart';
+import '../../listing/state/listing_providers.dart';
+import '../../sell/data/sell_draft.dart';
 import '../data/my_listings_repository.dart';
 
 /// The user's listings, newest first; empty for guests. Loaded once per
@@ -49,6 +51,16 @@ class MyListingsController extends AsyncNotifier<List<MyListing>> {
     final l = _byId(listingId);
     if (l != null) _replace(l.copyWith(priceCents: priceCents));
     ref.invalidate(feedControllerProvider);
+  }
+
+  /// "Salva modifiche": the listing's data; the list, the listing page and
+  /// the feed are read again.
+  Future<void> saveDetails(String listingId, SellDetails details) async {
+    await _repo.updateDetails(listingId, details);
+    if (!ref.mounted) return;
+    ref.invalidate(listingDetailProvider(listingId));
+    ref.invalidate(feedControllerProvider);
+    await refresh();
   }
 
   /// Returns how many people got it. Throws [OfferException].

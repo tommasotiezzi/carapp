@@ -302,8 +302,15 @@ class _ContactBar extends ConsumerWidget {
             children: [
               Text(Formatters.price(listing.priceCents), style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(width: AppSpacing.l),
-              if (own)
-                Expanded(child: _OwnListingAction(listingId: listing.id))
+              if (own) ...[
+                IconButton.outlined(
+                  tooltip: t.editListingTitle,
+                  onPressed: () => context.push(AppRoutes.editListingPath(listing.id)),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                const SizedBox(width: AppSpacing.s),
+                Expanded(child: _OwnListingAction(listingId: listing.id)),
+              ]
               else ...[
                 if (whatsapp) ...[
                   OutlinedButton(
