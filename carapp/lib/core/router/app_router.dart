@@ -21,6 +21,8 @@ import '../../features/sell/ui/sell_start_screen.dart';
 import '../../features/sell/ui/shots_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
 import '../../features/my_listings/ui/edit_listing_screen.dart';
+import '../../features/sell/state/sell_controller.dart' show mediaEditControllerProvider;
+import '../../features/sell/ui/edit_media_screen.dart';
 import '../media/shared_video.dart';
 import '../widgets/placeholder_screen.dart';
 import 'main_shell.dart';
@@ -129,6 +131,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => SellDoneScreen(listingId: state.pathParameters['id']!),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.editMedia,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => EditMediaScreen(listingId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.editMediaCapture,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => CaptureScreen(
+          provider: mediaEditControllerProvider,
+          stepId: state.uri.queryParameters['step'],
+          photos: state.uri.queryParameters['photos'] == '1',
+          single: state.uri.queryParameters['single'] == '1',
+        ),
       ),
       GoRoute(
         path: AppRoutes.editListing,

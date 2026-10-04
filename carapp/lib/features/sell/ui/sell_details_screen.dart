@@ -290,9 +290,15 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
           children: [
             Text(editing ? t.editListingTitle : t.detailsTitle, style: text.headlineSmall),
             const SizedBox(height: AppSpacing.s),
-            if (editing)
-              Text(t.editListingNote, style: text.bodySmall)
-            else
+            if (editing) ...[
+              Text(t.editListingNote, style: text.bodySmall),
+              const SizedBox(height: AppSpacing.s),
+              OutlinedButton.icon(
+                onPressed: () => context.push(AppRoutes.editMediaPath(widget.edit!.listingId)),
+                icon: const Icon(Icons.photo_library_outlined, size: 18),
+                label: Text(t.editListingMedia),
+              ),
+            ] else
               _MediaProgress(state: s, onRetry: () => ref.read(sellControllerProvider.notifier).startMedia()),
             const SizedBox(height: AppSpacing.xl),
             Row(

@@ -2161,7 +2161,7 @@ abstract class AppLocalizations {
   /// No description provided for @editListingNote.
   ///
   /// In it, this message translates to:
-  /// **'Video e foto restano quelli pubblicati. Se abbassi il prezzo, chi l\'ha salvato lo vede.'**
+  /// **'Se abbassi il prezzo, chi l\'ha salvato lo vede. Video e foto si cambiano a parte.'**
   String get editListingNote;
 
   /// No description provided for @editListingSave.
@@ -2187,6 +2187,90 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Questo annuncio non si può modificare.'**
   String get editListingNotFound;
+
+  /// No description provided for @editMediaTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto e video'**
+  String get editMediaTitle;
+
+  /// No description provided for @editMediaSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'annuncio resta online: rifai il video o cambia le foto, poi salva.'**
+  String get editMediaSubtitle;
+
+  /// No description provided for @editMediaVideo.
+  ///
+  /// In it, this message translates to:
+  /// **'Video pubblicato'**
+  String get editMediaVideo;
+
+  /// No description provided for @editMediaReshoot.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai il video'**
+  String get editMediaReshoot;
+
+  /// No description provided for @editMediaReshootNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai le riprese: il nuovo video sostituisce quello online solo quando salvi.'**
+  String get editMediaReshootNote;
+
+  /// No description provided for @editMediaKeepVideo.
+  ///
+  /// In it, this message translates to:
+  /// **'Tieni il video pubblicato'**
+  String get editMediaKeepVideo;
+
+  /// No description provided for @editMediaSave.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva foto e video'**
+  String get editMediaSave;
+
+  /// No description provided for @editMediaSaving.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvataggio · {percent}%'**
+  String editMediaSaving(int percent);
+
+  /// No description provided for @editMediaSaved.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto e video aggiornati'**
+  String get editMediaSaved;
+
+  /// No description provided for @editMediaLeaveTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Uscire senza salvare?'**
+  String get editMediaLeaveTitle;
+
+  /// No description provided for @editMediaLeaveBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Le modifiche a foto e video andranno perse.'**
+  String get editMediaLeaveBody;
+
+  /// No description provided for @editMediaLeave.
+  ///
+  /// In it, this message translates to:
+  /// **'Esci'**
+  String get editMediaLeave;
+
+  /// No description provided for @editMediaStay.
+  ///
+  /// In it, this message translates to:
+  /// **'Resta'**
+  String get editMediaStay;
+
+  /// No description provided for @editListingMedia.
+  ///
+  /// In it, this message translates to:
+  /// **'Cambia foto e video'**
+  String get editListingMedia;
 
   /// No description provided for @inboxTitle.
   ///

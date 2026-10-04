@@ -10,23 +10,33 @@ import '../data/capture_step.dart';
 import '../data/sell_draft.dart';
 import '../data/sell_media.dart';
 import '../state/sell_controller.dart';
-import 'capture_screen.dart' show ShotImage;
+import '../data/sell_repository.dart';
+import 'capture_screen.dart' show ShotImage, ShotThumb;
 import 'sell_labels.dart';
+
+/// Opens the camera of the session (new listing or "Foto e video").
+typedef CapturePath = String Function({String? step, bool photos, bool single});
 
 /// `/sell/shots` (screen 3): every step with its shot, tap to retake or
 /// to add a missing one. "Crea il video" starts the video in the
-/// background and opens "Dati e prezzo".
+/// background and opens "Dati e prezzo". With [provider] =
+/// [mediaEditControllerProvider] it is "Foto e video" of an online
+/// listing: the video stays until it is shot again, "Salva foto e video".
 class ShotsScreen extends ConsumerWidget {
-  const ShotsScreen({super.key});
+  const ShotsScreen({super.key, this.provider});
+
+  final NotifierProvider<SellController, SellState>? provider;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final s = ref.watch(sellControllerProvider);
+    final p = provider ?? sellControllerProvider;
+    final s = ref.watch(p);
     final draft = s.draft;
     // No draft: just published (this page is leaving), or discarded.
     if (draft == null) return const Scaffold(backgroundColor: AppColors.surface);
+    final editing = draft.editing;
 
     final done = s.steps.where((step) => draft.shots.containsKey(step.id)).length;
     final missing = draft.missingIn(s.steps);
@@ -34,12 +44,29 @@ class ShotsScreen extends ConsumerWidget {
     final hasDefectsStep = s.steps.any((step) => step.id == 'defects');
     final blocker = missing.isNotEmpty
         ? t.shotsMissing(missing.map((step) => t.stepLabel(step.id)).join(', '))
-        : draft.videosIn(s.steps).isEmpty
+        : draft.videosIn(s.steps).isEmpty && !draft.keepsVideo
             ? t.shotsNeedVideo
             : null;
 
-    void capture(CaptureStep step) =>
-        context.push(AppRoutes.sellCapturePath(step: step.id, single: true));
+    String capturePath({String? step, bool photos = false, bool single = false}) => editing
+        ? AppRoutes.editMediaCapturePath(draft.id, step: step, photos: photos, single: single)
+        : AppRoutes.sellCapturePath(step: step, photos: photos, single: single);
+
+    void capture(CaptureStep step) => context.push(capturePath(step: step.id, single: true));
+
+    final steps = [
+      for (final step in s.steps) ...[
+        _StepTile(
+          step: step,
+          shot: draft.shots[step.id],
+          draftId: draft.id,
+          onCapture: () => capture(step),
+          onRetake: () => capture(step),
+          onDelete: step.required ? null : () => ref.read(p.notifier).removeShot(step.id),
+        ),
+        const SizedBox(height: AppSpacing.s),
+      ],
+    ];
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -47,30 +74,42 @@ class ShotsScreen extends ConsumerWidget {
         leading: IconButton(
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.sell),
+          onPressed: () => editing
+              ? Navigator.maybePop(context) // asks before dropping changes
+              : context.canPop()
+                  ? context.pop()
+                  : context.go(AppRoutes.sell),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(AppSpacing.page, 0, AppSpacing.page, AppSpacing.xl),
         children: [
-          Text(t.shotsTitle, style: text.headlineSmall),
+          Text(editing ? t.editMediaTitle : t.shotsTitle, style: text.headlineSmall),
           const SizedBox(height: AppSpacing.xs),
-          Text(t.shotsSubtitle(done, s.steps.length), style: text.bodyMedium),
+          Text(editing ? t.editMediaSubtitle : t.shotsSubtitle(done, s.steps.length), style: text.bodyMedium),
           const SizedBox(height: AppSpacing.l),
-          for (final step in s.steps) ...[
-            _StepTile(
-              step: step,
-              shot: draft.shots[step.id],
-              draftId: draft.id,
-              onCapture: () => capture(step),
-              onRetake: () => capture(step),
-              onDelete: step.required
-                  ? null
-                  : () => ref.read(sellControllerProvider.notifier).removeShot(step.id),
-            ),
-            const SizedBox(height: AppSpacing.s),
+          if (draft.keepsVideo)
+            _PublishedVideo(
+              draft: draft,
+              onReshoot: () => context.push(capturePath()),
+            )
+          else ...[
+            if (editing) ...[
+              Text(t.editMediaReshootNote, style: text.bodySmall),
+              const SizedBox(height: AppSpacing.s),
+            ],
+            ...steps,
+            if (editing)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => ref.read(p.notifier).keepPublishedVideo(),
+                  icon: const Icon(Icons.undo, size: 18),
+                  label: Text(t.editMediaKeepVideo),
+                ),
+              ),
           ],
-          if (hasDefectsStep && !draft.shots.containsKey('defects')) ...[
+          if (!editing && hasDefectsStep && !draft.shots.containsKey('defects')) ...[
             const SizedBox(height: AppSpacing.xs),
             Container(
               padding: const EdgeInsets.all(AppSpacing.m),
@@ -89,7 +128,7 @@ class ShotsScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.xl),
-          _Photos(draft: draft, slots: s.slots),
+          _Photos(draft: draft, slots: s.slots, provider: p, capturePath: capturePath),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -103,17 +142,21 @@ class ShotsScreen extends ConsumerWidget {
                 Text(blocker, style: text.bodySmall?.copyWith(color: AppColors.danger), textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.s),
               ],
-              FilledButton(
-                onPressed: ready
-                    ? () {
-                        ref.read(sellControllerProvider.notifier).startMedia();
-                        context.push(AppRoutes.sellDetails);
-                      }
-                    : null,
-                child: Text(t.shotsCreate),
-              ),
-              const SizedBox(height: AppSpacing.s),
-              Text(t.shotsCreateNote, style: text.bodySmall, textAlign: TextAlign.center),
+              if (editing)
+                _SaveEditButton(provider: p, enabled: ready && draft.hasEdits)
+              else ...[
+                FilledButton(
+                  onPressed: ready
+                      ? () {
+                          ref.read(p.notifier).startMedia();
+                          context.push(AppRoutes.sellDetails);
+                        }
+                      : null,
+                  child: Text(t.shotsCreate),
+                ),
+                const SizedBox(height: AppSpacing.s),
+                Text(t.shotsCreateNote, style: text.bodySmall, textAlign: TextAlign.center),
+              ],
             ],
           ),
         ),
@@ -122,13 +165,127 @@ class ShotsScreen extends ConsumerWidget {
   }
 }
 
+/// Editing, video kept: the online cover and "Rifai il video".
+class _PublishedVideo extends StatelessWidget {
+  const _PublishedVideo({required this.draft, required this.onReshoot});
+
+  final SellDraft draft;
+  final VoidCallback onReshoot;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final cover = draft.publishedCover;
+    return Material(
+      key: const ValueKey('published-video'),
+      color: AppColors.surfaceAlt,
+      borderRadius: BorderRadius.circular(AppRadius.m),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.m),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.s),
+              child: Container(
+                width: 52,
+                height: 80,
+                color: AppColors.placeholder,
+                child: cover == null
+                    ? const Icon(Icons.movie_outlined, color: AppColors.inkMuted)
+                    : ShotThumb(
+                        draftId: draft.id,
+                        shot: Shot.remote(stepId: 'cover', mediaId: 'cover', path: cover),
+                        width: 52,
+                      ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.m),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t.editMediaVideo, style: text.titleSmall),
+                  const SizedBox(height: AppSpacing.xs),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
+                    onPressed: onReshoot,
+                    icon: const Icon(Icons.videocam_outlined, size: 18),
+                    label: Text(t.editMediaReshoot),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Salva foto e video": makes the new video if any, uploads what changed,
+/// puts it online, then leaves.
+class _SaveEditButton extends ConsumerStatefulWidget {
+  const _SaveEditButton({required this.provider, required this.enabled});
+
+  final NotifierProvider<SellController, SellState> provider;
+  final bool enabled;
+
+  @override
+  ConsumerState<_SaveEditButton> createState() => _SaveEditButtonState();
+}
+
+class _SaveEditButtonState extends ConsumerState<_SaveEditButton> {
+  bool _saving = false;
+
+  Future<void> _save() async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final controller = ref.read(widget.provider.notifier);
+    setState(() => _saving = true);
+    try {
+      await controller.applyEdit();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(t.editMediaSaved)));
+      navigator.pop();
+    } on PublishException catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(switch (e.failure) {
+            PublishFailure.notEditable => t.editListingNotFound,
+            PublishFailure.missingMedia => t.publishErrorMedia,
+            PublishFailure.network => t.publishErrorNetwork,
+            _ => t.publishError,
+          }),
+        ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final progress = ref.watch(widget.provider.select((s) => s.progress));
+    return FilledButton(
+      onPressed: widget.enabled && !_saving ? _save : null,
+      child: Text(_saving ? t.editMediaSaving((progress * 100).round()) : t.editMediaSave),
+    );
+  }
+}
+
 /// The carousel photos, all optional: one tile per [PhotoSlot] (taken
 /// with the guided camera or picked from the gallery), then "Altre foto".
 class _Photos extends ConsumerWidget {
-  const _Photos({required this.draft, required this.slots});
+  const _Photos({required this.draft, required this.slots, required this.provider, required this.capturePath});
 
   final SellDraft draft;
   final List<PhotoSlot> slots;
+  final NotifierProvider<SellController, SellState> provider;
+  final CapturePath capturePath;
 
   static const _extraSize = 76.0;
 
@@ -145,7 +302,7 @@ class _Photos extends ConsumerWidget {
   Future<void> _slotActions(BuildContext context, WidgetRef ref, PhotoSlot slot) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final controller = ref.read(sellControllerProvider.notifier);
+    final controller = ref.read(provider.notifier);
     final taken = draft.photoFor(slot.id);
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -180,7 +337,7 @@ class _Photos extends ConsumerWidget {
     if (!context.mounted || choice == null) return;
     switch (choice) {
       case 'camera':
-        context.push(AppRoutes.sellCapturePath(step: slot.id, photos: true, single: true));
+        context.push(capturePath(step: slot.id, photos: true, single: true));
       case 'delete':
         await controller.removePhoto(taken!.file);
       case 'gallery':
@@ -196,7 +353,7 @@ class _Photos extends ConsumerWidget {
   Future<void> _addExtra(BuildContext context, WidgetRef ref) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final controller = ref.read(sellControllerProvider.notifier);
+    final controller = ref.read(provider.notifier);
     final room = SellDraft.maxExtras - draft.extraPhotos.length;
 
     final source = await showModalBottomSheet<String>(
@@ -232,7 +389,7 @@ class _Photos extends ConsumerWidget {
 
   Future<void> _removeExtra(BuildContext context, WidgetRef ref, Shot shot) async {
     final t = AppLocalizations.of(context);
-    final controller = ref.read(sellControllerProvider.notifier);
+    final controller = ref.read(provider.notifier);
     final remove = await showModalBottomSheet<bool>(
       context: context,
       builder: (context) => SafeArea(
@@ -264,7 +421,7 @@ class _Photos extends ConsumerWidget {
         const SizedBox(height: AppSpacing.m),
         if (anyMissing) ...[
           OutlinedButton.icon(
-            onPressed: () => context.push(AppRoutes.sellCapturePath(photos: true)),
+            onPressed: () => context.push(capturePath(photos: true)),
             icon: const Icon(Icons.photo_camera_outlined),
             label: Text(t.photosShootGuided),
           ),
@@ -306,7 +463,7 @@ class _Photos extends ConsumerWidget {
                     width: _extraSize,
                     height: _extraSize,
                     color: AppColors.placeholder,
-                    child: ShotImage(draftId: draft.id, file: shot.file, width: _extraSize),
+                    child: ShotThumb(draftId: draft.id, shot: shot, width: _extraSize),
                   ),
                 ),
               ),
@@ -369,7 +526,7 @@ class _SlotTile extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppRadius.s),
                         child: ColoredBox(
                           color: AppColors.placeholder,
-                          child: ShotImage(draftId: draftId, file: s.file, width: 120),
+                          child: ShotThumb(draftId: draftId, shot: s, width: 120),
                         ),
                       ),
                       const Positioned(

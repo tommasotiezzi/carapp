@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/storage/preferences.dart';
 import '../../feed/state/feed_controller.dart';
+import '../../listing/state/listing_providers.dart';
 import '../../my_listings/state/my_listings_controller.dart';
 import '../data/capture_step.dart';
 import '../data/sell_draft.dart';
@@ -60,8 +61,15 @@ class SellState {
 
 /// The listing being created, from the first shot to "è online".
 /// The draft is saved on the phone after every change, so the flow can be
-/// left and resumed at any point.
+/// left and resumed at any point. The same controller (another instance,
+/// [mediaEditControllerProvider]) changes the video and photos of a
+/// listing already online: [startEdit] / [applyEdit].
 class SellController extends Notifier<SellState> {
+  SellController({this.prefKey = PrefKeys.sellDraft});
+
+  /// Where the draft is kept on the phone.
+  final String prefKey;
+
   static const _uuid = Uuid();
   static const _renderShare = 0.7;
   static const thumbSize = Size(270, 480);
@@ -79,7 +87,7 @@ class SellController extends Notifier<SellState> {
 
   /// The draft left on this phone, if any (not loaded into the state).
   SellDraft? savedDraft() {
-    final raw = _prefs.getString(PrefKeys.sellDraft);
+    final raw = _prefs.getString(prefKey);
     if (raw == null) return null;
     try {
       return SellDraft.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -104,12 +112,111 @@ class SellController extends Notifier<SellState> {
     await _save(draft);
   }
 
+  /// "Foto e video" of an online listing: its photos as they are online,
+  /// its video kept until the steps are shot again. Resumes an edit of the
+  /// same listing left on the phone. Throws when the listing is not the
+  /// user's ([PublishFailure.notEditable]) or offline.
+  Future<void> startEdit(String listingId) async {
+    final saved = savedDraft();
+    if (saved != null && !(saved.editing && saved.id == listingId)) await discard();
+    var draft = saved != null && saved.editing && saved.id == listingId ? saved : null;
+    final categoryId = draft?.categoryId;
+    EditableMedia? media;
+    if (draft == null) {
+      media = await _repo.editableMedia(listingId);
+      if (media == null) throw const PublishException(PublishFailure.notEditable);
+    }
+    final category = categoryId ?? media!.categoryId;
+    final steps = await _repo.captureSteps(category);
+    if (!ref.mounted) return;
+    final slots = PhotoSlot.defaultsFor(category);
+    if (draft == null) {
+      final slotIds = {for (final s in slots) s.id};
+      final used = <String>{};
+      draft = SellDraft(
+        id: listingId,
+        categoryId: category,
+        createdAt: DateTime.now(),
+        editing: true,
+        publishedCover: media!.coverPath,
+        initialMediaIds: [for (final p in media.photos) p.id],
+        photos: [
+          for (final p in media.photos)
+            Shot.remote(
+              // One photo per slot; anything else is one of "Altre foto".
+              stepId: p.step != null && slotIds.contains(p.step) && used.add(p.step!) ? p.step! : PhotoSlot.extra,
+              mediaId: p.id,
+              path: p.path,
+            ),
+        ],
+      );
+    }
+    state = SellState(draft: draft, steps: steps, slots: slots);
+    await _save(draft);
+  }
+
+  /// Editing: back to the video that is online (the new clips go).
+  Future<void> keepPublishedVideo() async {
+    final draft = state.draft;
+    if (draft == null || !draft.editing || draft.shots.isEmpty) return;
+    try {
+      await _media.cancel(_renderTask(draft.id));
+    } catch (_) {}
+    final dir = await _media.draftDir(draft.id);
+    final files = [for (final s in draft.shots.values) ...[s.file, s.thumb], draft.video, draft.cover];
+    _set(draft.copyWith(shots: const {}, video: null, cover: null, renderedFrom: null, videoDurationMs: null));
+    await _deleteFiles(dir, files);
+    _restartIfRunning();
+  }
+
+  /// Editing: uploads what changed and puts it online
+  /// (`update-listing-media`); the phone copy goes. Throws
+  /// [PublishException].
+  Future<void> applyEdit() async {
+    final draft = state.draft;
+    if (draft == null || !draft.editing) throw const PublishException(PublishFailure.other);
+    if (!draft.readyIn(state.steps)) throw const PublishException(PublishFailure.incomplete);
+    try {
+      await prepareMedia();
+    } catch (e) {
+      if (kDebugMode) debugPrint('edit prepare: $e');
+      throw const PublishException(PublishFailure.network);
+    }
+
+    final current = state.draft ?? draft;
+    final carousel = current.carousel(state.slots);
+    try {
+      await _repo.applyMediaEdit(
+        listingId: current.id,
+        video: !current.keepsVideo,
+        videoDurationMs: current.videoDurationMs,
+        photos: [
+          for (final (i, p) in carousel.indexed)
+            p.isRemote ? {'media_id': p.mediaId!} : {'file': SellDraft.photoName(i, p)},
+        ],
+      );
+    } on PublishException {
+      rethrow;
+    } catch (e) {
+      if (kDebugMode) debugPrint('apply edit: $e');
+      throw const PublishException(PublishFailure.network);
+    }
+
+    await _prefs.remove(prefKey);
+    await _media.deleteDraftDir(current.id);
+    if (!ref.mounted) return;
+    state = SellState.empty;
+    ref.invalidate(listingDetailProvider(current.id));
+    ref.invalidate(feedControllerProvider);
+    ref.invalidate(myListingsProvider);
+  }
+
   /// Deletes the draft and its files (phone only; uploads left in the
   /// private drafts bucket are overwritten or cleaned by the next one).
   Future<void> discard() async {
     final saved = state.draft ?? savedDraft();
     _again = false;
-    await _prefs.remove(PrefKeys.sellDraft);
+    await _prefs.remove(prefKey);
     if (saved != null) {
       try {
         await _media.cancel(_renderTask(saved.id));
@@ -120,7 +227,7 @@ class SellController extends Notifier<SellState> {
   }
 
   Future<void> _save(SellDraft draft) =>
-      _prefs.setString(PrefKeys.sellDraft, jsonEncode(draft.toJson()));
+      _prefs.setString(prefKey, jsonEncode(draft.toJson()));
 
   void _set(SellDraft draft) {
     state = state.copyWith(draft: draft);
@@ -314,10 +421,14 @@ class SellController extends Notifier<SellState> {
   Map<String, (String, String, String)> _wanted(SellDraft d) {
     final photos = d.carousel(state.slots);
     return {
-      'video.mp4': (d.video!, 'video/mp4', d.renderedFrom!),
-      'cover.jpg': (d.cover!, 'image/jpeg', d.renderedFrom!),
+      if (!d.keepsVideo) ...{
+        'video.mp4': (d.video!, 'video/mp4', d.renderedFrom!),
+        'cover.jpg': (d.cover!, 'image/jpeg', d.renderedFrom!),
+      },
+      // Photos already online stay where they are.
       for (var i = 0; i < photos.length; i++)
-        'photo-${(i + 1).toString().padLeft(2, '0')}-${photos[i].stepId}.jpg':
+        if (!photos[i].isRemote)
+          SellDraft.photoName(i, photos[i]):
             (photos[i].file, 'image/jpeg', photos[i].file),
     };
   }
@@ -392,7 +503,7 @@ class SellController extends Notifier<SellState> {
     }
 
     // Online: the phone copy is no longer needed.
-    await _prefs.remove(PrefKeys.sellDraft);
+    await _prefs.remove(prefKey);
     await _media.deleteDraftDir(current.id);
     if (!ref.mounted) return current.id;
     state = SellState.empty;
@@ -424,3 +535,9 @@ class SellController extends Notifier<SellState> {
 }
 
 final sellControllerProvider = NotifierProvider<SellController, SellState>(SellController.new);
+
+/// "Foto e video" of a listing already online: its own draft, so a new
+/// listing in progress is never touched.
+final mediaEditControllerProvider = NotifierProvider<SellController, SellState>(
+  () => SellController(prefKey: PrefKeys.mediaEditDraft),
+);

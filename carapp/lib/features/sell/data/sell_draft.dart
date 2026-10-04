@@ -11,13 +11,26 @@ class Shot {
     required this.file,
     this.thumb,
     this.takenAt,
+    this.mediaId,
+    this.remotePath,
   });
+
+  /// A photo already online (`listing_media`), when editing a listing.
+  /// Its [file] is a placeholder name ("remote-<id>"), nothing local.
+  factory Shot.remote({required String stepId, required String mediaId, required String path}) =>
+      Shot(stepId: stepId, kind: ShotKind.photo, file: 'remote-$mediaId', mediaId: mediaId, remotePath: path);
 
   final String stepId;
   final ShotKind kind;
 
   /// File name in the draft folder (clip .mp4 or photo .jpg).
   final String file;
+
+  /// Set for a photo already online: its `listing_media` id and path.
+  final String? mediaId;
+  final String? remotePath;
+
+  bool get isRemote => mediaId != null;
 
   /// Small preview .jpg for the summary (videos); photos show themselves.
   final String? thumb;
@@ -29,9 +42,19 @@ class Shot {
         'file': file,
         'thumb': thumb,
         'taken_at': takenAt?.toIso8601String(),
+        'media_id': ?mediaId,
+        'remote_path': ?remotePath,
       };
 
-  Shot copyWithStep(String id) => Shot(stepId: id, kind: kind, file: file, thumb: thumb, takenAt: takenAt);
+  Shot copyWithStep(String id) => Shot(
+        stepId: id,
+        kind: kind,
+        file: file,
+        thumb: thumb,
+        takenAt: takenAt,
+        mediaId: mediaId,
+        remotePath: remotePath,
+      );
 
   factory Shot.fromJson(Map<String, dynamic> json) => Shot(
         stepId: json['step_id'] as String,
@@ -39,6 +62,8 @@ class Shot {
         file: json['file'] as String,
         thumb: json['thumb'] as String?,
         takenAt: DateTime.tryParse((json['taken_at'] as String?) ?? ''),
+        mediaId: json['media_id'] as String?,
+        remotePath: json['remote_path'] as String?,
       );
 }
 
@@ -235,6 +260,9 @@ class SellDraft {
     this.videoDurationMs,
     this.renderedFrom,
     this.uploaded = const {},
+    this.editing = false,
+    this.publishedCover,
+    this.initialMediaIds = const [],
   });
 
   final String id;
@@ -265,6 +293,39 @@ class SellDraft {
   /// Remote file name -> [mediaKey] it was uploaded from.
   final Map<String, String> uploaded;
 
+  /// "Foto e video" of a listing already online ([id] = the listing's id):
+  /// the photos start as the online ones ([Shot.isRemote]) and the video
+  /// stays unless the steps are shot again.
+  final bool editing;
+
+  /// Editing: the online cover (shown while the video is kept).
+  final String? publishedCover;
+
+  /// Editing: the online photos at the start, in order (to tell changes).
+  final List<String> initialMediaIds;
+
+  /// Editing without shooting the video again.
+  bool get keepsVideo => editing && shots.isEmpty;
+
+  /// Editing: something to save.
+  bool get hasEdits =>
+      shots.isNotEmpty ||
+      photos.any((p) => !p.isRemote) ||
+      !_sameList([for (final p in photos) p.mediaId!], initialMediaIds);
+
+  static bool _sameList(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// Name of a carousel photo in the uploads folder (position [index] in
+  /// the carousel, 0-based). See publish-listing / update-listing-media.
+  static String photoName(int index, Shot photo) =>
+      'photo-${(index + 1).toString().padLeft(2, '0')}-${photo.stepId}.jpg';
+
   /// What the video is made of: changes when a clip is added, retaken or
   /// removed (photos do not change the video).
   String get mediaKey => (shots.values
@@ -290,13 +351,15 @@ class SellDraft {
       ];
 
   /// Required steps still without a clip.
-  List<CaptureStep> missingIn(List<CaptureStep> steps) =>
-      [for (final s in steps) if (s.required && shots[s.id]?.kind != ShotKind.video) s];
+  /// Editing and keeping the video: none.
+  List<CaptureStep> missingIn(List<CaptureStep> steps) => keepsVideo
+      ? const []
+      : [for (final s in steps) if (s.required && shots[s.id]?.kind != ShotKind.video) s];
 
   /// Ready for "Crea il video": every required step done, at least one
-  /// video (the feed shows the video).
+  /// video (the feed shows the video). Editing: also when the video stays.
   bool readyIn(List<CaptureStep> steps) =>
-      missingIn(steps).isEmpty && videosIn(steps).isNotEmpty;
+      missingIn(steps).isEmpty && (keepsVideo || videosIn(steps).isNotEmpty);
 
   /// Steps renamed in the catalog (migration 15: 'front_three_quarter'
   /// became 'front').
@@ -328,7 +391,7 @@ class SellDraft {
     return copyWith(shots: clips, photos: [...photos, ...moved]);
   }
 
-  bool get videoUpToDate => video != null && cover != null && renderedFrom == mediaKey;
+  bool get videoUpToDate => keepsVideo || (video != null && cover != null && renderedFrom == mediaKey);
 
   static const _unset = Object();
 
@@ -355,6 +418,9 @@ class SellDraft {
             identical(videoDurationMs, _unset) ? this.videoDurationMs : videoDurationMs as int?,
         renderedFrom: identical(renderedFrom, _unset) ? this.renderedFrom : renderedFrom as String?,
         uploaded: uploaded ?? this.uploaded,
+        editing: editing,
+        publishedCover: publishedCover,
+        initialMediaIds: initialMediaIds,
       );
 
   Map<String, dynamic> toJson() => {
@@ -369,6 +435,9 @@ class SellDraft {
         'video_duration_ms': videoDurationMs,
         'rendered_from': renderedFrom,
         'uploaded': uploaded,
+        if (editing) 'editing': true,
+        'published_cover': ?publishedCover,
+        if (initialMediaIds.isNotEmpty) 'initial_media_ids': initialMediaIds,
       };
 
   factory SellDraft.fromJson(Map<String, dynamic> json) {
@@ -387,6 +456,9 @@ class SellDraft {
       videoDurationMs: (json['video_duration_ms'] as num?)?.toInt(),
       renderedFrom: json['rendered_from'] as String?,
       uploaded: Map<String, String>.from((json['uploaded'] as Map?) ?? const {}),
+      editing: (json['editing'] as bool?) ?? false,
+      publishedCover: json['published_cover'] as String?,
+      initialMediaIds: List<String>.from((json['initial_media_ids'] as List?) ?? const []),
     );
   }
 }

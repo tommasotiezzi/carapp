@@ -245,6 +245,7 @@ class _Menu extends ConsumerWidget {
 
     final items = <(String, String)>[
       if (l.isActive || l.status == 'sold') ('edit', t.editListingTitle),
+      if (l.isActive || l.status == 'sold') ('media', t.editListingMedia),
       if (l.isActive) ('price', t.myListingEditPrice),
       if (l.isActive) ('sold', t.myListingMarkSold),
       if (l.status == 'sold') ('relist', t.myListingRelist),
@@ -260,6 +261,8 @@ class _Menu extends ConsumerWidget {
         switch (value) {
           case 'edit':
             context.push(AppRoutes.editListingPath(l.id));
+          case 'media':
+            context.push(AppRoutes.editMediaPath(l.id));
           case 'price':
             showPriceSheet(context, l);
           case 'sold':

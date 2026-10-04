@@ -418,7 +418,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Modifica annuncio'), findsOneWidget);
-    expect(find.textContaining('Video e foto restano'), findsOneWidget);
+    expect(find.text('Cambia foto e video'), findsOneWidget);
     expect(find.text('Volkswagen'), findsOneWidget);
     expect(find.text('Golf'), findsOneWidget);
     expect(find.text('78.400'), findsOneWidget);

@@ -18,11 +18,13 @@ import 'package:carapp/features/sell/data/sell_repository.dart';
 import 'package:carapp/features/sell/state/sell_controller.dart';
 import 'package:carapp/features/sell/ui/sell_details_screen.dart';
 import 'package:carapp/features/sell/ui/sell_done_screen.dart';
+import 'package:carapp/features/sell/ui/edit_media_screen.dart';
 import 'package:carapp/features/sell/ui/sell_start_screen.dart';
 import 'package:carapp/features/sell/ui/shots_screen.dart';
 import 'package:carapp/features/sell/ui/silhouette.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -122,7 +124,36 @@ class FakeSellRepository implements SellRepository {
     if (failPublish != null) throw PublishException(failPublish!);
     published.add((draftId, videoDurationMs));
   }
+
+  EditableMedia? editable;
+  final edits = <({String listingId, bool video, int? durationMs, List<Map<String, String>> photos})>[];
+  PublishFailure? failEdit;
+
+  @override
+  Future<EditableMedia?> editableMedia(String listingId) async => editable;
+
+  @override
+  Future<void> applyMediaEdit({
+    required String listingId,
+    required bool video,
+    int? videoDurationMs,
+    required List<Map<String, String>> photos,
+  }) async {
+    if (failEdit != null) throw PublishException(failEdit!);
+    edits.add((listingId: listingId, video: video, durationMs: videoDurationMs, photos: photos));
+  }
 }
+
+const _online = EditableMedia(
+  categoryId: 'car',
+  coverPath: 'l9/cover.jpg',
+  photos: [
+    (id: 'm1', path: 'l9/a.jpg', step: 'front'),
+    (id: 'm2', path: 'l9/b.jpg', step: 'front'), // second for the same slot: "Altre foto"
+    (id: 'm3', path: 'l9/c.jpg', step: 'rear'),
+    (id: 'm4', path: 'l9/d.jpg', step: 'left_side'), // old step id: "Altre foto"
+  ],
+);
 
 const _complete = SellDetails(
   makeId: 'vw',
@@ -392,6 +423,113 @@ void main() {
       await ctrl().start('car');
       expect(st().draft!.shots.keys, ['front']);
       expect(st().draft!.shots['front']!.file, 'f.mp4');
+    });
+
+    group('edit media of an online listing', () {
+      SellController edit() => c.read(mediaEditControllerProvider.notifier);
+      SellState es() => c.read(mediaEditControllerProvider);
+
+      test('starts from the online photos, the video kept, nothing to save', () async {
+        repo.editable = _online;
+        await edit().startEdit('l9');
+        final d = es().draft!;
+        expect(d.editing, isTrue);
+        expect(d.keepsVideo, isTrue);
+        expect(d.missingIn(es().steps), isEmpty);
+        expect(d.readyIn(es().steps), isTrue);
+        expect(d.hasEdits, isFalse);
+        expect(d.photoFor('front')!.mediaId, 'm1');
+        expect(d.photoFor('rear')!.mediaId, 'm3');
+        expect(d.extraPhotos.map((p) => p.mediaId), ['m2', 'm4']);
+        expect(d.publishedCover, 'l9/cover.jpg');
+
+        // Not the user's.
+        repo.editable = null;
+        await expectLater(edit().startEdit('other'), throwsA(isA<PublishException>()));
+      });
+
+      test('photos only: no video, only the new photo uploaded, the carousel sent in order', () async {
+        repo.editable = _online;
+        await edit().startEdit('l9');
+        await edit().removePhoto(es().draft!.photoFor('rear')!.file);
+        await edit().addPhoto('trunk', await cameraFile('trunk.jpg'), fromCamera: false);
+        expect(es().draft!.hasEdits, isTrue);
+
+        await edit().applyEdit();
+        expect(media.renders, isEmpty);
+        expect(repo.uploads, ['photo-02-trunk.jpg']);
+        final sent = repo.edits.single;
+        expect(sent.listingId, 'l9');
+        expect(sent.video, isFalse);
+        expect(sent.photos, [
+          {'media_id': 'm1'},
+          {'file': 'photo-02-trunk.jpg'},
+          {'media_id': 'm2'},
+          {'media_id': 'm4'},
+        ]);
+        expect(es().draft, isNull);
+        expect(prefs.getString(PrefKeys.mediaEditDraft), isNull);
+      });
+
+      test('a new video: every step again, rendered and uploaded; partial = not ready', () async {
+        repo.editable = _online;
+        await edit().startEdit('l9');
+        await edit().addClip('front', await cameraFile('f.mp4'));
+        expect(es().draft!.keepsVideo, isFalse);
+        expect(es().draft!.readyIn(es().steps), isFalse);
+        await expectLater(edit().applyEdit(), throwsA(isA<PublishException>()));
+
+        // Back to the online video.
+        await edit().keepPublishedVideo();
+        expect(es().draft!.keepsVideo, isTrue);
+        expect(es().draft!.hasEdits, isFalse);
+
+        for (final s in _carSteps.where((s) => s.required)) {
+          await edit().addClip(s.id, await cameraFile('${s.id}.mp4'));
+        }
+        await edit().applyEdit();
+        expect(media.renders, hasLength(1));
+        expect(repo.uploads, ['video.mp4', 'cover.jpg']);
+        final sent = repo.edits.single;
+        expect(sent.video, isTrue);
+        expect(sent.durationMs, 5 * 5000 - 4 * 600);
+        expect(sent.photos.map((p) => p['media_id']), ['m1', 'm3', 'm2', 'm4']);
+      });
+
+      test('a new listing in progress is never touched; an edit resumes', () async {
+        await ctrl().start('car');
+        await ctrl().addClip('front', await cameraFile('mine.mp4'));
+        repo.editable = _online;
+        await edit().startEdit('l9');
+        await edit().addPhoto(PhotoSlot.extra, await cameraFile('x.jpg'), fromCamera: true);
+        expect(ctrl().savedDraft()!.shots.keys, ['front']);
+        expect(ctrl().savedDraft()!.editing, isFalse);
+
+        // Leaving and coming back to the same listing keeps the changes.
+        repo.editable = null;
+        final again = ProviderContainer(overrides: [
+          sellMediaProvider.overrideWithValue(media),
+          sellRepositoryProvider.overrideWithValue(repo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          appConfigProvider.overrideWith((ref) async => AppConfig.empty),
+        ]);
+        addTearDown(again.dispose);
+        await again.read(mediaEditControllerProvider.notifier).startEdit('l9');
+        expect(again.read(mediaEditControllerProvider).draft!.extraPhotos, hasLength(3));
+      });
+
+      test('a refusal keeps the edit for another try', () async {
+        repo.editable = _online;
+        await edit().startEdit('l9');
+        await edit().removePhoto(es().draft!.photoFor('front')!.file);
+        repo.failEdit = PublishFailure.notEditable;
+        await expectLater(
+          edit().applyEdit(),
+          throwsA(isA<PublishException>().having((e) => e.failure, 'failure', PublishFailure.notEditable)),
+        );
+        expect(es().draft!.hasEdits, isTrue);
+        expect(prefs.getString(PrefKeys.mediaEditDraft), isNotNull);
+      });
     });
 
     test('a retake while the video is being made restarts it', () async {
@@ -665,6 +803,95 @@ void main() {
       await tester.tap(find.text('Scatta con la guida'));
       await tester.pumpAndSettle();
       expect(find.text('capture photos=1'), findsOneWidget);
+    });
+
+    testWidgets('edit media: video kept, reshoot opens its camera, save, leave asks', (tester) async {
+      tester.view.physicalSize = const Size(430, 2600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      repo.editable = _online;
+      // Online photos go through the image cache, which wants a folder.
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        (_) async => tmp.path,
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'), null));
+      final router = GoRouter(routes: [
+        GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('my listings'))),
+        GoRoute(path: '/listing/:id/media', builder: (_, s) => EditMediaScreen(listingId: s.pathParameters['id']!)),
+        GoRoute(path: '/listing/:id/media/capture', builder: (_, s) => Text('edit capture ${s.uri.query}')),
+      ]);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          supabaseProvider.overrideWithValue(SupabaseClient(
+            'https://test.supabase.co',
+            'anon',
+            authOptions: const AuthClientOptions(autoRefreshToken: false),
+          )),
+          sellMediaProvider.overrideWithValue(media),
+          sellRepositoryProvider.overrideWithValue(repo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          appConfigProvider.overrideWith((ref) async => AppConfig.empty),
+        ],
+        child: MaterialApp.router(
+          theme: AppTheme.light(),
+          routerConfig: router,
+          locale: const Locale('it'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+      router.push('/listing/l9/media');
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Foto e video'), findsOneWidget);
+      expect(find.byKey(const ValueKey('published-video')), findsOneWidget);
+      final save = find.widgetWithText(FilledButton, 'Salva foto e video');
+      expect(tester.widget<FilledButton>(save).onPressed, isNull, reason: 'nothing changed');
+
+      await tester.tap(find.text('Rifai il video'));
+      await tester.pumpAndSettle();
+      expect(find.text('edit capture '), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+
+      // Remove the rear photo: something to save; leaving asks first.
+      await tester.tap(find.text('Posteriore'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Elimina'));
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+
+      await tester.tap(find.byTooltip('Indietro'));
+      await tester.pumpAndSettle();
+      expect(find.text('Uscire senza salvare?'), findsOneWidget);
+      await tester.tap(find.text('Resta'));
+      await tester.pumpAndSettle();
+
+      await tester.runAsync(() async {
+        await tester.tap(save);
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+      expect(repo.edits.single.photos.map((p) => p['media_id']), ['m1', 'm2', 'm4']);
+      expect(find.text('my listings'), findsOneWidget);
+      expect(find.text('Foto e video aggiornati'), findsOneWidget);
+      // The snackbar and the image cache keep timers: let them run out.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(minutes: 1));
     });
 
     testWidgets('details: validation and publish', (tester) async {

@@ -1213,7 +1213,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get editListingNote =>
-      'Video e foto restano quelli pubblicati. Se abbassi il prezzo, chi l\'ha salvato lo vede.';
+      'Se abbassi il prezzo, chi l\'ha salvato lo vede. Video e foto si cambiano a parte.';
 
   @override
   String get editListingSave => 'Salva modifiche';
@@ -1226,6 +1226,53 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get editListingNotFound => 'Questo annuncio non si può modificare.';
+
+  @override
+  String get editMediaTitle => 'Foto e video';
+
+  @override
+  String get editMediaSubtitle =>
+      'L\'annuncio resta online: rifai il video o cambia le foto, poi salva.';
+
+  @override
+  String get editMediaVideo => 'Video pubblicato';
+
+  @override
+  String get editMediaReshoot => 'Rifai il video';
+
+  @override
+  String get editMediaReshootNote =>
+      'Rifai le riprese: il nuovo video sostituisce quello online solo quando salvi.';
+
+  @override
+  String get editMediaKeepVideo => 'Tieni il video pubblicato';
+
+  @override
+  String get editMediaSave => 'Salva foto e video';
+
+  @override
+  String editMediaSaving(int percent) {
+    return 'Salvataggio · $percent%';
+  }
+
+  @override
+  String get editMediaSaved => 'Foto e video aggiornati';
+
+  @override
+  String get editMediaLeaveTitle => 'Uscire senza salvare?';
+
+  @override
+  String get editMediaLeaveBody =>
+      'Le modifiche a foto e video andranno perse.';
+
+  @override
+  String get editMediaLeave => 'Esci';
+
+  @override
+  String get editMediaStay => 'Resta';
+
+  @override
+  String get editListingMedia => 'Cambia foto e video';
 
   @override
   String get inboxTitle => 'Messaggi';

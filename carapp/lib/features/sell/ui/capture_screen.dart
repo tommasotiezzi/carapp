@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/media/media_url.dart';
+import '../../../core/supabase/supabase_client.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -24,12 +27,16 @@ import 'silhouette.dart';
 /// per [PhotoSlot], all optional). After a shot it moves to the next one
 /// still missing; with `single` (a retake from the summary) it goes back.
 class CaptureScreen extends ConsumerStatefulWidget {
-  const CaptureScreen({super.key, this.stepId, this.photos = false, this.single = false});
+  const CaptureScreen({super.key, this.stepId, this.photos = false, this.single = false, this.provider});
 
   /// Step id, or slot id with [photos].
   final String? stepId;
   final bool photos;
   final bool single;
+
+  /// The session: a new listing (default) or [mediaEditControllerProvider]
+  /// ("Foto e video" of an online listing: every exit goes back).
+  final NotifierProvider<SellController, SellState>? provider;
 
   @override
   ConsumerState<CaptureScreen> createState() => _CaptureScreenState();
@@ -65,11 +72,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    final s = ref.read(sellControllerProvider);
+    final s = ref.read(_provider);
     if (s.draft == null) {
       // Opened without a draft (e.g. the app was restarted here).
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.go(AppRoutes.sell);
+        if (!mounted) return;
+        widget.provider == null ? context.go(AppRoutes.sell) : context.pop();
       });
       return;
     }
@@ -107,6 +115,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
 
   bool get _photoMode => widget.photos;
 
+  NotifierProvider<SellController, SellState> get _provider => widget.provider ?? sellControllerProvider;
+
+  bool get _editing => ref.read(_provider).draft?.editing ?? false;
+
   List<_Target> _targetsOf(SellState s) => _photoMode
       ? [for (final slot in s.slots) _Target(id: slot.id, silhouette: slot.silhouette, plateTip: slot.plateTip)]
       : [for (final step in s.steps) _Target(id: step.id, silhouette: step.silhouette, plateTip: step.plateTip, step: step)];
@@ -117,7 +129,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   /// The next target without a shot, after the current one, then from the
   /// start (skipped ones).
   _Target? _nextMissing() {
-    final s = ref.read(sellControllerProvider);
+    final s = ref.read(_provider);
     final targets = _targetsOf(s);
     final i = targets.indexWhere((x) => x.id == _stepId);
     for (var k = 1; k <= targets.length; k++) {
@@ -141,7 +153,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   }
 
   void _openShots() {
-    if (widget.single) {
+    if (widget.single || _editing) {
       context.pop();
     } else {
       context.pushReplacement(AppRoutes.sellShots);
@@ -149,8 +161,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   }
 
   void _close() {
-    final hasShots = ref.read(sellControllerProvider).draft?.shots.isNotEmpty ?? false;
-    if (hasShots && !widget.single && !_photoMode) {
+    final hasShots = ref.read(_provider).draft?.shots.isNotEmpty ?? false;
+    if (hasShots && !widget.single && !_photoMode && !_editing) {
       _openShots();
     } else {
       context.canPop() ? context.pop() : context.go(AppRoutes.sell);
@@ -221,7 +233,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
       return;
     }
 
-    final seconds = ref.read(sellControllerProvider).steps.firstWhere((x) => x.id == _stepId).seconds;
+    final seconds = ref.read(_provider).steps.firstWhere((x) => x.id == _stepId).seconds;
     try {
       await camera.startVideoRecording();
     } on CameraException {
@@ -252,7 +264,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   }
 
   Future<void> _save(String path) async {
-    final controller = ref.read(sellControllerProvider.notifier);
+    final controller = ref.read(_provider.notifier);
     final id = _stepId!;
     try {
       if (_photoMode) {
@@ -287,7 +299,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final s = ref.watch(sellControllerProvider);
+    final s = ref.watch(_provider);
     final draft = s.draft;
     if (draft == null || _stepId == null) {
       return const Scaffold(backgroundColor: AppColors.feedBackground);
@@ -814,7 +826,6 @@ class _ShotsButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final preview = shot == null ? null : (shot!.kind == ShotKind.photo ? shot!.file : shot!.thumb);
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -831,7 +842,7 @@ class _ShotsButton extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (preview != null) ShotImage(draftId: draftId, file: preview, width: 52),
+              if (shot != null) ShotThumb(draftId: draftId, shot: shot!, width: 52),
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
@@ -850,6 +861,33 @@ class _ShotsButton extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// A shot's picture: the clip's thumbnail, a photo of the draft folder, or
+/// (editing) a photo already online.
+class ShotThumb extends ConsumerWidget {
+  const ShotThumb({super.key, required this.draftId, required this.shot, required this.width});
+
+  final String draftId;
+  final Shot shot;
+  final double width;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (shot.isRemote) {
+      final url = MediaUrl.resolve(ref.read(supabaseProvider), shot.remotePath);
+      if (url == null) return const SizedBox.shrink();
+      return CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        memCacheWidth: (width * MediaQuery.devicePixelRatioOf(context)).round(),
+        errorWidget: (_, _, _) => const SizedBox.shrink(),
+      );
+    }
+    final file = shot.kind == ShotKind.photo ? shot.file : shot.thumb;
+    if (file == null) return const SizedBox.shrink();
+    return ShotImage(draftId: draftId, file: file, width: width);
   }
 }
 
