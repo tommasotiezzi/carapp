@@ -60,7 +60,8 @@ lib/
     l10n/vehicle_labels.dart  ARB labels for DB enums (fuel_type, transmission_type)
     widgets/pill.dart, placeholder_screen.dart
   features/
-    feed/      data (FeedItem, FeedRepository), state (FeedController), ui (FeedScreen, FeedVideoView, FeedOverlay)
+    feed/      data (FeedItem, FeedRepository, FeedFilters), state (FeedController, FeedFiltersController),
+               ui (FeedScreen, FeedVideoView, FeedOverlay with filter pills, FilterSheet)
     auth/      AuthRepository (email + password, Supabase error codes -> AuthFailure), login_sheet.dart
                (reusable bottom sheet: sign in / create account, confirm-email step if Supabase requires it)
     onboarding/ BuyerPreferences, makesProvider, OnboardingController (local first, synced on login),
@@ -73,7 +74,7 @@ lib/
                rolls back on error), toggleSave() (login sheet for guests), SavedSection (profile grid)
     profile/   ProfileScreen (minimal: login/logout, "Cosa cerco" gated behind signup, "Salvati")
   l10n/app_it.arb (+ gen/)
-test/       transfer cost rules, listing screen / Salvati / login sheet widget tests (fake data), SavedController
+test/       transfer cost rules, feed filters, listing / Salvati / login / filter sheet widget tests (fake data), SavedController
 ```
 
 Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
@@ -238,15 +239,17 @@ Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a use
 
 ## Status
 
-Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save. Designs for all screens and states exist in the Claude canvas mockup.
+Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters. Designs for all screens and states exist in the Claude canvas mockup.
 
 Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contact. Save, Share and Contact show "in arrivo" until their steps. Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
 
 Save: bookmark on the feed and on the listing screen; guests get the login sheet, then the listing is saved (never un-saved by that tap). `favorites` upsert with `ignoreDuplicates` keeps the first `price_cents_at_save`. Profile "Salvati": two-column grid newest first (orders by `favorites.created_at`), "Sceso di € X" badge when the price dropped since saving, "Non più disponibile" card when RLS hides the listing (remove from the bookmark). Events `save` / `unsave` tracked. Price-drop push alerts come with notifications.
 
+Feed filters: `FeedFilters` (category, price min/max, makes, year min, mileage max, fuel types; same names as `listings` columns, ready to become `saved_searches.filters`). Pills over the video (Prezzo, Marca, Anno, Km) open their section of `FilterSheet`; the tune button opens all sections and shows how many are active. The sheet edits a draft and applies on "Mostra annunci", so the feed reloads once (`FeedController` watches the filters; cursor pagination unchanged). Filters are stored on the phone (`PrefKeys.feedFilters`); until the user applies any, they follow the onboarding preferences (novice driver is not a filter). No results with filters → "Rimuovi i filtri" / "Modifica filtri".
+
 ## Next (in order)
 
-1. **Filters**: per-pill bottom sheets on the feed + full Search screen; filtered feed query; saved searches. Preferences pre-fill filters.
+1. **Search**: full Search screen (filters + results), saved searches (`saved_searches`, notify flag). Feed pills and filtered query are done.
 2. **Contact**: conversations + messages with Realtime, Inbox, WhatsApp button (needs a security-definer function to expose seller contact).
 3. **Share**: listing link + web fallback page.
 4. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).

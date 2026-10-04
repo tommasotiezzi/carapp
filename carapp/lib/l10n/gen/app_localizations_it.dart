@@ -564,4 +564,62 @@ class AppLocalizationsIt extends AppLocalizations {
   String savedPriceDrop(String amount) {
     return 'Sceso di $amount';
   }
+
+  @override
+  String get commonRefresh => 'Aggiorna';
+
+  @override
+  String get feedEmptyTitle => 'Ancora nessun annuncio';
+
+  @override
+  String get feedEmptyBody =>
+      'Torna tra poco: stiamo caricando i primi veicoli.';
+
+  @override
+  String get feedEmptyFilteredTitle => 'Nessun annuncio con questi filtri';
+
+  @override
+  String get feedEmptyFilteredBody =>
+      'Prova ad allargare la ricerca: togli un filtro o alza il budget.';
+
+  @override
+  String get filterTitle => 'Filtri';
+
+  @override
+  String get filterPrice => 'Prezzo';
+
+  @override
+  String get filterBrand => 'Marca';
+
+  @override
+  String get filterBrands => 'Marche';
+
+  @override
+  String filterBrandCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count marche',
+      one: '1 marca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get filterYear => 'Anno';
+
+  @override
+  String get filterMileage => 'Km';
+
+  @override
+  String get filterReset => 'Azzera';
+
+  @override
+  String get filterApply => 'Mostra annunci';
+
+  @override
+  String get filterClearAll => 'Rimuovi i filtri';
+
+  @override
+  String get filterEdit => 'Modifica filtri';
 }

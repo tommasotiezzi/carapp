@@ -13,9 +13,12 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/state/onboarding_controller.dart';
 import '../../saved/state/saved_controller.dart';
 import '../../saved/ui/save_action.dart';
+import '../data/feed_filters.dart';
 import '../data/feed_item.dart';
 import '../state/feed_controller.dart';
+import '../state/feed_filters_controller.dart';
 import 'feed_overlay.dart';
+import 'filter_sheet.dart';
 import 'feed_video_view.dart';
 
 class FeedScreen extends ConsumerWidget {
@@ -23,26 +26,40 @@ class FeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
     final feed = ref.watch(feedControllerProvider);
+    final filtered = !ref.watch(feedFiltersProvider.select((f) => f.isEmpty));
+    void refresh() => ref.read(feedControllerProvider.notifier).refresh();
 
     return Scaffold(
       backgroundColor: AppColors.feedBackground,
       body: feed.when(
         loading: () => const _FeedLoading(),
         error: (e, _) => _FeedMessage(
-          title: 'Qualcosa è andato storto',
-          body: 'Controlla la connessione e riprova.',
-          actionLabel: 'Riprova',
-          onAction: () => ref.read(feedControllerProvider.notifier).refresh(),
+          title: t.errorTitle,
+          body: t.errorBody,
+          actionLabel: t.commonRetry,
+          onAction: refresh,
         ),
-        data: (state) => state.items.isEmpty
-            ? _FeedMessage(
-                title: 'Ancora nessun annuncio',
-                body: 'Torna tra poco: stiamo caricando le prime auto.',
-                actionLabel: 'Aggiorna',
-                onAction: () => ref.read(feedControllerProvider.notifier).refresh(),
-              )
-            : _FeedPager(items: state.items),
+        data: (state) => state.items.isNotEmpty
+            ? _FeedPager(items: state.items)
+            : filtered
+                // Nothing matches: offer a way out instead of a dead end.
+                ? _FeedMessage(
+                    title: t.feedEmptyFilteredTitle,
+                    body: t.feedEmptyFilteredBody,
+                    actionLabel: t.filterClearAll,
+                    onAction: () =>
+                        ref.read(feedFiltersProvider.notifier).apply(FeedFilters.empty),
+                    secondaryLabel: t.filterEdit,
+                    onSecondary: () => showFilterSheet(context),
+                  )
+                : _FeedMessage(
+                    title: t.feedEmptyTitle,
+                    body: t.feedEmptyBody,
+                    actionLabel: t.commonRefresh,
+                    onAction: refresh,
+                  ),
       ),
     );
   }
@@ -288,7 +305,8 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
                     ),
                     onShare: () => _interact(() => _comingSoon('Condividi')),
                     onContact: () => _interact(() => _openDetail(item)),
-                    onOpenFilters: () => _interact(() => _comingSoon('Filtri')),
+                    onOpenFilters: (section) =>
+                        _interact(() => showFilterSheet(context, only: section)),
                   ),
                 ),
               ),
@@ -351,12 +369,16 @@ class _FeedMessage extends StatelessWidget {
     required this.body,
     required this.actionLabel,
     required this.onAction,
+    this.secondaryLabel,
+    this.onSecondary,
   });
 
   final String title;
   final String body;
   final String actionLabel;
   final VoidCallback onAction;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
 
   @override
   Widget build(BuildContext context) {
@@ -385,6 +407,14 @@ class _FeedMessage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               FilledButton(onPressed: onAction, child: Text(actionLabel)),
+              if (secondaryLabel != null) ...[
+                const SizedBox(height: AppSpacing.s),
+                TextButton(
+                  onPressed: onSecondary,
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  child: Text(secondaryLabel!),
+                ),
+              ],
             ],
           ),
         ),
