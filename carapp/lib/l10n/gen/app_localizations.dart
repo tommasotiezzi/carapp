@@ -502,65 +502,119 @@ abstract class AppLocalizations {
   /// **'La tua email'**
   String get loginEmailLabel;
 
-  /// No description provided for @loginSendCode.
+  /// No description provided for @loginPasswordLabel.
   ///
   /// In it, this message translates to:
-  /// **'Mandami il codice'**
-  String get loginSendCode;
+  /// **'Password'**
+  String get loginPasswordLabel;
 
-  /// No description provided for @loginCodeTitle.
+  /// No description provided for @loginPasswordHint.
   ///
   /// In it, this message translates to:
-  /// **'Controlla la tua email'**
-  String get loginCodeTitle;
+  /// **'Almeno {min} caratteri'**
+  String loginPasswordHint(int min);
 
-  /// No description provided for @loginCodeSubtitle.
+  /// No description provided for @loginShowPassword.
   ///
   /// In it, this message translates to:
-  /// **'Abbiamo mandato un codice a {email}'**
-  String loginCodeSubtitle(String email);
+  /// **'Mostra password'**
+  String get loginShowPassword;
 
-  /// No description provided for @loginCodeLabel.
+  /// No description provided for @loginHidePassword.
   ///
   /// In it, this message translates to:
-  /// **'Codice'**
-  String get loginCodeLabel;
+  /// **'Nascondi password'**
+  String get loginHidePassword;
 
-  /// No description provided for @loginVerify.
+  /// No description provided for @loginSignIn.
   ///
   /// In it, this message translates to:
   /// **'Accedi'**
-  String get loginVerify;
+  String get loginSignIn;
 
-  /// No description provided for @loginResend.
+  /// No description provided for @loginSignUp.
   ///
   /// In it, this message translates to:
-  /// **'Rimanda il codice'**
-  String get loginResend;
+  /// **'Crea account'**
+  String get loginSignUp;
 
-  /// No description provided for @loginChangeEmail.
+  /// No description provided for @loginSignUpTitle.
   ///
   /// In it, this message translates to:
-  /// **'Cambia email'**
-  String get loginChangeEmail;
+  /// **'Crea il tuo account'**
+  String get loginSignUpTitle;
+
+  /// No description provided for @loginToSignUp.
+  ///
+  /// In it, this message translates to:
+  /// **'Non hai un account? Registrati'**
+  String get loginToSignUp;
+
+  /// No description provided for @loginToSignIn.
+  ///
+  /// In it, this message translates to:
+  /// **'Hai già un account? Accedi'**
+  String get loginToSignIn;
+
+  /// No description provided for @loginConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Conferma la tua email'**
+  String get loginConfirmTitle;
+
+  /// No description provided for @loginConfirmBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Ti abbiamo mandato un link a {email}. Aprilo per attivare l\'account, poi accedi.'**
+  String loginConfirmBody(String email);
+
+  /// No description provided for @loginErrorPassword.
+  ///
+  /// In it, this message translates to:
+  /// **'La password deve avere almeno {min} caratteri.'**
+  String loginErrorPassword(int min);
+
+  /// No description provided for @loginErrorCredentials.
+  ///
+  /// In it, this message translates to:
+  /// **'Email o password non corretti.'**
+  String get loginErrorCredentials;
+
+  /// No description provided for @loginErrorExists.
+  ///
+  /// In it, this message translates to:
+  /// **'Esiste già un account con questa email: accedi.'**
+  String get loginErrorExists;
+
+  /// No description provided for @loginErrorWeak.
+  ///
+  /// In it, this message translates to:
+  /// **'Password troppo debole, scegline una più lunga.'**
+  String get loginErrorWeak;
+
+  /// No description provided for @loginErrorNotConfirmed.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima conferma l\'email che ti abbiamo mandato.'**
+  String get loginErrorNotConfirmed;
+
+  /// No description provided for @loginErrorRateLimit.
+  ///
+  /// In it, this message translates to:
+  /// **'Troppi tentativi, riprova tra qualche minuto.'**
+  String get loginErrorRateLimit;
+
+  /// No description provided for @loginErrorGeneric.
+  ///
+  /// In it, this message translates to:
+  /// **'Qualcosa è andato storto, riprova.'**
+  String get loginErrorGeneric;
 
   /// No description provided for @loginErrorEmail.
   ///
   /// In it, this message translates to:
   /// **'Controlla l\'indirizzo email.'**
   String get loginErrorEmail;
-
-  /// No description provided for @loginErrorCode.
-  ///
-  /// In it, this message translates to:
-  /// **'Codice non valido o scaduto.'**
-  String get loginErrorCode;
-
-  /// No description provided for @loginErrorSend.
-  ///
-  /// In it, this message translates to:
-  /// **'Non siamo riusciti a inviare il codice, riprova tra poco.'**
-  String get loginErrorSend;
 
   /// No description provided for @loginTerms.
   ///
