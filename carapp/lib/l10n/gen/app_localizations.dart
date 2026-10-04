@@ -1089,6 +1089,102 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Sceso di {amount}'**
   String savedPriceDrop(String amount);
+
+  /// No description provided for @commonRefresh.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiorna'**
+  String get commonRefresh;
+
+  /// No description provided for @feedEmptyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Ancora nessun annuncio'**
+  String get feedEmptyTitle;
+
+  /// No description provided for @feedEmptyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Torna tra poco: stiamo caricando i primi veicoli.'**
+  String get feedEmptyBody;
+
+  /// No description provided for @feedEmptyFilteredTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun annuncio con questi filtri'**
+  String get feedEmptyFilteredTitle;
+
+  /// No description provided for @feedEmptyFilteredBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Prova ad allargare la ricerca: togli un filtro o alza il budget.'**
+  String get feedEmptyFilteredBody;
+
+  /// No description provided for @filterTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Filtri'**
+  String get filterTitle;
+
+  /// No description provided for @filterPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzo'**
+  String get filterPrice;
+
+  /// No description provided for @filterBrand.
+  ///
+  /// In it, this message translates to:
+  /// **'Marca'**
+  String get filterBrand;
+
+  /// No description provided for @filterBrands.
+  ///
+  /// In it, this message translates to:
+  /// **'Marche'**
+  String get filterBrands;
+
+  /// No description provided for @filterBrandCount.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 marca} other{{count} marche}}'**
+  String filterBrandCount(int count);
+
+  /// No description provided for @filterYear.
+  ///
+  /// In it, this message translates to:
+  /// **'Anno'**
+  String get filterYear;
+
+  /// No description provided for @filterMileage.
+  ///
+  /// In it, this message translates to:
+  /// **'Km'**
+  String get filterMileage;
+
+  /// No description provided for @filterReset.
+  ///
+  /// In it, this message translates to:
+  /// **'Azzera'**
+  String get filterReset;
+
+  /// No description provided for @filterApply.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra annunci'**
+  String get filterApply;
+
+  /// No description provided for @filterClearAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi i filtri'**
+  String get filterClearAll;
+
+  /// No description provided for @filterEdit.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica filtri'**
+  String get filterEdit;
 }
 
 class _AppLocalizationsDelegate

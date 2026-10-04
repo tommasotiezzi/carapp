@@ -1,12 +1,18 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../../onboarding/data/catalog_repository.dart';
+import '../../onboarding/ui/budget_label.dart';
+import '../data/feed_filters.dart';
 import '../data/feed_item.dart';
+import '../state/feed_filters_controller.dart';
 
 /// Everything drawn over the video: side actions, caption, filter pills.
 class FeedOverlay extends StatelessWidget {
@@ -27,7 +33,9 @@ class FeedOverlay extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onShare;
   final VoidCallback onContact;
-  final VoidCallback onOpenFilters;
+
+  /// null = the "tune" button (all filters), otherwise one pill's section.
+  final ValueChanged<FilterSection?> onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +80,7 @@ class FeedOverlay extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 12,
-          child: _FilterPills(onTap: onOpenFilters),
+          child: _FilterPills(onOpen: onOpenFilters),
         ),
       ],
     );
@@ -333,74 +341,142 @@ class _Caption extends StatelessWidget {
   }
 }
 
-/// Liquid-glass pills. For now they open the search tab;
-/// they will show the user's active filters once search is built.
-class _FilterPills extends StatelessWidget {
-  const _FilterPills({required this.onTap});
+/// Liquid-glass pills showing the active filters. A pill opens its
+/// section; the "tune" button opens every filter and shows how many are on.
+class _FilterPills extends ConsumerWidget {
+  const _FilterPills({required this.onOpen});
 
-  final VoidCallback onTap;
+  final ValueChanged<FilterSection?> onOpen;
+
+  static final _thousands = NumberFormat.decimalPattern('it_IT');
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final f = ref.watch(feedFiltersProvider);
+
+    String brandLabel() {
+      if (f.makeIds.isEmpty) return t.filterBrand;
+      if (f.makeIds.length > 1) return t.filterBrandCount(f.makeIds.length);
+      final makes = ref.watch(makesProvider(f.categoryId ?? 'car')).value ?? const [];
+      return makes.where((m) => m.id == f.makeIds.first).firstOrNull?.name ??
+          t.filterBrandCount(1);
+    }
+
+    final budget = f.budget;
+    final pills = [
+      (
+        FilterSection.price,
+        f.hasPrice,
+        budget != null ? t.budgetLabel(budget) : t.filterPrice,
+      ),
+      (FilterSection.brand, f.makeIds.isNotEmpty, brandLabel()),
+      (
+        FilterSection.year,
+        f.yearMin != null,
+        f.yearMin != null ? t.yearFrom('${f.yearMin}') : t.filterYear,
+      ),
+      (
+        FilterSection.mileage,
+        f.mileageMaxKm != null,
+        f.mileageMaxKm != null ? t.mileageMax(_thousands.format(f.mileageMaxKm)) : t.filterMileage,
+      ),
+    ];
+
     return SizedBox(
       height: AppSizes.chipHeight,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
         children: [
-          _GlassPill(onTap: onTap, child: const Icon(Icons.tune, size: 16, color: Colors.white)),
-          const SizedBox(width: 8),
-          _GlassPill(onTap: onTap, label: 'Prezzo'),
-          const SizedBox(width: 8),
-          _GlassPill(onTap: onTap, label: 'Marca'),
-          const SizedBox(width: 8),
-          _GlassPill(onTap: onTap, label: 'Anno'),
-          const SizedBox(width: 8),
-          _GlassPill(onTap: onTap, label: 'Km'),
+          _GlassPill(
+            onTap: () => onOpen(null),
+            active: !f.isEmpty,
+            semanticLabel: t.filterTitle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.tune, size: 16, color: f.isEmpty ? Colors.white : AppColors.ink),
+                if (!f.isEmpty) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '${f.activeCount}',
+                    style: const TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          for (final (section, active, label) in pills) ...[
+            const SizedBox(width: 8),
+            _GlassPill(onTap: () => onOpen(section), active: active, label: label),
+          ],
         ],
       ),
     );
   }
 }
 
+/// Active = solid white with dark text, readable on any video frame.
 class _GlassPill extends StatelessWidget {
-  const _GlassPill({required this.onTap, this.label, this.child});
+  const _GlassPill({
+    required this.onTap,
+    this.active = false,
+    this.label,
+    this.child,
+    this.semanticLabel,
+  });
 
   final VoidCallback onTap;
+  final bool active;
   final String? label;
   final Widget? child;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Material(
-          color: AppColors.glassFill,
-          shape: const StadiumBorder(side: BorderSide(color: AppColors.glassBorder)),
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const StadiumBorder(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Center(
-                child: child ??
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          label!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+    final foreground = active ? AppColors.ink : Colors.white;
+
+    return Semantics(
+      button: true,
+      selected: active,
+      label: semanticLabel,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Material(
+            color: active ? Colors.white : AppColors.glassFill,
+            shape: StadiumBorder(
+              side: BorderSide(color: active ? Colors.white : AppColors.glassBorder),
+            ),
+            child: InkWell(
+              onTap: onTap,
+              customBorder: const StadiumBorder(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Center(
+                  child: child ??
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label!,
+                            style: TextStyle(
+                              color: foreground,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.white),
-                      ],
-                    ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.keyboard_arrow_down, size: 16, color: foreground),
+                        ],
+                      ),
+                ),
               ),
             ),
           ),

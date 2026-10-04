@@ -9,6 +9,7 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../data/buyer_preferences.dart';
 import '../data/catalog_repository.dart';
 import '../state/onboarding_controller.dart';
+import 'budget_label.dart';
 import 'onboarding_exit.dart';
 
 /// "Cosa cerchi?" Used in onboarding and, with [editing], from the profile.
@@ -38,14 +39,6 @@ class PreferencesScreen extends ConsumerWidget {
     final p = ref.watch(onboardingControllerProvider.select((s) => s.preferences));
     final controller = ref.read(onboardingControllerProvider.notifier);
     void update(BuyerPreferences Function(BuyerPreferences) f) => controller.updatePreferences(f);
-
-    String budgetLabel(BudgetOption o) => switch (o) {
-          BudgetOption.upTo5k => t.budgetUpTo('5k'),
-          BudgetOption.from5to10k => '5–10k',
-          BudgetOption.from10to15k => '10–15k',
-          BudgetOption.from15to25k => '15–25k',
-          BudgetOption.over25k => t.budgetOver('25k'),
-        };
 
     final brandCategory = p.categoryId ?? 'car';
 
@@ -105,7 +98,7 @@ class PreferencesScreen extends ConsumerWidget {
                     ),
                     for (final o in BudgetOption.values)
                       Pill(
-                        label: budgetLabel(o),
+                        label: t.budgetLabel(o),
                         selected: p.budget == o,
                         onTap: () => update((x) => x.copyWith(budget: o)),
                       ),

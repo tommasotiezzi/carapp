@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
 import '../data/feed_item.dart';
+import 'feed_filters_controller.dart';
 import '../data/feed_repository.dart';
 
 class FeedState {
@@ -33,9 +34,13 @@ class FeedController extends AsyncNotifier<FeedState> {
     return config.feedValue('page_size', 10);
   }
 
+  /// Rebuilt (first page reloaded) whenever the filters change.
   @override
   Future<FeedState> build() async {
-    final items = await ref.read(feedRepositoryProvider).fetchPage(pageSize: _pageSize);
+    final filters = ref.watch(feedFiltersProvider);
+    final items = await ref
+        .read(feedRepositoryProvider)
+        .fetchPage(pageSize: _pageSize, filters: filters);
     return FeedState(items: items, hasMore: items.length == _pageSize);
   }
 
@@ -50,6 +55,7 @@ class FeedController extends AsyncNotifier<FeedState> {
       final next = await ref.read(feedRepositoryProvider).fetchPage(
             before: current.items.last.publishedAt,
             pageSize: _pageSize,
+            filters: ref.read(feedFiltersProvider),
           );
       state = AsyncData(current.copyWith(
         items: [...current.items, ...next],

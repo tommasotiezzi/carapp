@@ -194,5 +194,24 @@
   "savedUnavailable": "Non più disponibile",
   "savedRemove": "Rimuovi dai salvati",
   "savedPriceDrop": "Sceso di {amount}",
-  "@savedPriceDrop": {"placeholders": {"amount": {"type": "String"}}}
+  "@savedPriceDrop": {"placeholders": {"amount": {"type": "String"}}},
+
+  "commonRefresh": "Aggiorna",
+  "feedEmptyTitle": "Ancora nessun annuncio",
+  "feedEmptyBody": "Torna tra poco: stiamo caricando i primi veicoli.",
+  "feedEmptyFilteredTitle": "Nessun annuncio con questi filtri",
+  "feedEmptyFilteredBody": "Prova ad allargare la ricerca: togli un filtro o alza il budget.",
+
+  "filterTitle": "Filtri",
+  "filterPrice": "Prezzo",
+  "filterBrand": "Marca",
+  "filterBrands": "Marche",
+  "filterBrandCount": "{count, plural, =1{1 marca} other{{count} marche}}",
+  "@filterBrandCount": {"placeholders": {"count": {"type": "int"}}},
+  "filterYear": "Anno",
+  "filterMileage": "Km",
+  "filterReset": "Azzera",
+  "filterApply": "Mostra annunci",
+  "filterClearAll": "Rimuovi i filtri",
+  "filterEdit": "Modifica filtri"
 }
