@@ -79,5 +79,9 @@
 	</array>
 	<key>FlutterDeepLinkingEnabled</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Per riprendere il veicolo che vendi.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Per registrare il suono del motore nei video degli annunci.</string>
 </dict>
 </plist>

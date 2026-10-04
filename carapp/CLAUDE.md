@@ -6,18 +6,18 @@ TikTok-style vertical video feed to buy and sell used vehicles (cars incl. vans,
 
 - **App lands on the feed.** Onboarding is never forced: it opens over the feed after 4 listings viewed (`app_config.onboarding.show_after_listings`) or at the first tap on Save / Share / Contact / filters, until completed or skipped.
 - **Everything real.** No AI retouching of videos or photos. Photos optional. Zoom happens on the video itself (pinch / double tap pauses and zooms the frame, release resumes).
-- **Video:** 5 s clips per guided-capture step, 1080p H.264 30 fps ~4-5 Mbps, encoded on the phone. Single version for the MVP (1440p zoom version only if pilot data shows heavy zoom use). Feed keeps max 3 players (prev/current/next).
+- **Video:** one 5 s clip (or a photo) per guided-capture step, each retakeable on its own; the clips are joined on the phone with a 600 ms cross-dissolve into one 1080p H.264 30 fps ~4.5 Mbps MP4 (`pro_video_editor`: Media3 / AVFoundation); photos form the carousel. Single version for the MVP (1440p zoom version only if pilot data shows heavy zoom use). Feed keeps max 3 players (prev/current/next).
 - **No likes, no public comments.** Save (with price-drop alerts), Share, Contact (in-app chat + optional WhatsApp). Q&A answers can be made public by the seller.
 - **Plates:** no in-app blurring; the capture flow just tells users to cover the plate.
 - **Navbar:** always dark, same on every tab. Feed dark, other screens white/premium, accent blue `#1D4ED8`, system font.
-- **Age and consents:** the app is for **14+** (Italian age of digital consent; AM licence at 14, A1 at 16 are part of the target). Sign up requires two ticks: "Ho almeno 14 anni e accetto i Termini e condizioni" and "Ho letto l'Informativa privacy" (the privacy notice is read, not "accepted"); promotional emails are an optional tick, off by default. Minors buy with a parent's consent (stated in the Termini); the sell flow will ask 18+ or parental consent. Birth date and gender are **never asked in onboarding**: optional in Settings (data minimisation). All to be reviewed with lawyers before launch.
+- **Age and consents:** the app is for **14+** (Italian age of digital consent; AM licence at 14, A1 at 16 are part of the target). Sign up requires two ticks: "Ho almeno 14 anni e accetto i Termini e condizioni" and "Ho letto l'Informativa privacy" (the privacy notice is read, not "accepted"); promotional emails are an optional tick, off by default. Minors buy with a parent's consent (stated in the Termini); the sell flow asks private sellers once to declare 18+ or a parent's consent (`seller_age`). Birth date and gender are **never asked in onboarding**: optional in Settings (data minimisation). All to be reviewed with lawyers before launch.
 - **Login:** email + password for now (sign in / create account in the same sheet). Email OTP codes are paused because emails cannot be received yet; bring them back once email delivery works. Google later, Apple required before iOS release if Google is offered.
 - **Dealers:** VAT verified with VIES. Pricing: months 1-3 free; months 4-6 free until 30 total contacts since signup; then €29/month locked (founder price). Manual invoicing, no card at signup. Base / Pro plans configurable from DB. A "contact" = chat with ≥1 buyer message or a WhatsApp click.
 - **Ads:** only sponsored listings (labelled) and coherent partners (financing, insurance). No generic banners.
 
 ## Stack
 
-- Flutter (Riverpod, go_router, video_player, cached_network_image, shared_preferences, intl, uuid, supabase_flutter)
+- Flutter (Riverpod, go_router, video_player, cached_network_image, shared_preferences, intl, uuid, supabase_flutter, camera, pro_video_editor, path_provider, share_plus, url_launcher)
 - Supabase only: Postgres, Auth, Storage + CDN, Realtime, Edge Functions. External: VIES (VAT), later Claude API (AI search), APNs/FCM (push).
 
 ## Conventions
@@ -41,7 +41,7 @@ flutter run --dart-define-from-file=env.json
 flutter analyze && flutter test   # before every push
 ```
 
-Supabase setup: run the migrations not run yet (09 → 12) in the SQL editor; deploy the `delete-account` Edge Function (Verify JWT on). Auth > Sign In / Providers > Email: keep **"Confirm email" off** while emails cannot be received (otherwise sign up ends on "conferma la tua email" and the account stays unusable). Minimum password length in the app: 8. When OTP codes come back: "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}`.
+Supabase setup: run the migrations not run yet (09 → 13) in the SQL editor; deploy the Edge Functions `delete-account` and `publish-listing` (Verify JWT on). Auth > Sign In / Providers > Email: keep **"Confirm email" off** while emails cannot be received (otherwise sign up ends on "conferma la tua email" and the account stays unusable). Minimum password length in the app: 8. When OTP codes come back: "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}`.
 
 ## Flutter structure (done)
 
@@ -86,6 +86,10 @@ lib/
     chat/      data (ConversationSummary, ChatMessage, ChatRepository: RPCs + Realtime streams), state (InboxController:
                live Inbox + unread badge; ChatController: one chat, optimistic send, catch-up after reconnect),
                ui (InboxScreen, ChatScreen for /chat/:id and /chat/new/:listingId, contactSeller() / openWhatsapp())
+    sell/      data (CaptureStep from vehicle_categories.capture_steps, SellDraft + Shot + SellDetails, SellMedia:
+               draft folder / thumbnails / render with pro_video_editor, SellRepository: draft row, uploads,
+               publish-listing), state (SellController: draft on the phone, background render + upload, publish),
+               ui (SellStartScreen, CaptureScreen + Silhouette painter, ShotsScreen, SellDetailsScreen, SellDoneScreen)
     share/     listingShareLink() (share site or app link), listingShareSummary(), shareListing() (share sheet + `share` event)
     profile/   ProfileScreen (login, "Cosa cerco" gated behind signup, "Salvati", gear -> settings)
   l10n/app_it.arb (+ gen/)
@@ -93,19 +97,20 @@ site/       share site (Cloudflare Pages): /l/:id rendered on the server with pr
 test/       query parser, suggestions, recents, chips, logicFilter, transfer cost, feed filters, SavedController;
             widget tests (fake data): listing, Salvati, login, filter sheet, Search, Inbox, chat (new chat, contact bar);
             chat logic with a fake repository (optimistic send, Realtime echo, retry, catch-up, Inbox refresh);
-            share (links, share sheet text, tracking)
+            share (links, share sheet text, tracking); sell (draft model, controller with fake media/repository:
+            render order, uploads, retakes, publish; start, shots, details, done screens)
 ```
 
 Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
 
-Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`, `/onboarding/preferences[?edit=1]`, `/onboarding/dealer`, `/sell`, `/listing/:id`, `/chat/:id`, `/chat/new/:listingId`, `/dealer`; share link `/l/:id` -> `/listing/:id`. Deep links: custom scheme `carfeed://app/<path>` (Android intent filter with `flutter_deeplinking_enabled`, iOS `CFBundleURLTypes` + `FlutterDeepLinkingEnabled`; go_router opens `<path>`). https App Links / Universal Links once a final domain exists (see `site/README.md`).
+Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`, `/onboarding/preferences[?edit=1]`, `/onboarding/dealer`, `/sell` (+ `/sell/capture?step=&single=1`, `/sell/shots`, `/sell/shots/details`, `/sell/done/:id`), `/listing/:id`, `/chat/:id`, `/chat/new/:listingId`, `/dealer`; share link `/l/:id` -> `/listing/:id`. Deep links: custom scheme `carfeed://app/<path>` (Android intent filter with `flutter_deeplinking_enabled`, iOS `CFBundleURLTypes` + `FlutterDeepLinkingEnabled`; go_router opens `<path>`). https App Links / Universal Links once a final domain exists (see `site/README.md`).
 
 ## Database
 
-Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`, `09_consents_and_settings`, `10_lock_profile_account_type`, `11_chat`, `12_share`. All in `supabase/migrations/`; run new ones in the SQL editor. The whole chain 01→12 has been run on Postgres 16 + PostGIS with a stand-in for Supabase's `auth`/`storage` schemas, and the app's queries replayed through PostgREST 12 (anon and authenticated).
+Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`, `09_consents_and_settings`, `10_lock_profile_account_type`, `11_chat`, `12_share`, `13_sell`. All in `supabase/migrations/`; run new ones in the SQL editor. The whole chain 01→13 has been run on Postgres 16 + PostGIS with a stand-in for Supabase's `auth`/`storage` schemas, and the app's queries replayed through PostgREST 12 (anon and authenticated).
 
 ### Enums
-`account_type` consumer | dealer_member · `user_intent` buy | sell | browse | dealer · `seller_type` private | dealer · `listing_status` draft | active | sold | expired | removed · `media_kind` video | photo | cover · `fuel_type` petrol | diesel | hybrid | plugin_hybrid | electric | lpg | cng | other · `transmission_type` manual | automatic | semi_automatic · `dealer_role` owner | seller · `subscription_status` trial | conditional_free | active | past_due | canceled · `billing_method` manual_invoice | card · `event_type` impression | view | watch_time | zoom | open_detail | save | unsave | share | contact_chat | contact_whatsapp · `notification_type` new_message | price_drop | listing_sold | saved_search_match | new_contact | listing_expiring · `report_reason` scam | misleading_info | already_sold | inappropriate | other · `report_status` open | reviewed | actioned | dismissed · `platform` ios | android | web · `consent_kind` terms | privacy | age_14 | marketing_email · `gender` female | male | other | undisclosed
+`account_type` consumer | dealer_member · `user_intent` buy | sell | browse | dealer · `seller_type` private | dealer · `listing_status` draft | active | sold | expired | removed · `media_kind` video | photo | cover · `fuel_type` petrol | diesel | hybrid | plugin_hybrid | electric | lpg | cng | other · `transmission_type` manual | automatic | semi_automatic · `dealer_role` owner | seller · `subscription_status` trial | conditional_free | active | past_due | canceled · `billing_method` manual_invoice | card · `event_type` impression | view | watch_time | zoom | open_detail | save | unsave | share | contact_chat | contact_whatsapp · `notification_type` new_message | price_drop | listing_sold | saved_search_match | new_contact | listing_expiring · `report_reason` scam | misleading_info | already_sold | inappropriate | other · `report_status` open | reviewed | actioned | dismissed · `platform` ios | android | web · `consent_kind` terms | privacy | age_14 | marketing_email | seller_age · `gender` female | male | other | undisclosed
 
 ### Tables (key columns)
 Column defaults worth knowing: all UUID PKs `gen_random_uuid()`; `created_at`/`updated_at` default `now()`; listings `status` default `draft`, `currency` `EUR`, `attributes` `{}`; profiles `account_type` default `consumer`, `whatsapp_public` false, `locale` `it`; subscriptions `status` default `trial`, `billing_method` `manual_invoice`; saved_searches `notify` true; listing_questions `is_public` false; notification_preferences `enabled` true. `events` and `listing_price_history` use bigint identity PKs.
@@ -202,8 +207,8 @@ RLS on every table. Active listings, media, price history, dealers, reviews, cat
 | subscriptions | members | — | — | — |
 | vehicle_categories | anon + auth, `is_visible` | — | — | — |
 | makes, models | anon + auth, all | — | — | — |
-| listings | `status = active`, or owner, or member | owner, `status = draft`, private ⇒ no dealer_id, dealer ⇒ member | owner or member | owner, only drafts |
-| listing_media | if parent listing visible | owner/member of listing (ALL) | same | same |
+| listings | `status = active`, or owner, or member | owner, `status = draft`, private ⇒ no dealer_id, dealer ⇒ member (trigger: no paths/dates) | owner or member (trigger `protect_listing_fields`: data and price yes; status only active→sold/removed, sold→active, draft→removed; never paths, dates, owner) | owner, only drafts |
+| listing_media | if parent listing visible | — (publish-listing) | — | — |
 | listing_price_history | if parent listing visible | — (trigger later) | — | — |
 | listing_questions | public answered, or asker, or listing owner/member | asker = self, no answer, not public | listing owner/member | — |
 | favorites, saved_searches, notification_preferences | own | own | own | own |
@@ -218,7 +223,7 @@ RLS on every table. Active listings, media, price history, dealers, reviews, cat
 
 Storage policies: `listing-drafts` select/insert/update/delete only when first folder = `auth.uid()`; `avatars` insert/update/delete same rule (public read); `listing-media` no client write policy (public read via bucket flag).
 
-Known loose spots to tighten with SQL functions: listings UPDATE lets the seller change `status`, `published_at`, `sponsored_until`, `expires_at`. (conversations are written only by functions since migration 11; profiles `account_type` is locked by the trigger `protect_account_type` from migration 10: only server-side roles can change it.)
+No known loose spots left in the client write policies: listings are locked by `protect_listing_fields` (migration 13), conversations are written only by functions (migration 11), profiles `account_type` is locked by the trigger `protect_account_type` from migration 10: only server-side roles can change it.)
 
 ### Indexes
 
@@ -252,6 +257,10 @@ Rollback: any failure in steps 6-8 deletes subscriptions, then dealer_members, t
 
 Known gap: VAT is trusted from VIES only at signup (no periodic re-check).
 
+### publish-listing (`supabase/functions/publish-listing/index.ts`)
+
+`POST { listing_id, video_duration_ms? }` with the user's JWT; service role inside. The app has inserted the draft row (id = draft id) and uploaded to `listing-drafts/<owner id>/<listing id>/`: `video.mp4` and `cover.jpg` (required), `photo-<NN>-<step>.jpg` (carousel, NN = order). Checks the caller is the owner or a member of the listing's dealer (else 404 `not_found`), status `draft` (already `active` → 200, a retry; else 409 `not_draft`), required data make, model, year, km, price, fuel, city (400 `incomplete` + `fields`), required files (409 `missing_media`). Moves the files (`storage.move` with `destinationBucket`) to `listing-media/<listing id>/<uuid>.<ext>`, inserts `listing_media` (video, cover, photos with `capture_step`), sets the listing `active` with `published_at` / `last_confirmed_at` = now, `video_path`, `cover_path`, `video_duration_ms`, then the first `listing_price_history` row. Any failure after the move moves the files back (draft can be published again) → 500 `server_error`. Type-checked with `tsc` against supabase-js types (no Deno here).
+
 ### delete-account (`supabase/functions/delete-account/index.ts`)
 
 `POST` with the user's JWT (the app re-authenticates with the password first). Removes the user's files in `listing-drafts` and `avatars` (best effort), then `auth.admin.deleteUser`: the database cascades profile, preferences, favorites, saved searches, consents, the user's listings, chats, messages, reviews, notifications. A dealer whose only owner is deleted stays without members. Errors: 401 `unauthorized`, 500 `server_error`.
@@ -260,6 +269,7 @@ Known gap: VAT is trusted from VIES only at signup (no periodic re-check).
 
 - `handle_new_user()` trigger function on `auth.users` insert → creates `profiles` row (`security definer`, `search_path = ''`, `on conflict do nothing`). Migration `08_auth_profiles.sql` also backfills profiles for pre-existing users.
 - `protect_account_type()` trigger (migration 10): `account_type` changes only from server-side roles.
+- `protect_listing_fields()` trigger (migration 13, before insert/update on listings, only for anon/authenticated): inserts only as plain drafts; updates never touch owner, dealer, seller type, published/confirmed/expiry/sponsored dates, video/cover paths or duration; status moves only active → sold/removed, sold → active, draft → removed (`sold_at` set/cleared by the trigger). Error `listing_field_locked` / `listing_status_locked` (42501).
 - Chat (migration 11, all `security definer`, `search_path = ''`, callable by `authenticated` only):
   - `start_conversation(p_listing_id, p_body) → uuid`: the first "Contatta" message. Listing must be active and not the user's (owner or dealer member); creates the conversation (`on conflict` reuses it) and inserts the message in one call, so a seller never sees an empty chat. A new chat writes one `contact_chat` event (= one contact). Errors by message: `not_authenticated` / `own_listing` (42501, HTTP 403), `listing_unavailable` / `empty_message` (P0001, HTTP 400).
   - `mark_conversation_read(p_conversation_id)`: sets `buyer_last_read_at` or `seller_last_read_at` for the caller's side.
@@ -267,11 +277,11 @@ Known gap: VAT is trusted from VIES only at signup (no periodic re-check).
   - `seller_whatsapp(p_listing_id) → text | null`: the number only for an active listing with `whatsapp_enabled`; dealer → `dealers.whatsapp`, private → `profiles.phone` when `whatsapp_public`. Each answer with a number writes a `contact_whatsapp` event (dashboards count distinct users).
   - Trigger `messages_touch_conversation` (after insert on messages): sets `last_message_at` and the sender side's read marker.
 - Realtime publication `supabase_realtime`: `messages`, `conversations` (Realtime applies RLS: each user only receives their own chats).
-- Planned: feed RPC (returns listings + seller display info, since profiles are not readable by others), dealer entitlements, publish listing (moves media from `listing-drafts` to `listing-media`), price-history trigger, nightly stats aggregation (contacts = conversations + distinct `contact_whatsapp` users), listing expiry, push on new message.
+- Planned: feed RPC (returns listings + seller display info, since profiles are not readable by others), dealer entitlements (max active listings per plan, checked in publish-listing), price-history trigger, nightly stats aggregation (contacts = conversations + distinct `contact_whatsapp` users), listing expiry, push on new message.
 
 ## Status
 
-Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters, search + saved searches, consents (sign up + gate), settings, contact (chat + Inbox + WhatsApp), share (share sheet + share site). Designs for all screens and states exist in the Claude canvas mockup.
+Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters, search + saved searches, consents (sign up + gate), settings, contact (chat + Inbox + WhatsApp), share (share sheet + share site), sell flow (capture → summary → details → publish). Designs for all screens and states exist in the Claude canvas mockup.
 
 Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered; opened from the feed it receives the feed's `SharedVideo` through go_router `extra` and continues it, no second download — the feed stops driving that player until the page closes; from a link or a grid it creates its own), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contatta (+ WhatsApp when on). Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
 
@@ -287,8 +297,11 @@ Contact: "Contatta" on the listing (guests sign in first; the seller sees "Il tu
 
 Share: button on the feed and the listing → the phone's share sheet (`share_plus`) with "Volkswagen Golf · 2019 · € 14.900 · Milano\nGuarda l'annuncio su Carfeed: <link>"; the link is `<share.base_url>/l/<id>` or, while the site is not online, `carfeed://app/listing/<id>`. `share` event tracked unless the sheet was dismissed. Share site (`site/`, Cloudflare Pages): `/l/<id>` queries Supabase REST with the anon key (RLS: active listings only) and returns a script-free page with Open Graph / Twitter tags (title + price, km · fuel · gearbox · city, cover image), the listing, "Apri nell'app" (`carfeed://app/listing/<id>`) and store buttons when `IOS_APP_URL` / `ANDROID_APP_URL` are set; gone listing or bad id → 404 page, Supabase down → 503; cache 5 min; strict CSP. Tested with `node --test`, also against the local PostgREST.
 
+Sell flow (`+` tab → `/sell`): (1) Auto / Moto, tips, "Inizia le riprese" (guests sign in first); a draft left on the phone shows "Riprendi" / "Ricomincia" (another category asks before dropping it). (2) Capture: steps from `vehicle_categories.capture_steps` (built-in copy if offline), "Step N di M" + segments, step title and instruction, dashed silhouette over the full-screen camera (`Silhouette` painter, replaceable by real SVGs later), plate tip, torch, Video 5 s / Foto toggle, shutter with a 5 s ring (stops by itself), "Salta", last-shot thumbnail "N/M" → summary, "Prossimo: …". Camera 1080p, 30 fps, bitrate from `app_config.media`, audio on (engine sound), portrait locked; an interrupted clip is dropped; permission denied → message + retry. After a shot it moves to the next missing step (then the summary); `single=1` (retake) goes back. (3) "Le tue riprese": each step with thumbnail, "Video · 5 s" / "Foto", check; "Da fare" for missing required ones; dashed "+" rows for optional ones ("Difetti visibili · aumenta la fiducia"); tap → Rifai / Elimina (optional only); "Crea il video" needs every required step and at least one video. (4) "Dati e prezzo": the video is made and uploaded in the background meanwhile ("Stiamo preparando il video · N%": render 0-70%, uploads 70-100%; a retake restarts it; failure → tap to retry); make / model pickers from the catalog, year, km (thousands dots), fuel chips, "+ Altri dettagli" (version, gearbox, kW with ≈ CV, owners, Euro class, colour, service history, body type + novice ok / moto type, cc, licence), price, description, city (a province capital fills the province) + province, WhatsApp switch (private: phone saved to the profile with `whatsapp_public`; dealer: the dealer's number), 18+ / parental-consent tick for private sellers (`seller_age` consent, asked once). "Pubblica annuncio": saves the draft row (upsert, dealer listing when the user is a dealer member), waits for the media, calls `publish-listing`, then deletes the phone copy and refreshes the feed. (5) "La tua Golf è online", next confirmation in `confirm_every_days / 7` weeks, listing card, "Condividi il link", "Vedi l'annuncio". The draft (`PrefKeys.sellDraft` + `<documents>/sell/<id>/`) is saved after every change; uploads are tracked per file and source, so only what changed is uploaded again and stale ones are removed. Not built and not testable here: the native render on a real phone (package tested upstream).
+
 ## Next (in order)
 
-1. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
+1. **My listings**: list in the profile (active / draft / sold), mark sold, remove, edit price and data, "è ancora disponibile?" confirmation.
+2. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
 
-Later: sell flow (guided capture with silhouettes, on-device encoding, drafts bucket → publish function), dealer dashboard (reads `listing_stats_daily`), nightly stats aggregation, listing expiry job, notifications + push (FCM/APNs, `device_tokens`), AI search (Claude via Edge Function, filters only from DB data), Google/Apple login.
+Later: dealer dashboard (reads `listing_stats_daily`), nightly stats aggregation, listing expiry job, notifications + push (FCM/APNs, `device_tokens`), AI search (Claude via Edge Function, filters only from DB data), Google/Apple login.

@@ -534,7 +534,7 @@ packages:
     source: hosted
     version: "1.9.1"
   path_provider:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: path_provider
       sha256: a7f4874f987173da295a61c181b8ee71dab59b332a486b391babf26a1b884825
@@ -613,6 +613,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.9.1"
+  pro_video_editor:
+    dependency: "direct main"
+    description:
+      name: pro_video_editor
+      sha256: "25f3706dc94c0a37f5965976ef20e35aec262bbfb3d823639516e36f558cb3a5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.23.0"
   pub_semver:
     dependency: transitive
     description:
