@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/feed/ui/feed_screen.dart';
+import '../../features/listing/ui/listing_screen.dart';
 import '../../features/onboarding/ui/dealer_signup_screen.dart';
 import '../../features/onboarding/ui/intent_screen.dart';
 import '../../features/onboarding/ui/preferences_screen.dart';
@@ -89,9 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.listing,
         parentNavigatorKey: _rootKey,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Scheda ${state.pathParameters['id']}',
-        ),
+        builder: (_, state) => ListingScreen(id: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.shareShort,

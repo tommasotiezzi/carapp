@@ -36,6 +36,7 @@ TikTok-style vertical video feed to buy and sell used vehicles (cars incl. vans,
 flutter pub get
 flutter gen-l10n
 flutter run --dart-define-from-file=env.json
+flutter analyze && flutter test   # before every push
 ```
 
 Supabase setup: Auth > Emails > "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}` (6-digit code login).
@@ -55,7 +56,8 @@ lib/
     router/routes.dart, app_router.dart, main_shell.dart  routes, shell, dark navbar
     analytics/event_tracker.dart  batched events (20 / 15 s / app paused)
     media/media_url.dart    storage path -> public URL (http URLs pass through)
-    utils/formatters.dart   € / km / CV / fuel labels
+    utils/formatters.dart   € / km / CV
+    l10n/vehicle_labels.dart  ARB labels for DB enums (fuel_type, transmission_type)
     widgets/pill.dart, placeholder_screen.dart
   features/
     feed/      data (FeedItem, FeedRepository), state (FeedController), ui (FeedScreen, FeedVideoView, FeedOverlay)
@@ -63,9 +65,15 @@ lib/
     onboarding/ BuyerPreferences, makesProvider, OnboardingController (local first, synced on login),
                IntentScreen, PreferencesScreen (also edit mode from profile), DealerSignupScreen, exitOnboarding()
     dealer/    DealerRepository (calls dealer-signup edge function)
+    listing/   data (ListingDetail + photos/dealer, ListingQuestion, DealerReviews, ListingRepository,
+               TransferCostRules), state (listingDetail / listingQuestions / dealerReviews providers),
+               ui (ListingScreen, ListingVideoHeader, photo strip + viewer, sections, Q&A + ask sheet)
     profile/   ProfileScreen (minimal: login/logout, "Cosa cerco" gated behind signup)
   l10n/app_it.arb (+ gen/)
+test/       transfer cost rules, listing screen widget tests (fake data, small + large phone)
 ```
+
+Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
 
 Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`, `/onboarding/preferences[?edit=1]`, `/onboarding/dealer`, `/sell`, `/listing/:id`, `/chat/:id`, `/dealer`; share link `/l/:id` -> `/listing/:id`. Deep links: custom scheme `carfeed://app/<path>` (see SETUP.md); https links once a domain exists.
 
@@ -198,7 +206,7 @@ listings: partial `where status = 'active'` on (published_at desc), (category_id
 - `avatars` (public): `{auth.uid}/{uuid}.ext`
 
 ### app_config keys
-`config_version` (bump on every change) · `app_versions` {ios/android: {min, latest}} · `legal` {privacy_policy_url, terms_url, support_email} · `feature_flags` {billing_enabled, ai_search_enabled, push_enabled, whatsapp_contact_enabled, reviews_enabled} · `onboarding` {login_nudge_after_listings, second_nudge_after_listings, preferences_nudge_after_listings, show_after_listings (default 4 in app)} · `dealer_trial` {trial_months 3, conditional_free_months 3, contact_threshold_total 30, founder_price_cents 2900} · `contact_definition` · `listing_lifecycle` {confirm_every_days 21, expire_after_days_without_confirm 7} · `feed` {page_size 10, prefetch_next_videos 2, prefetch_seconds 3} · `media` {clip_seconds 5, video_max_height 1920, video_min_height 720, video_bitrate_kbps 4500, video_fps 30, photo_max_long_side 4000}
+`config_version` (bump on every change) · `app_versions` {ios/android: {min, latest}} · `legal` {privacy_policy_url, terms_url, support_email} · `feature_flags` {billing_enabled, ai_search_enabled, push_enabled, whatsapp_contact_enabled, reviews_enabled} · `onboarding` {login_nudge_after_listings, second_nudge_after_listings, preferences_nudge_after_listings, show_after_listings (default 4 in app)} · `dealer_trial` {trial_months 3, conditional_free_months 3, contact_threshold_total 30, founder_price_cents 2900} · `contact_definition` · `listing_lifecycle` {confirm_every_days 21, expire_after_days_without_confirm 7} · `feed` {page_size 10, prefetch_next_videos 2, prefetch_seconds 3} · `media` {clip_seconds 5, video_max_height 1920, video_min_height 720, video_bitrate_kbps 4500, video_fps 30, photo_max_long_side 4000} · `transfer_costs` (optional, app defaults if missing) {ipt_base_cents 15081, ipt_base_max_kw 53, ipt_per_kw_cents 351.19, provincial_surcharge_pct 30, fixed_fees_cents 8520}
 
 ## Edge Functions
 
@@ -227,15 +235,16 @@ Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a use
 
 ## Status
 
-Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email OTP login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile. Designs for all screens and states exist in the Claude canvas mockup.
+Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email OTP login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail. Designs for all screens and states exist in the Claude canvas mockup.
+
+Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contact. Save, Share and Contact show "in arrivo" until their steps. Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
 
 ## Next (in order)
 
-1. **Listing detail** (`/listing/:id`): video on top, photos, price, total cost estimate, specs, description, Q&A, seller + reviews, sticky Contact.
-2. **Save** + profile "Salvati" (favorites, price_cents_at_save; login sheet when guest).
-3. **Filters**: per-pill bottom sheets on the feed + full Search screen; filtered feed query; saved searches. Preferences pre-fill filters.
-4. **Contact**: conversations + messages with Realtime, Inbox, WhatsApp button (needs a security-definer function to expose seller contact).
-5. **Share**: listing link + web fallback page.
-6. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
+1. **Save** + profile "Salvati" (favorites, price_cents_at_save; login sheet when guest).
+2. **Filters**: per-pill bottom sheets on the feed + full Search screen; filtered feed query; saved searches. Preferences pre-fill filters.
+3. **Contact**: conversations + messages with Realtime, Inbox, WhatsApp button (needs a security-definer function to expose seller contact).
+4. **Share**: listing link + web fallback page.
+5. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
 
 Later: sell flow (guided capture with silhouettes, on-device encoding, drafts bucket → publish function), dealer dashboard (reads `listing_stats_daily`), nightly stats aggregation, listing expiry job, notifications + push (FCM/APNs, `device_tokens`), AI search (Claude via Edge Function, filters only from DB data), Google/Apple login.

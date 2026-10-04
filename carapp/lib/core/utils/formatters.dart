@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 /// Italian formatting for prices, km and vehicle data.
+/// Enum labels (fuel, transmission) live in the ARB: see `VehicleLabels`.
 class Formatters {
   Formatters._();
 
@@ -16,18 +17,6 @@ class Formatters {
   /// kW -> CV, rounded
   static String horsepower(int? kw) =>
       kw == null ? '' : '${(kw * 1.35962).round()} CV';
-
-  static String fuel(String? dbValue) => switch (dbValue) {
-        'petrol' => 'Benzina',
-        'diesel' => 'Diesel',
-        'hybrid' => 'Ibrida',
-        'plugin_hybrid' => 'Ibrida plug-in',
-        'electric' => 'Elettrica',
-        'lpg' => 'GPL',
-        'cng' => 'Metano',
-        'other' => 'Altro',
-        _ => '',
-      };
 
   /// "AB" from "Auto Bianchi"
   static String initials(String? name) {

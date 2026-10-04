@@ -36,6 +36,9 @@ class AppConfig {
 
   // ---- typed accessors -----------------------------------------------
 
+  /// A whole JSON section, for features that parse their own config.
+  Map<String, dynamic> section(String key) => _section(key);
+
   bool flag(String name) => (_section('feature_flags')[name] as bool?) ?? false;
 
   int onboardingValue(String name, int fallback) =>

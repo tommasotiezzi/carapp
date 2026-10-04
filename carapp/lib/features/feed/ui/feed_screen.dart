@@ -87,7 +87,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     super.didChangeDependencies();
     // go_router turns tickers off for inactive tabs, and the Navigator does
     // the same for pages covered by a full-screen route (/sell, /listing...).
-    final visible = TickerMode.of(context);
+    final visible = TickerMode.valuesOf(context).enabled;
     if (visible != _visible) {
       _visible = visible;
       _updatePlayback();
