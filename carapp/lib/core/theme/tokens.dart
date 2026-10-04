@@ -31,6 +31,7 @@ class AppColors {
   // Status
   static const success = Color(0xFF22C55E);
   static const successSoft = Color(0xFFDCFCE7);
+  static const successInk = Color(0xFF166534); // text on successSoft
   static const warningSoft = Color(0xFFFFF6E5);
   static const danger = Color(0xFFB42318);
   static const rating = Color(0xFFF5A524); // review stars

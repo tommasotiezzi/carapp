@@ -500,4 +500,34 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get qaLoginSubtitle =>
       'Il venditore riceve la tua domanda e ti risponde qui.';
+
+  @override
+  String get savedTitle => 'Salvati';
+
+  @override
+  String get savedLabel => 'Salvato';
+
+  @override
+  String get savedEmpty =>
+      'Non hai ancora salvato niente. Tocca Salva su un annuncio per ritrovarlo qui.';
+
+  @override
+  String get savedAdded => 'Salvato. Lo ritrovi nel profilo.';
+
+  @override
+  String get savedRemoved => 'Rimosso dai salvati';
+
+  @override
+  String get savedError => 'Non siamo riusciti a salvare, riprova.';
+
+  @override
+  String get savedUnavailable => 'Non più disponibile';
+
+  @override
+  String get savedRemove => 'Rimuovi dai salvati';
+
+  @override
+  String savedPriceDrop(String amount) {
+    return 'Sceso di $amount';
+  }
 }

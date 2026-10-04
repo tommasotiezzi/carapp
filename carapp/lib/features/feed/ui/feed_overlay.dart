@@ -14,6 +14,7 @@ class FeedOverlay extends StatelessWidget {
     super.key,
     required this.item,
     required this.onOpenDetail,
+    required this.saved,
     required this.onSave,
     required this.onShare,
     required this.onContact,
@@ -21,6 +22,7 @@ class FeedOverlay extends StatelessWidget {
   });
 
   final FeedItem item;
+  final bool saved;
   final VoidCallback onOpenDetail;
   final VoidCallback onSave;
   final VoidCallback onShare;
@@ -54,6 +56,7 @@ class FeedOverlay extends StatelessWidget {
           bottom: 120,
           child: _SideActions(
             item: item,
+            saved: saved,
             onSave: onSave,
             onShare: onShare,
             onContact: onContact,
@@ -79,12 +82,14 @@ class FeedOverlay extends StatelessWidget {
 class _SideActions extends StatelessWidget {
   const _SideActions({
     required this.item,
+    required this.saved,
     required this.onSave,
     required this.onShare,
     required this.onContact,
   });
 
   final FeedItem item;
+  final bool saved;
   final VoidCallback onSave;
   final VoidCallback onShare;
   final VoidCallback onContact;
@@ -134,7 +139,11 @@ class _SideActions extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 22),
-        _ActionButton(icon: Icons.bookmark_border, label: 'Salva', onTap: onSave),
+        _ActionButton(
+          icon: saved ? Icons.bookmark : Icons.bookmark_border,
+          label: saved ? AppLocalizations.of(context).savedLabel : AppLocalizations.of(context).commonSave,
+          onTap: onSave,
+        ),
         const SizedBox(height: 18),
         _ActionButton(icon: Icons.reply, label: 'Invia', onTap: onShare, mirror: true),
         const SizedBox(height: 18),

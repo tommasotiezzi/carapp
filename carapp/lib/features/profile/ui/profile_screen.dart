@@ -9,9 +9,10 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/ui/login_sheet.dart';
 import '../../onboarding/state/onboarding_controller.dart';
+import '../../saved/ui/saved_section.dart';
 
-/// Minimal profile for now: login / logout and "Cosa cerco".
-/// Saved listings and searches arrive with step 3.
+/// Minimal profile for now: login / logout, "Cosa cerco" and "Salvati".
+/// Saved searches arrive with the filters step.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -60,6 +61,8 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xl),
             _WhatILookForCard(loggedIn: user != null, hasPrefs: hasPrefs),
             if (user != null) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              const SavedSection(),
               const SizedBox(height: AppSpacing.xxl),
               OutlinedButton(
                 onPressed: () => ref.read(authRepositoryProvider).signOut(),

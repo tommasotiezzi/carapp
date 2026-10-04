@@ -981,6 +981,60 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Il venditore riceve la tua domanda e ti risponde qui.'**
   String get qaLoginSubtitle;
+
+  /// No description provided for @savedTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvati'**
+  String get savedTitle;
+
+  /// No description provided for @savedLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvato'**
+  String get savedLabel;
+
+  /// No description provided for @savedEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Non hai ancora salvato niente. Tocca Salva su un annuncio per ritrovarlo qui.'**
+  String get savedEmpty;
+
+  /// No description provided for @savedAdded.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvato. Lo ritrovi nel profilo.'**
+  String get savedAdded;
+
+  /// No description provided for @savedRemoved.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimosso dai salvati'**
+  String get savedRemoved;
+
+  /// No description provided for @savedError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non siamo riusciti a salvare, riprova.'**
+  String get savedError;
+
+  /// No description provided for @savedUnavailable.
+  ///
+  /// In it, this message translates to:
+  /// **'Non più disponibile'**
+  String get savedUnavailable;
+
+  /// No description provided for @savedRemove.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi dai salvati'**
+  String get savedRemove;
+
+  /// No description provided for @savedPriceDrop.
+  ///
+  /// In it, this message translates to:
+  /// **'Sceso di {amount}'**
+  String savedPriceDrop(String amount);
 }
 
 class _AppLocalizationsDelegate

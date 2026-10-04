@@ -172,5 +172,16 @@
   "qaSent": "Domanda inviata al venditore",
   "qaError": "Non siamo riusciti a inviare la domanda, riprova.",
   "qaLoginTitle": "Accedi per fare una domanda",
-  "qaLoginSubtitle": "Il venditore riceve la tua domanda e ti risponde qui."
+  "qaLoginSubtitle": "Il venditore riceve la tua domanda e ti risponde qui.",
+
+  "savedTitle": "Salvati",
+  "savedLabel": "Salvato",
+  "savedEmpty": "Non hai ancora salvato niente. Tocca Salva su un annuncio per ritrovarlo qui.",
+  "savedAdded": "Salvato. Lo ritrovi nel profilo.",
+  "savedRemoved": "Rimosso dai salvati",
+  "savedError": "Non siamo riusciti a salvare, riprova.",
+  "savedUnavailable": "Non più disponibile",
+  "savedRemove": "Rimuovi dai salvati",
+  "savedPriceDrop": "Sceso di {amount}",
+  "@savedPriceDrop": {"placeholders": {"amount": {"type": "String"}}}
 }
