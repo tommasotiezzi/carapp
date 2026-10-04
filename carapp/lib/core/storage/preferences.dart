@@ -17,4 +17,5 @@ class PrefKeys {
   static const anonId = 'anon_id_v1';
   static const viewedListingsCount = 'viewed_listings_count_v1';
   static const feedFilters = 'feed_filters_v1';
+  static const recentSearches = 'recent_searches_v1';
 }
