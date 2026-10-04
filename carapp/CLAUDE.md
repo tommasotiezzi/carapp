@@ -61,7 +61,10 @@ lib/
     widgets/pill.dart, placeholder_screen.dart
   features/
     feed/      data (FeedItem, FeedRepository, FeedFilters), state (FeedController, FeedFiltersController),
-               ui (FeedScreen, FeedVideoView, FeedOverlay with filter pills, FilterSheet)
+               ui (FeedScreen, FeedVideoView, FeedOverlay with filter pills, FilterSheet + FilterSections,
+               ListingCard grid card, describeFilters() summary)
+    search/    SavedSearch + SavedSearchRepository, state (searchDraft, searchResults with debounce,
+               savedSearches), ui (SearchScreen: saved searches, inline filters, results grid, save sheet)
     auth/      AuthRepository (email + password, Supabase error codes -> AuthFailure), login_sheet.dart
                (reusable bottom sheet: sign in / create account, confirm-email step if Supabase requires it)
     onboarding/ BuyerPreferences, makesProvider, OnboardingController (local first, synced on login),
@@ -74,7 +77,8 @@ lib/
                rolls back on error), toggleSave() (login sheet for guests), SavedSection (profile grid)
     profile/   ProfileScreen (minimal: login/logout, "Cosa cerco" gated behind signup, "Salvati")
   l10n/app_it.arb (+ gen/)
-test/       transfer cost rules, feed filters, listing / Salvati / login / filter sheet widget tests (fake data), SavedController
+test/       transfer cost rules, feed filters, search, listing / Salvati / login / filter sheet / Search widget tests
+            (fake data), SavedController
 ```
 
 Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
@@ -239,7 +243,7 @@ Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a use
 
 ## Status
 
-Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters. Designs for all screens and states exist in the Claude canvas mockup.
+Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters, search + saved searches. Designs for all screens and states exist in the Claude canvas mockup.
 
 Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contact. Save, Share and Contact show "in arrivo" until their steps. Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
 
@@ -247,11 +251,12 @@ Save: bookmark on the feed and on the listing screen; guests get the login sheet
 
 Feed filters: `FeedFilters` (category, price min/max, makes, year min, mileage max, fuel types; same names as `listings` columns, ready to become `saved_searches.filters`). Pills over the video (Prezzo, Marca, Anno, Km) open their section of `FilterSheet`; the tune button opens all sections and shows how many are active. The sheet edits a draft and applies on "Mostra annunci", so the feed reloads once (`FeedController` watches the filters; cursor pagination unchanged). Filters are stored on the phone (`PrefKeys.feedFilters`); until the user applies any, they follow the onboarding preferences (novice driver is not a filter). No results with filters → "Rimuovi i filtri" / "Modifica filtri".
 
+Search tab (`/search`): saved searches on top (tap = apply to the feed and go there; delete from the ⋮ menu; bell for `notify` only when `feature_flags.push_enabled`), every filter inline (`FilterSections`, same as the sheet), results grid (20 per page, "Carica altri"). The draft starts from and follows the feed filters; edits are debounced (350 ms, superseded builds do not fetch) and the previous grid stays visible while reloading. "Salva ricerca" (login sheet for guests) names it with `describeFilters()` ("Auto · Volkswagen · 5–10k · Dal 2018") and stores `FeedFilters.toJson()` in `saved_searches.filters`; list ordered by name (no documented `created_at` on that table). "Guarda nel feed" applies the draft to the feed.
+
 ## Next (in order)
 
-1. **Search**: full Search screen (filters + results), saved searches (`saved_searches`, notify flag). Feed pills and filtered query are done.
-2. **Contact**: conversations + messages with Realtime, Inbox, WhatsApp button (needs a security-definer function to expose seller contact).
-3. **Share**: listing link + web fallback page.
-4. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
+1. **Contact**: conversations + messages with Realtime, Inbox, WhatsApp button (needs a security-definer function to expose seller contact).
+2. **Share**: listing link + web fallback page.
+3. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
 
 Later: sell flow (guided capture with silhouettes, on-device encoding, drafts bucket → publish function), dealer dashboard (reads `listing_stats_daily`), nightly stats aggregation, listing expiry job, notifications + push (FCM/APNs, `device_tokens`), AI search (Claude via Edge Function, filters only from DB data), Google/Apple login.

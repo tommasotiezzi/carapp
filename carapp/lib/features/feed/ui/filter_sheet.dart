@@ -41,17 +41,11 @@ class FilterSheet extends ConsumerStatefulWidget {
 }
 
 class _FilterSheetState extends ConsumerState<FilterSheet> {
-  static final _thousands = NumberFormat.decimalPattern('it_IT');
-
   late FeedFilters _draft = ref.read(feedFiltersProvider);
-  bool _allBrands = false;
 
-  List<FilterSection> get _sections =>
-      widget.only == null ? FilterSection.values : [widget.only!];
-
-  void _update(FeedFilters Function(FeedFilters) f) => setState(() => _draft = f(_draft));
-
-  void _reset() => _update((d) => widget.only == null ? FeedFilters.empty : d.clear(widget.only!));
+  void _reset() => setState(
+        () => _draft = widget.only == null ? FeedFilters.empty : _draft.clear(widget.only!),
+      );
 
   Future<void> _apply() async {
     await ref.read(feedFiltersProvider.notifier).apply(_draft);
@@ -87,15 +81,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final s in _sections) ...[
-                    if (!single) SectionLabel(filterSectionTitle(t, s)),
-                    _section(t, s),
-                    const SizedBox(height: AppSpacing.xxl),
-                  ],
-                ],
+              child: FilterSections(
+                filters: _draft,
+                onChanged: (f) => setState(() => _draft = f),
+                sections: single ? [widget.only!] : FilterSection.values,
+                showLabels: !single,
               ),
             ),
           ),
@@ -105,6 +95,51 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
           ),
         ],
       ),
+    );
+  }
+
+}
+
+/// The filter controls, used by the sheet and inline by the Search screen.
+/// Stateless about the filters: every change goes through [onChanged].
+class FilterSections extends ConsumerStatefulWidget {
+  const FilterSections({
+    super.key,
+    required this.filters,
+    required this.onChanged,
+    this.sections = FilterSection.values,
+    this.showLabels = true,
+  });
+
+  final FeedFilters filters;
+  final ValueChanged<FeedFilters> onChanged;
+  final List<FilterSection> sections;
+  final bool showLabels;
+
+  @override
+  ConsumerState<FilterSections> createState() => _FilterSectionsState();
+}
+
+class _FilterSectionsState extends ConsumerState<FilterSections> {
+  static final _thousands = NumberFormat.decimalPattern('it_IT');
+  bool _allBrands = false;
+
+  FeedFilters get _draft => widget.filters;
+
+  void _update(FeedFilters Function(FeedFilters) f) => widget.onChanged(f(_draft));
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final s in widget.sections) ...[
+          if (widget.showLabels) SectionLabel(filterSectionTitle(t, s)),
+          _section(t, s),
+          const SizedBox(height: AppSpacing.xxl),
+        ],
+      ],
     );
   }
 

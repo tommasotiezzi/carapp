@@ -213,5 +213,24 @@
   "filterReset": "Azzera",
   "filterApply": "Mostra annunci",
   "filterClearAll": "Rimuovi i filtri",
-  "filterEdit": "Modifica filtri"
+  "filterEdit": "Modifica filtri",
+
+  "searchResults": "Risultati",
+  "searchNoResults": "Nessun annuncio con questi filtri. Prova ad allargare la ricerca.",
+  "searchLoadMore": "Carica altri",
+  "searchShowInFeed": "Guarda nel feed",
+  "searchSave": "Salva ricerca",
+  "searchSavedTitle": "Ricerche salvate",
+  "searchNameLabel": "Nome della ricerca",
+  "searchNotify": "Avvisami quando arrivano annunci nuovi",
+  "searchSavedDone": "Ricerca salvata",
+  "searchDeleted": "Ricerca eliminata",
+  "searchDelete": "Elimina",
+  "searchMore": "Altre azioni",
+  "searchNotifyOn": "Avvisi attivi",
+  "searchNotifyOff": "Avvisi spenti",
+  "searchError": "Operazione non riuscita, riprova.",
+  "searchLoginTitle": "Accedi per salvare la ricerca",
+  "searchLoginSubtitle": "La ritrovi qui con un tocco, su qualsiasi telefono.",
+  "searchAllVehicles": "Tutti i veicoli"
 }

@@ -622,4 +622,60 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get filterEdit => 'Modifica filtri';
+
+  @override
+  String get searchResults => 'Risultati';
+
+  @override
+  String get searchNoResults =>
+      'Nessun annuncio con questi filtri. Prova ad allargare la ricerca.';
+
+  @override
+  String get searchLoadMore => 'Carica altri';
+
+  @override
+  String get searchShowInFeed => 'Guarda nel feed';
+
+  @override
+  String get searchSave => 'Salva ricerca';
+
+  @override
+  String get searchSavedTitle => 'Ricerche salvate';
+
+  @override
+  String get searchNameLabel => 'Nome della ricerca';
+
+  @override
+  String get searchNotify => 'Avvisami quando arrivano annunci nuovi';
+
+  @override
+  String get searchSavedDone => 'Ricerca salvata';
+
+  @override
+  String get searchDeleted => 'Ricerca eliminata';
+
+  @override
+  String get searchDelete => 'Elimina';
+
+  @override
+  String get searchMore => 'Altre azioni';
+
+  @override
+  String get searchNotifyOn => 'Avvisi attivi';
+
+  @override
+  String get searchNotifyOff => 'Avvisi spenti';
+
+  @override
+  String get searchError => 'Operazione non riuscita, riprova.';
+
+  @override
+  String get searchLoginTitle => 'Accedi per salvare la ricerca';
+
+  @override
+  String get searchLoginSubtitle =>
+      'La ritrovi qui con un tocco, su qualsiasi telefono.';
+
+  @override
+  String get searchAllVehicles => 'Tutti i veicoli';
 }

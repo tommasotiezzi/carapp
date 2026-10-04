@@ -8,6 +8,7 @@ import '../../features/onboarding/ui/dealer_signup_screen.dart';
 import '../../features/onboarding/ui/intent_screen.dart';
 import '../../features/onboarding/ui/preferences_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
+import '../../features/search/ui/search_screen.dart';
 import '../widgets/placeholder_screen.dart';
 import 'main_shell.dart';
 import 'routes.dart';
@@ -44,7 +45,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
               path: AppRoutes.search,
-              builder: (_, __) => const PlaceholderScreen(title: 'Cerca'),
+              builder: (_, __) => const SearchScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [

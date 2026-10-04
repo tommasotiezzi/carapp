@@ -1185,6 +1185,114 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Modifica filtri'**
   String get filterEdit;
+
+  /// No description provided for @searchResults.
+  ///
+  /// In it, this message translates to:
+  /// **'Risultati'**
+  String get searchResults;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun annuncio con questi filtri. Prova ad allargare la ricerca.'**
+  String get searchNoResults;
+
+  /// No description provided for @searchLoadMore.
+  ///
+  /// In it, this message translates to:
+  /// **'Carica altri'**
+  String get searchLoadMore;
+
+  /// No description provided for @searchShowInFeed.
+  ///
+  /// In it, this message translates to:
+  /// **'Guarda nel feed'**
+  String get searchShowInFeed;
+
+  /// No description provided for @searchSave.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva ricerca'**
+  String get searchSave;
+
+  /// No description provided for @searchSavedTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricerche salvate'**
+  String get searchSavedTitle;
+
+  /// No description provided for @searchNameLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome della ricerca'**
+  String get searchNameLabel;
+
+  /// No description provided for @searchNotify.
+  ///
+  /// In it, this message translates to:
+  /// **'Avvisami quando arrivano annunci nuovi'**
+  String get searchNotify;
+
+  /// No description provided for @searchSavedDone.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricerca salvata'**
+  String get searchSavedDone;
+
+  /// No description provided for @searchDeleted.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricerca eliminata'**
+  String get searchDeleted;
+
+  /// No description provided for @searchDelete.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina'**
+  String get searchDelete;
+
+  /// No description provided for @searchMore.
+  ///
+  /// In it, this message translates to:
+  /// **'Altre azioni'**
+  String get searchMore;
+
+  /// No description provided for @searchNotifyOn.
+  ///
+  /// In it, this message translates to:
+  /// **'Avvisi attivi'**
+  String get searchNotifyOn;
+
+  /// No description provided for @searchNotifyOff.
+  ///
+  /// In it, this message translates to:
+  /// **'Avvisi spenti'**
+  String get searchNotifyOff;
+
+  /// No description provided for @searchError.
+  ///
+  /// In it, this message translates to:
+  /// **'Operazione non riuscita, riprova.'**
+  String get searchError;
+
+  /// No description provided for @searchLoginTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Accedi per salvare la ricerca'**
+  String get searchLoginTitle;
+
+  /// No description provided for @searchLoginSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'La ritrovi qui con un tocco, su qualsiasi telefono.'**
+  String get searchLoginSubtitle;
+
+  /// No description provided for @searchAllVehicles.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutti i veicoli'**
+  String get searchAllVehicles;
 }
 
 class _AppLocalizationsDelegate
