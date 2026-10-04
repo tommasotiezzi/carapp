@@ -29,6 +29,7 @@ class ListingDetail {
     this.videoPath,
     this.dealer,
     this.photos = const [],
+    this.whatsappEnabled = false,
   });
 
   final String id;
@@ -57,6 +58,10 @@ class ListingDetail {
   final String? videoPath;
   final ListingDealer? dealer;
   final List<ListingPhoto> photos;
+
+  /// The seller turned WhatsApp on (the number itself is never read
+  /// here: `seller_whatsapp()` gives it to signed-in users).
+  final bool whatsappEnabled;
 
   bool get isDealer => sellerType == 'dealer';
 
@@ -96,7 +101,7 @@ class ListingDetail {
       'id, seller_type, owner_id, category_id, published_at, version, year, '
       'mileage_km, price_cents, fuel_type, transmission, power_kw, euro_class, '
       'color, owners_count, has_service_history, warranty_months, description, '
-      'city, province, cover_path, video_path, '
+      'city, province, cover_path, video_path, whatsapp_enabled, '
       'make:makes(name), model:models(name), '
       'dealer:dealers(id, display_name, city, province, logo_path, vat_verified_at), '
       'media:listing_media(kind, storage_path, width, height, sort_order)';
@@ -141,6 +146,7 @@ class ListingDetail {
       videoPath: row['video_path'] as String?,
       dealer: dealerRow == null ? null : ListingDealer.fromRow(dealerRow),
       photos: photos,
+      whatsappEnabled: (row['whatsapp_enabled'] as bool?) ?? false,
     );
   }
 }

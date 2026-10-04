@@ -1737,6 +1737,222 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Account eliminato'**
   String get settingsDeleted;
+
+  /// No description provided for @inboxTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Messaggi'**
+  String get inboxTitle;
+
+  /// No description provided for @inboxGuestTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'I tuoi messaggi'**
+  String get inboxGuestTitle;
+
+  /// No description provided for @inboxGuestBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Accedi per scrivere ai venditori e ritrovare qui tutte le chat.'**
+  String get inboxGuestBody;
+
+  /// No description provided for @inboxEmptyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun messaggio'**
+  String get inboxEmptyTitle;
+
+  /// No description provided for @inboxEmptyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Quando scrivi a un venditore, la chat appare qui.'**
+  String get inboxEmptyBody;
+
+  /// No description provided for @inboxExplore.
+  ///
+  /// In it, this message translates to:
+  /// **'Esplora annunci'**
+  String get inboxExplore;
+
+  /// No description provided for @inboxYourListing.
+  ///
+  /// In it, this message translates to:
+  /// **'Il tuo annuncio'**
+  String get inboxYourListing;
+
+  /// No description provided for @inboxYou.
+  ///
+  /// In it, this message translates to:
+  /// **'Tu: {text}'**
+  String inboxYou(String text);
+
+  /// No description provided for @chatPrivateSeller.
+  ///
+  /// In it, this message translates to:
+  /// **'Venditore privato'**
+  String get chatPrivateSeller;
+
+  /// No description provided for @chatBuyer.
+  ///
+  /// In it, this message translates to:
+  /// **'Acquirente'**
+  String get chatBuyer;
+
+  /// No description provided for @chatToday.
+  ///
+  /// In it, this message translates to:
+  /// **'Oggi'**
+  String get chatToday;
+
+  /// No description provided for @chatYesterday.
+  ///
+  /// In it, this message translates to:
+  /// **'Ieri'**
+  String get chatYesterday;
+
+  /// No description provided for @chatNotFoundTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Chat non disponibile'**
+  String get chatNotFoundTitle;
+
+  /// No description provided for @chatNotFoundBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa chat non esiste più.'**
+  String get chatNotFoundBody;
+
+  /// No description provided for @chatInputHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi un messaggio'**
+  String get chatInputHint;
+
+  /// No description provided for @chatSend.
+  ///
+  /// In it, this message translates to:
+  /// **'Invia'**
+  String get chatSend;
+
+  /// No description provided for @chatSending.
+  ///
+  /// In it, this message translates to:
+  /// **'Invio…'**
+  String get chatSending;
+
+  /// No description provided for @chatFailed.
+  ///
+  /// In it, this message translates to:
+  /// **'Non inviato · tocca per riprovare'**
+  String get chatFailed;
+
+  /// No description provided for @chatDelete.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina'**
+  String get chatDelete;
+
+  /// No description provided for @chatNewTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi a {name}'**
+  String chatNewTitle(String name);
+
+  /// No description provided for @chatNewBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Fai la tua domanda: la risposta arriva qui e in Inbox.'**
+  String get chatNewBody;
+
+  /// No description provided for @chatSafetyTip.
+  ///
+  /// In it, this message translates to:
+  /// **'Non pagare anticipi o caparre prima di aver visto il veicolo di persona.'**
+  String get chatSafetyTip;
+
+  /// No description provided for @chatQuickAvailable.
+  ///
+  /// In it, this message translates to:
+  /// **'È ancora disponibile?'**
+  String get chatQuickAvailable;
+
+  /// No description provided for @chatQuickVisit.
+  ///
+  /// In it, this message translates to:
+  /// **'Posso vederlo dal vivo?'**
+  String get chatQuickVisit;
+
+  /// No description provided for @chatQuickPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'Il prezzo è trattabile?'**
+  String get chatQuickPrice;
+
+  /// No description provided for @chatQuickTradeIn.
+  ///
+  /// In it, this message translates to:
+  /// **'Accetti permute?'**
+  String get chatQuickTradeIn;
+
+  /// No description provided for @chatListingSold.
+  ///
+  /// In it, this message translates to:
+  /// **'Venduto'**
+  String get chatListingSold;
+
+  /// No description provided for @chatListingUnavailable.
+  ///
+  /// In it, this message translates to:
+  /// **'Non più disponibile'**
+  String get chatListingUnavailable;
+
+  /// No description provided for @chatSendError.
+  ///
+  /// In it, this message translates to:
+  /// **'Messaggio non inviato, riprova.'**
+  String get chatSendError;
+
+  /// No description provided for @contactListingUnavailable.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo annuncio non è più disponibile.'**
+  String get contactListingUnavailable;
+
+  /// No description provided for @contactOwnListing.
+  ///
+  /// In it, this message translates to:
+  /// **'È un tuo annuncio.'**
+  String get contactOwnListing;
+
+  /// No description provided for @contactError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad aprire la chat, riprova.'**
+  String get contactError;
+
+  /// No description provided for @whatsappLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'WhatsApp'**
+  String get whatsappLabel;
+
+  /// No description provided for @whatsappNoNumber.
+  ///
+  /// In it, this message translates to:
+  /// **'Il venditore non ha un numero WhatsApp: scrivigli in chat.'**
+  String get whatsappNoNumber;
+
+  /// No description provided for @whatsappError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad aprire WhatsApp.'**
+  String get whatsappError;
+
+  /// No description provided for @whatsappPrefill.
+  ///
+  /// In it, this message translates to:
+  /// **'Ciao! Ti scrivo per {title} visto su {app}.'**
+  String whatsappPrefill(String title, String app);
 }
 
 class _AppLocalizationsDelegate

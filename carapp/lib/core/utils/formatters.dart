@@ -17,6 +17,25 @@ class Formatters {
   /// "1 ott 2026" (day, short month, year) in the app's locale.
   static String date(DateTime d) => DateFormat.yMMMd('it').format(d);
 
+  /// "14:32"
+  static String time(DateTime d) => DateFormat.Hm('it').format(d);
+
+  /// Inbox row: "14:32" today, [yesterday] ("Ieri"), weekday ("lun")
+  /// within a week, then "12/09/26".
+  static String chatListTime(DateTime d, {required String yesterday, DateTime? now}) {
+    final today = _day(now ?? DateTime.now());
+    final days = today.difference(_day(d)).inDays;
+    if (days <= 0) return time(d);
+    if (days == 1) return yesterday;
+    if (days < 7) return DateFormat.E('it').format(d);
+    return DateFormat('dd/MM/yy', 'it').format(d);
+  }
+
+  /// Midnight of [d] (local), for "same day" checks.
+  static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  static bool sameDay(DateTime a, DateTime b) => _day(a) == _day(b);
+
   /// kW -> CV, rounded
   static String horsepower(int? kw) =>
       kw == null ? '' : '${(kw * 1.35962).round()} CV';

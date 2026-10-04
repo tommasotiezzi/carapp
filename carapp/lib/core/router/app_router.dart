@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/chat/ui/chat_screen.dart';
+import '../../features/chat/ui/inbox_screen.dart';
 import '../../features/feed/ui/feed_screen.dart';
 import '../../features/legal/ui/consent_gate.dart';
 import '../../features/listing/ui/listing_screen.dart';
@@ -54,7 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
               path: AppRoutes.inbox,
-              builder: (_, __) => const PlaceholderScreen(title: 'Inbox'),
+              builder: (_, _) => const InboxScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -106,11 +108,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             AppRoutes.listingPath(state.pathParameters['id']!),
       ),
       GoRoute(
+        path: AppRoutes.newChat,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => ChatScreen(listingId: state.pathParameters['listingId']),
+      ),
+      GoRoute(
         path: AppRoutes.chat,
         parentNavigatorKey: _rootKey,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Chat ${state.pathParameters['id']}',
-        ),
+        builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']),
       ),
       GoRoute(
         path: AppRoutes.settings,
