@@ -19,7 +19,7 @@ import 'chat_widgets.dart';
 /// that chat).
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, this.conversationId, this.listingId})
-      : assert(conversationId != null || listingId != null);
+    : assert(conversationId != null || listingId != null);
 
   final String? conversationId;
   final String? listingId;
@@ -61,13 +61,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _start(String body) async {
     final t = AppLocalizations.of(context);
     final repo = ref.read(chatRepositoryProvider);
-    setState(() => _starting = ChatMessage(
-          id: 'local-first',
-          senderId: ref.read(currentUserIdProvider) ?? '',
-          body: body,
-          createdAt: DateTime.now(),
-          status: MessageStatus.sending,
-        ));
+    setState(
+      () => _starting = ChatMessage(
+        id: 'local-first',
+        senderId: ref.read(currentUserIdProvider) ?? '',
+        body: body,
+        createdAt: DateTime.now(),
+        status: MessageStatus.sending,
+      ),
+    );
     try {
       final id = await repo.startConversation(listingId: widget.listingId!, body: body);
       if (!mounted) return;
@@ -117,12 +119,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 // ---------------------------------------------------------------------
 
 class _ConversationBody extends ConsumerWidget {
-  const _ConversationBody({
-    required this.conversationId,
-    required this.input,
-    required this.onSend,
-    this.placeholder,
-  });
+  const _ConversationBody({required this.conversationId, required this.input, required this.onSend, this.placeholder});
 
   final String conversationId;
   final TextEditingController input;
@@ -164,8 +161,8 @@ class _ConversationBody extends ConsumerWidget {
       onSend: onSend,
       body: value == null
           ? (placeholder == null
-              ? const Center(child: CircularProgressIndicator())
-              : _MessageList(messages: [placeholder!], isMine: (_) => true))
+                ? const Center(child: CircularProgressIndicator())
+                : _MessageList(messages: [placeholder!], isMine: (_) => true))
           : _MessageList(
               messages: value.messages,
               isMine: value.isMine,
@@ -272,15 +269,10 @@ class _NewChatBody extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
                 itemCount: quick.length,
                 separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s),
-                itemBuilder: (_, i) => ActionChip(
-                  label: Text(quick[i]),
-                  onPressed: () => onQuickReply(quick[i]),
-                ),
+                itemBuilder: (_, i) => ActionChip(label: Text(quick[i]), onPressed: () => onQuickReply(quick[i])),
               ),
             ),
-      body: starting != null
-          ? _MessageList(messages: [starting!], isMine: (_) => true)
-          : _NewChatIntro(name: name),
+      body: starting != null ? _MessageList(messages: [starting!], isMine: (_) => true) : _NewChatIntro(name: name),
     );
   }
 }
@@ -306,10 +298,7 @@ class _NewChatIntro extends StatelessWidget {
         const SizedBox(height: AppSpacing.xxl),
         Container(
           padding: const EdgeInsets.all(AppSpacing.m),
-          decoration: BoxDecoration(
-            color: AppColors.warningSoft,
-            borderRadius: BorderRadius.circular(AppRadius.s),
-          ),
+          decoration: BoxDecoration(color: AppColors.warningSoft, borderRadius: BorderRadius.circular(AppRadius.s)),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -328,8 +317,7 @@ class _NewChatIntro extends StatelessWidget {
 // Shared pieces
 // ---------------------------------------------------------------------
 
-void _back(BuildContext context) =>
-    context.canPop() ? context.pop() : context.go(AppRoutes.inbox);
+void _back(BuildContext context) => context.canPop() ? context.pop() : context.go(AppRoutes.inbox);
 
 class _ChatScaffold extends StatelessWidget {
   const _ChatScaffold({
@@ -364,10 +352,7 @@ class _ChatScaffold extends StatelessWidget {
         children: [
           ?header,
           Expanded(child: body),
-          if (aboveInput != null) ...[
-            aboveInput!,
-            const SizedBox(height: AppSpacing.xs),
-          ],
+          if (aboveInput != null) ...[aboveInput!, const SizedBox(height: AppSpacing.xs)],
           _Composer(controller: input, onSend: onSend),
         ],
       ),
@@ -405,7 +390,9 @@ class _ListingStrip extends StatelessWidget {
         onTap: statusLabel != null ? null : () => context.push(AppRoutes.listingPath(listingId)),
         child: Container(
           padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.s, AppSpacing.page, AppSpacing.s),
-          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.border)),
+          ),
           child: Row(
             children: [
               ListingThumb(path: coverPath, size: 44),
@@ -419,14 +406,8 @@ class _ListingStrip extends StatelessWidget {
                     Row(
                       children: [
                         Text(Formatters.price(priceCents), style: text.bodySmall),
-                        if (yours) ...[
-                          const SizedBox(width: AppSpacing.s),
-                          ChatTag(t.inboxYourListing),
-                        ],
-                        if (statusLabel != null) ...[
-                          const SizedBox(width: AppSpacing.s),
-                          ChatTag(statusLabel),
-                        ],
+                        if (yours) ...[const SizedBox(width: AppSpacing.s), ChatTag(t.inboxYourListing)],
+                        if (statusLabel != null) ...[const SizedBox(width: AppSpacing.s), ChatTag(statusLabel)],
                       ],
                     ),
                   ],
@@ -484,12 +465,7 @@ class _MessageList extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (newDay && !(hasMore && older == null)) _DaySeparator(m.createdAt),
-            _Bubble(
-              message: m,
-              mine: mine,
-              spaced: lastOfGroup,
-              onFailedTap: onFailedTap,
-            ),
+            _Bubble(message: m, mine: mine, spaced: lastOfGroup, onFailedTap: onFailedTap),
           ],
         );
       },
@@ -509,8 +485,8 @@ class _DaySeparator extends StatelessWidget {
     final label = Formatters.sameDay(day, now)
         ? t.chatToday
         : Formatters.sameDay(day, now.subtract(const Duration(days: 1)))
-            ? t.chatYesterday
-            : Formatters.date(day);
+        ? t.chatYesterday
+        : Formatters.date(day);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
       child: Center(child: ChatTag(label)),
@@ -540,18 +516,17 @@ class _Bubble extends StatelessWidget {
       MessageStatus.failed => t.chatFailed,
     };
 
-    final bubble = Container(
-      constraints: BoxConstraints(maxWidth: width * 0.75),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-      decoration: BoxDecoration(
-        color: mine ? AppColors.primary : AppColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(AppRadius.m),
-      ),
-      child: Text(
-        message.body,
-        style: text.bodyLarge?.copyWith(color: mine ? Colors.white : AppColors.ink),
-      ),
-    );
+    final bubble = message.isOffer
+        ? _OfferCard(message: message, mine: mine, maxWidth: width * 0.75)
+        : Container(
+            constraints: BoxConstraints(maxWidth: width * 0.75),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+            decoration: BoxDecoration(
+              color: mine ? AppColors.primary : AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.m),
+            ),
+            child: Text(message.body, style: text.bodyLarge?.copyWith(color: mine ? Colors.white : AppColors.ink)),
+          );
 
     return Padding(
       padding: EdgeInsets.only(bottom: spaced ? AppSpacing.m : 3),
@@ -573,6 +548,65 @@ class _Bubble extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// An offer to the people who saved the listing: the reserved price,
+/// the listing's price struck through, and (buyer side) an invitation to
+/// answer.
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({required this.message, required this.mine, required this.maxWidth});
+
+  final ChatMessage message;
+  final bool mine;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    return Container(
+      key: const ValueKey('offer-card'),
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      padding: const EdgeInsets.all(AppSpacing.m),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        border: Border.all(color: AppColors.primary),
+        borderRadius: BorderRadius.circular(AppRadius.m),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.local_offer_outlined, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  mine ? t.offerCardSeller : t.offerCardBuyer,
+                  style: text.labelMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: AppSpacing.s,
+            children: [
+              Text(Formatters.price(message.offerPriceCents), style: text.headlineSmall),
+              Text(
+                Formatters.price(message.offerListPriceCents),
+                style: text.bodyMedium?.copyWith(color: AppColors.inkMuted, decoration: TextDecoration.lineThrough),
+              ),
+            ],
+          ),
+          if (!mine) ...[const SizedBox(height: AppSpacing.xs), Text(t.offerCardAnswer, style: text.bodySmall)],
         ],
       ),
     );
@@ -608,11 +642,7 @@ class _Composer extends StatelessWidget {
                   maxLength: 2000,
                   textCapitalization: TextCapitalization.sentences,
                   keyboardType: TextInputType.multiline,
-                  decoration: InputDecoration(
-                    hintText: t.chatInputHint,
-                    counterText: '',
-                    isDense: true,
-                  ),
+                  decoration: InputDecoration(hintText: t.chatInputHint, counterText: '', isDense: true),
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),

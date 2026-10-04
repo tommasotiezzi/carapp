@@ -30,6 +30,7 @@ class MyProfile {
     this.phonePublic = false,
     this.whatsappPublic = false,
     this.avatarPath,
+    this.intent,
   });
 
   final String? displayName;
@@ -44,6 +45,10 @@ class MyProfile {
 
   /// Profile picture in the `avatars` bucket.
   final String? avatarPath;
+
+  /// `user_intent` saved at onboarding (read only here): the profile's
+  /// role on a phone that has no local choice.
+  final String? intent;
 
   static const _unset = Object();
 
@@ -66,6 +71,7 @@ class MyProfile {
         phonePublic: phonePublic ?? this.phonePublic,
         whatsappPublic: whatsappPublic ?? this.whatsappPublic,
         avatarPath: identical(avatarPath, _unset) ? this.avatarPath : avatarPath as String?,
+        intent: intent,
       );
 
   static const minAge = 14;
@@ -84,6 +90,7 @@ class MyProfile {
         phonePublic: (row['phone_public'] as bool?) ?? false,
         whatsappPublic: (row['whatsapp_public'] as bool?) ?? false,
         avatarPath: row['avatar_path'] as String?,
+        intent: row['intent'] as String?,
       );
 }
 
@@ -161,7 +168,7 @@ class AccountRepository {
   Future<MyProfile> fetchProfile() async {
     final row = await _client
         .from('profiles')
-        .select('display_name, birth_date, gender, province, phone, phone_public, whatsapp_public, avatar_path')
+        .select('display_name, birth_date, gender, province, phone, phone_public, whatsapp_public, avatar_path, intent')
         .eq('id', _userId)
         .single();
     return MyProfile.fromRow(row);

@@ -57,6 +57,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get commonClose => 'Chiudi';
 
   @override
+  String get commonUndo => 'Annulla';
+
+  @override
   String get commonRetry => 'Riprova';
 
   @override
@@ -937,6 +940,275 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsDeleted => 'Account eliminato';
 
   @override
+  String get inboxArchive => 'Archivia';
+
+  @override
+  String get inboxArchivedDone => 'Chat archiviata';
+
+  @override
+  String get inboxArchiveError =>
+      'Non riusciamo ad archiviare la chat. Riprova.';
+
+  @override
+  String inboxArchived(int count) {
+    return 'Archiviate ($count)';
+  }
+
+  @override
+  String get inboxArchivedTitle => 'Chat archiviate';
+
+  @override
+  String get inboxArchivedEmpty => 'Nessuna chat archiviata';
+
+  @override
+  String get inboxRestore => 'Ripristina';
+
+  @override
+  String get inboxRestored => 'Chat di nuovo nella Inbox';
+
+  @override
+  String get offerCardBuyer => 'Prezzo riservato a te';
+
+  @override
+  String get offerCardSeller => 'Offerta a chi l\'ha salvato';
+
+  @override
+  String get offerCardAnswer => 'Rispondi qui per accordarti con il venditore';
+
+  @override
+  String get myListingsTitle => 'I miei annunci';
+
+  @override
+  String get myListingsSell => 'Vendi';
+
+  @override
+  String get myListingsEmpty =>
+      'Non hai ancora annunci. Con le riprese guidate ci vogliono circa 5 minuti.';
+
+  @override
+  String get myListingUntitled => 'Annuncio senza titolo';
+
+  @override
+  String get myListingActive => 'Online';
+
+  @override
+  String get myListingSold => 'Venduto';
+
+  @override
+  String get myListingDraft => 'Bozza';
+
+  @override
+  String get myListingExpired => 'Non online';
+
+  @override
+  String myListingSaves(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count persone l\'hanno salvato',
+      one: '1 persona l\'ha salvato',
+      zero: 'Nessuno l\'ha salvato',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingChats(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count chat',
+      one: '1 chat',
+      zero: 'Nessuna chat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get myListingOffer => 'Offerta a chi l\'ha salvato';
+
+  @override
+  String myListingOfferSent(String price, int hours) {
+    return 'Offerta inviata: $price. La prossima tra $hours h';
+  }
+
+  @override
+  String get myListingActions => 'Azioni';
+
+  @override
+  String get myListingEditPrice => 'Cambia prezzo';
+
+  @override
+  String get myListingMarkSold => 'Segna come venduto';
+
+  @override
+  String get myListingRelist => 'Rimetti in vendita';
+
+  @override
+  String get myListingRemove => 'Rimuovi annuncio';
+
+  @override
+  String get myListingRemoveTitle => 'Rimuovere l\'annuncio?';
+
+  @override
+  String get myListingRemoveBody =>
+      'Non sarà più visibile a nessuno. Le chat restano nella Inbox.';
+
+  @override
+  String get myListingError =>
+      'Non riusciamo ad aggiornare l\'annuncio. Riprova.';
+
+  @override
+  String get offerSheetTitle => 'Offerta a chi l\'ha salvato';
+
+  @override
+  String offerSheetBody(int count, String price) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count persone l\'hanno salvato.',
+      one: '1 persona l\'ha salvato.',
+    );
+    return '$_temp0 Ricevono un messaggio con il prezzo riservato a loro e possono risponderti subito. Non vedi chi sono finché non ti scrivono; il prezzo pubblico resta $price.';
+  }
+
+  @override
+  String get offerSheetPrice => 'Prezzo riservato';
+
+  @override
+  String offerSheetSend(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Invia a $count persone',
+      one: 'Invia a 1 persona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String offerSent(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Offerta inviata a $count persone',
+      one: 'Offerta inviata a 1 persona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get offerErrorEmpty => 'Scrivi un prezzo';
+
+  @override
+  String get offerErrorNotLower => 'Deve essere più basso del prezzo attuale';
+
+  @override
+  String get offerErrorTooLow => 'Non più della metà di sconto';
+
+  @override
+  String get offerErrorTooSoon => 'Puoi fare un\'offerta ogni 24 ore';
+
+  @override
+  String get offerErrorNoSavers => 'Nessuno l\'ha ancora salvato';
+
+  @override
+  String get offerErrorUnavailable => 'L\'annuncio non è online';
+
+  @override
+  String get offerError => 'Non riusciamo a inviare l\'offerta. Riprova.';
+
+  @override
+  String get priceSheetBody =>
+      'Il nuovo prezzo vale per tutti: chi l\'ha salvato vede che è sceso.';
+
+  @override
+  String get priceSheetPrice => 'Prezzo';
+
+  @override
+  String ownListingOffer(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Offerta a chi l\'ha salvato ($count)',
+      one: 'Offerta a chi l\'ha salvato (1)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profileRoleExplorer => 'Stai esplorando';
+
+  @override
+  String get profileRoleBuyer => 'Stai cercando un veicolo';
+
+  @override
+  String get profileRoleSeller => 'Stai vendendo';
+
+  @override
+  String get profileRoleDealer => 'Concessionario';
+
+  @override
+  String get profileRoleChange => 'Cambia';
+
+  @override
+  String get profileNeedsTitle =>
+      'Semplifica la tua esperienza scegliendo quello di cui hai bisogno';
+
+  @override
+  String get profileNeedBuy => 'Voglio comprare';
+
+  @override
+  String get profileNeedBuyBody =>
+      'Cosa cerchi, salvati e avvisi quando il prezzo scende';
+
+  @override
+  String get profileNeedSell => 'Voglio vendere';
+
+  @override
+  String get profileNeedSellBody => 'I tuoi annunci e chi li ha salvati';
+
+  @override
+  String get profileNeedDealer => 'Sono un concessionario';
+
+  @override
+  String get profileNeedDealerBody =>
+      'La pagina del salone e tutto lo stock nel feed';
+
+  @override
+  String get profileNeedBrowse => 'Sto solo guardando';
+
+  @override
+  String get profileNeedBrowseBody => 'Nessuna scelta: il profilo resta neutro';
+
+  @override
+  String get profileSellerGuest =>
+      'Accedi e pubblica: qui vedi i tuoi annunci, quante persone li hanno salvati e puoi fare loro un\'offerta.';
+
+  @override
+  String get profileDealerPendingTitle =>
+      'Completa la verifica del concessionario';
+
+  @override
+  String get profileDealerPendingBody =>
+      'Ci serve la partita IVA: la controlliamo subito con il registro europeo (VIES).';
+
+  @override
+  String get profileDealerPendingCta => 'Verifica la partita IVA';
+
+  @override
+  String get profileDealerActive => 'Annunci online';
+
+  @override
+  String get profileDealerSaves => 'Salvataggi';
+
+  @override
+  String get profileDealerChats => 'Chat';
+
+  @override
+  String get profileDealerPage => 'Vedi la pagina del concessionario';
+
+  @override
   String get inboxTitle => 'Messaggi';
 
   @override
@@ -1134,6 +1406,100 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String capturePhotoOf(int current, int total) {
+    return 'Foto $current di $total';
+  }
+
+  @override
+  String get photoFront3q => 'Anteriore 3/4';
+
+  @override
+  String get photoFront3qHint =>
+      'Mettiti all\'angolo anteriore: davanti e fianco insieme, tutto nella sagoma';
+
+  @override
+  String get photoFront => 'Frontale';
+
+  @override
+  String get photoFrontHint => 'Davanti, al centro, a circa 4 metri';
+
+  @override
+  String get photoSide => 'Fianco';
+
+  @override
+  String get photoSideHint =>
+      'Di lato, a circa 4 metri: tutto il veicolo nella sagoma, ruote comprese';
+
+  @override
+  String get photoRear3q => 'Posteriore 3/4';
+
+  @override
+  String get photoRear3qHint =>
+      'Dall\'angolo posteriore opposto: dietro e fianco insieme';
+
+  @override
+  String get photoRear => 'Posteriore';
+
+  @override
+  String get photoRearHint => 'Dietro, al centro, a circa 4 metri';
+
+  @override
+  String get photoDashboard => 'Quadro e km';
+
+  @override
+  String get photoDashboardHint =>
+      'Quadro acceso: i chilometri devono leggersi bene';
+
+  @override
+  String get photoInterior => 'Interni anteriori';
+
+  @override
+  String get photoInteriorHint =>
+      'Dal sedile posteriore al centro: volante, plancia e sedili davanti';
+
+  @override
+  String get photoRearSeats => 'Sedili posteriori';
+
+  @override
+  String get photoRearSeatsHint =>
+      'Dalla portiera posteriore aperta: seduta e schienali';
+
+  @override
+  String get photoTrunk => 'Bagagliaio';
+
+  @override
+  String get photoTrunkHint => 'Aperto e vuoto, inquadrato dall\'alto';
+
+  @override
+  String get photoWheels => 'Cerchi e gomme';
+
+  @override
+  String get photoWheelsHint =>
+      'Da vicino, una ruota anteriore: si deve vedere il battistrada';
+
+  @override
+  String get photoTank => 'Serbatoio e sella';
+
+  @override
+  String get photoTankHint => 'Dall\'alto, di lato: serbatoio e sella interi';
+
+  @override
+  String get photoChainTyres => 'Gomme e catena';
+
+  @override
+  String get photoChainTyresHint =>
+      'Da vicino: battistrada e catena devono vedersi bene';
+
+  @override
+  String get photoExhaust => 'Scarico';
+
+  @override
+  String get photoExhaustHint => 'Da vicino, di lato: tutto lo scarico';
+
+  @override
+  String get photoOther => 'Altra foto';
+
+  @override
   String captureVideo(int seconds) {
     return 'Video $seconds s';
   }
@@ -1253,9 +1619,6 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get shotsPhoto => 'Foto';
-
-  @override
   String get shotsTodo => 'Da fare';
 
   @override
@@ -1268,11 +1631,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get shotsEngineOn => 'motore acceso';
 
   @override
-  String get extraPhotosTitle => 'Foto aggiuntive';
+  String get photosTitle => 'Foto per il carosello';
+
+  @override
+  String get photosHint =>
+      'Facoltative ma consigliate: chi compra le guarda prima di scrivere. Scattale con la guida o prendile dalla galleria.';
+
+  @override
+  String get photosShootGuided => 'Scatta con la guida';
+
+  @override
+  String get photosOther => 'Altre foto';
 
   @override
   String extraPhotosHint(int max) {
-    return 'Facoltative, fino a $max: dettagli, gomme, libretto dei tagliandi. Finiscono nel carosello dell\'annuncio.';
+    return 'Fino a $max: dettagli, graffi, libretto dei tagliandi.';
   }
 
   @override

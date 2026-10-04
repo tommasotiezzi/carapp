@@ -89,7 +89,7 @@ class ShotsScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.xl),
-          _ExtraPhotos(draft: draft),
+          _Photos(draft: draft, slots: s.slots),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -122,22 +122,82 @@ class ShotsScreen extends ConsumerWidget {
   }
 }
 
-/// "Foto aggiuntive": optional photos for the carousel (camera or
-/// gallery), besides the steps. Tap a photo to remove it.
-class _ExtraPhotos extends ConsumerWidget {
-  const _ExtraPhotos({required this.draft});
+/// The carousel photos, all optional: one tile per [PhotoSlot] (taken
+/// with the guided camera or picked from the gallery), then "Altre foto".
+class _Photos extends ConsumerWidget {
+  const _Photos({required this.draft, required this.slots});
 
   final SellDraft draft;
+  final List<PhotoSlot> slots;
 
-  static const _size = 76.0;
+  static const _extraSize = 76.0;
 
-  Future<void> _add(BuildContext context, WidgetRef ref) async {
+  Future<List<String>> _pick(WidgetRef ref, {required bool camera, required int limit}) {
+    final maxSide = (ref.read(appConfigProvider).value ?? AppConfig.empty).mediaValue('photo_max_long_side', 2560);
+    return ref.read(photoPickerProvider)(camera: camera, limit: limit, maxSide: maxSide);
+  }
+
+  void _error(ScaffoldMessengerState messenger, String text) => messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text)));
+
+  /// A slot: guided camera, gallery, or remove.
+  Future<void> _slotActions(BuildContext context, WidgetRef ref, PhotoSlot slot) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final controller = ref.read(sellControllerProvider.notifier);
-    final pick = ref.read(extraPhotoPickerProvider);
-    final maxSide = (ref.read(appConfigProvider).value ?? AppConfig.empty).mediaValue('photo_max_long_side', 2560);
-    final room = SellDraft.maxExtras - draft.extras.length;
+    final taken = draft.photoFor(slot.id);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(t.photoSlotLabel(slot.id), style: Theme.of(context).textTheme.titleSmall),
+              subtitle: Text(t.photoSlotHint(slot.id)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(t.photosShootGuided),
+              onTap: () => Navigator.pop(context, 'camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(t.extraPhotosGallery),
+              onTap: () => Navigator.pop(context, 'gallery'),
+            ),
+            if (taken != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+                title: Text(t.shotsDelete, style: const TextStyle(color: AppColors.danger)),
+                onTap: () => Navigator.pop(context, 'delete'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted || choice == null) return;
+    switch (choice) {
+      case 'camera':
+        context.push(AppRoutes.sellCapturePath(step: slot.id, photos: true, single: true));
+      case 'delete':
+        await controller.removePhoto(taken!.file);
+      case 'gallery':
+        try {
+          final paths = await _pick(ref, camera: false, limit: 1);
+          if (paths.isNotEmpty) await controller.addPhoto(slot.id, paths.first, fromCamera: false);
+        } catch (_) {
+          _error(messenger, t.extraPhotosError);
+        }
+    }
+  }
+
+  Future<void> _addExtra(BuildContext context, WidgetRef ref) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(sellControllerProvider.notifier);
+    final room = SellDraft.maxExtras - draft.extraPhotos.length;
 
     final source = await showModalBottomSheet<String>(
       context: context,
@@ -161,22 +221,16 @@ class _ExtraPhotos extends ConsumerWidget {
     );
     if (source == null) return;
     try {
-      final paths = await pick(camera: source == 'camera', limit: room, maxSide: maxSide);
+      final paths = await _pick(ref, camera: source == 'camera', limit: room);
       if (paths.isEmpty) return;
       final added = await controller.addExtraPhotos(paths);
-      if (added < paths.length) {
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(t.extraPhotosLimit(SellDraft.maxExtras))));
-      }
+      if (added < paths.length) _error(messenger, t.extraPhotosLimit(SellDraft.maxExtras));
     } catch (_) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(t.extraPhotosError)));
+      _error(messenger, t.extraPhotosError);
     }
   }
 
-  Future<void> _remove(BuildContext context, WidgetRef ref, Shot shot) async {
+  Future<void> _removeExtra(BuildContext context, WidgetRef ref, Shot shot) async {
     final t = AppLocalizations.of(context);
     final controller = ref.read(sellControllerProvider.notifier);
     final remove = await showModalBottomSheet<bool>(
@@ -189,24 +243,55 @@ class _ExtraPhotos extends ConsumerWidget {
         ),
       ),
     );
-    if (remove == true) await controller.removeExtraPhoto(shot.file);
+    if (remove == true) await controller.removePhoto(shot.file);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final extras = draft.extras;
+    final extras = draft.extraPhotos;
     final full = extras.length >= SellDraft.maxExtras;
+    final anyMissing = slots.any((slot) => draft.photoFor(slot.id) == null);
 
     return Column(
-      key: const ValueKey('extra-photos'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      key: const ValueKey('photos'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(t.extraPhotosTitle, style: text.titleMedium),
+        Text(t.photosTitle, style: text.titleMedium),
+        const SizedBox(height: 2),
+        Text(t.photosHint, style: text.bodySmall),
+        const SizedBox(height: AppSpacing.m),
+        if (anyMissing) ...[
+          OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.sellCapturePath(photos: true)),
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: Text(t.photosShootGuided),
+          ),
+          const SizedBox(height: AppSpacing.m),
+        ],
+        GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: AppSpacing.s,
+          crossAxisSpacing: AppSpacing.s,
+          childAspectRatio: 0.78,
+          children: [
+            for (final slot in slots)
+              _SlotTile(
+                label: t.photoSlotLabel(slot.id),
+                shot: draft.photoFor(slot.id),
+                draftId: draft.id,
+                onTap: () => _slotActions(context, ref, slot),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.l),
+        Text(t.photosOther, style: text.titleSmall),
         const SizedBox(height: 2),
         Text(t.extraPhotosHint(SellDraft.maxExtras), style: text.bodySmall),
-        const SizedBox(height: AppSpacing.m),
+        const SizedBox(height: AppSpacing.s),
         Wrap(
           spacing: AppSpacing.s,
           runSpacing: AppSpacing.s,
@@ -214,26 +299,26 @@ class _ExtraPhotos extends ConsumerWidget {
             for (final shot in extras)
               InkWell(
                 borderRadius: BorderRadius.circular(AppRadius.s),
-                onTap: () => _remove(context, ref, shot),
+                onTap: () => _removeExtra(context, ref, shot),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.s),
                   child: Container(
-                    width: _size,
-                    height: _size,
+                    width: _extraSize,
+                    height: _extraSize,
                     color: AppColors.placeholder,
-                    child: ShotImage(draftId: draft.id, file: shot.file, width: _size),
+                    child: ShotImage(draftId: draft.id, file: shot.file, width: _extraSize),
                   ),
                 ),
               ),
             if (!full)
               InkWell(
                 borderRadius: BorderRadius.circular(AppRadius.s),
-                onTap: () => _add(context, ref),
+                onTap: () => _addExtra(context, ref),
                 child: CustomPaint(
                   painter: _DashedBorder(radius: AppRadius.s),
                   child: SizedBox(
-                    width: _size,
-                    height: _size,
+                    width: _extraSize,
+                    height: _extraSize,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -248,6 +333,57 @@ class _ExtraPhotos extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// One suggested photo: its picture, or a dashed "+" with the name.
+class _SlotTile extends StatelessWidget {
+  const _SlotTile({required this.label, required this.shot, required this.draftId, required this.onTap});
+
+  final String label;
+  final Shot? shot;
+  final String draftId;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final s = shot;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.s),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: s == null
+                ? CustomPaint(
+                    painter: _DashedBorder(radius: AppRadius.s),
+                    child: const Center(child: Icon(Icons.add_a_photo_outlined, color: AppColors.inkSecondary)),
+                  )
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.s),
+                        child: ColoredBox(
+                          color: AppColors.placeholder,
+                          child: ShotImage(draftId: draftId, file: s.file, width: 120),
+                        ),
+                      ),
+                      const Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: text.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ],
+      ),
     );
   }
 }
@@ -347,10 +483,10 @@ class _StepTile extends StatelessWidget {
     final subtitle = s == null
         ? t.shotsTodo
         : [
-            s.kind == ShotKind.video ? t.shotsVideo(step.seconds) : t.shotsPhoto,
-            if (engineOn && s.kind == ShotKind.video) t.shotsEngineOn,
+            t.shotsVideo(step.seconds),
+            if (engineOn) t.shotsEngineOn,
           ].join(' · ');
-    final preview = s == null ? null : (s.kind == ShotKind.photo ? s.file : s.thumb);
+    final preview = s?.thumb;
 
     return Material(
       color: AppColors.surfaceAlt,

@@ -37,13 +37,25 @@ class ChatRepository {
   }
 
   /// Newest activity first. [before] = the last row's `activityAt`.
-  Future<List<ConversationSummary>> inbox({DateTime? before}) async {
+  /// [archived]: the archived chats instead of the Inbox.
+  Future<List<ConversationSummary>> inbox({DateTime? before, bool archived = false}) async {
     final rows = await _client.rpc<List<dynamic>>('my_conversations', params: {
       'p_before': before?.toUtc().toIso8601String(),
       'p_limit': inboxPageSize,
+      'p_archived': archived,
     });
     return rows.cast<Map<String, dynamic>>().map(ConversationSummary.fromRow).toList();
   }
+
+  /// Archive (or bring back) a chat for the user's side. A new message
+  /// brings it back by itself.
+  Future<void> archive(String conversationId, {required bool archived}) => _client.rpc<void>(
+        'archive_conversation',
+        params: {'p_conversation_id': conversationId, 'p_archived': archived},
+      );
+
+  Future<int> archivedCount() async =>
+      ((await _client.rpc<Object?>('archived_conversations_count')) as num?)?.toInt() ?? 0;
 
   /// null when the chat does not exist or is not the user's.
   Future<ConversationSummary?> conversation(String id) async {

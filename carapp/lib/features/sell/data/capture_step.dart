@@ -59,3 +59,40 @@ class CaptureStep {
           CaptureStep(id: 'defects', required: false),
         ];
 }
+
+/// A suggested photo for the carousel, after the video. All optional:
+/// shot with the guide (outline, hint) or picked from the gallery.
+class PhotoSlot {
+  const PhotoSlot({required this.id, this.silhouette, this.plateTip = false});
+
+  /// Also `listing_media.capture_step` and the ARB key of its label.
+  final String id;
+  final String? silhouette;
+  final bool plateTip;
+
+  /// Photos not tied to a slot ("Altre foto").
+  static const extra = 'extra';
+
+  static List<PhotoSlot> defaultsFor(String categoryId) => categoryId == 'motorcycle'
+      ? const [
+          PhotoSlot(id: 'front_three_quarter', plateTip: true),
+          PhotoSlot(id: 'side', silhouette: 'moto_side_l'),
+          PhotoSlot(id: 'rear', silhouette: 'moto_rear', plateTip: true),
+          PhotoSlot(id: 'dashboard'),
+          PhotoSlot(id: 'tank'),
+          PhotoSlot(id: 'chain_tyres'),
+          PhotoSlot(id: 'exhaust'),
+        ]
+      : const [
+          PhotoSlot(id: 'front_three_quarter', silhouette: 'car_front_3q', plateTip: true),
+          PhotoSlot(id: 'front', silhouette: 'car_front', plateTip: true),
+          PhotoSlot(id: 'side', silhouette: 'car_side_l'),
+          PhotoSlot(id: 'rear_three_quarter', plateTip: true),
+          PhotoSlot(id: 'rear', silhouette: 'car_rear', plateTip: true),
+          PhotoSlot(id: 'dashboard'),
+          PhotoSlot(id: 'interior'),
+          PhotoSlot(id: 'rear_seats'),
+          PhotoSlot(id: 'trunk'),
+          PhotoSlot(id: 'wheels'),
+        ];
+}

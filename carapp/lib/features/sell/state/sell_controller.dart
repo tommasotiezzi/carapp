@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/storage/preferences.dart';
 import '../../feed/state/feed_controller.dart';
+import '../../my_listings/state/my_listings_controller.dart';
 import '../data/capture_step.dart';
 import '../data/sell_draft.dart';
 import '../data/sell_media.dart';
@@ -24,12 +25,16 @@ class SellState {
   const SellState({
     this.draft,
     this.steps = const [],
+    this.slots = const [],
     this.phase = MediaPhase.idle,
     this.progress = 0,
   });
 
   final SellDraft? draft;
   final List<CaptureStep> steps;
+
+  /// Suggested carousel photos for the draft's category.
+  final List<PhotoSlot> slots;
   final MediaPhase phase;
 
   /// 0..1 over rendering (first 70%) and uploading.
@@ -40,12 +45,14 @@ class SellState {
   SellState copyWith({
     SellDraft? draft,
     List<CaptureStep>? steps,
+    List<PhotoSlot>? slots,
     MediaPhase? phase,
     double? progress,
   }) =>
       SellState(
         draft: draft ?? this.draft,
         steps: steps ?? this.steps,
+        slots: slots ?? this.slots,
         phase: phase ?? this.phase,
         progress: progress ?? this.progress,
       );
@@ -91,8 +98,9 @@ class SellController extends Notifier<SellState> {
         : SellDraft(id: _uuid.v4(), categoryId: categoryId, createdAt: DateTime.now());
     final steps = await _repo.captureSteps(categoryId);
     if (!ref.mounted) return;
-    draft = draft.withRenamedSteps(steps);
-    state = SellState(draft: draft, steps: steps);
+    final slots = PhotoSlot.defaultsFor(categoryId);
+    draft = draft.normalized(steps, slots);
+    state = SellState(draft: draft, steps: steps, slots: slots);
     await _save(draft);
   }
 
@@ -124,32 +132,29 @@ class SellController extends Notifier<SellState> {
     return '${(await _media.draftDir(draft.id)).path}/$fileName';
   }
 
-  /// A clip or photo for [stepId] (replaces the previous one). [tempPath]
-  /// is the camera's file; it is moved into the draft folder.
-  Future<void> addShot(String stepId, ShotKind kind, String tempPath) async {
+  /// The clip for [stepId] (replaces the previous one). [tempPath] is the
+  /// camera's file; it is moved into the draft folder.
+  Future<void> addClip(String stepId, String tempPath) async {
     final draft = state.draft;
     if (draft == null) return;
     final dir = await _media.draftDir(draft.id);
     final stamp = DateTime.now().millisecondsSinceEpoch;
-    final file = '$stepId-$stamp.${kind == ShotKind.video ? 'mp4' : 'jpg'}';
+    final file = '$stepId-$stamp.mp4';
     await _moveFile(tempPath, '${dir.path}/$file');
 
-    String? thumb;
-    if (kind == ShotKind.video) {
-      thumb = '$stepId-$stamp-thumb.jpg';
-      try {
-        await _media.thumbnail(video: '${dir.path}/$file', out: '${dir.path}/$thumb', size: thumbSize);
-      } catch (e) {
-        thumb = null; // the summary shows an icon instead
-        if (kDebugMode) debugPrint('thumbnail: $e');
-      }
+    String? thumb = '$stepId-$stamp-thumb.jpg';
+    try {
+      await _media.thumbnail(video: '${dir.path}/$file', out: '${dir.path}/$thumb', size: thumbSize);
+    } catch (e) {
+      thumb = null; // the summary shows an icon instead
+      if (kDebugMode) debugPrint('thumbnail: $e');
     }
 
     final current = state.draft ?? draft;
     final previous = current.shots[stepId];
     _set(current.copyWith(shots: {
       ...current.shots,
-      stepId: Shot(stepId: stepId, kind: kind, file: file, thumb: thumb, takenAt: DateTime.now()),
+      stepId: Shot(stepId: stepId, kind: ShotKind.video, file: file, thumb: thumb, takenAt: DateTime.now()),
     }));
     if (previous != null) await _deleteFiles(dir, [previous.file, previous.thumb]);
     _restartIfRunning();
@@ -164,34 +169,51 @@ class SellController extends Notifier<SellState> {
     _restartIfRunning();
   }
 
-  /// Adds "Foto aggiuntive" (camera or gallery files, copied into the
-  /// draft folder) up to [SellDraft.maxExtras]. Returns how many were
-  /// added.
-  Future<int> addExtraPhotos(List<String> paths) async {
+  /// A carousel photo for [slotId] (replaces the slot's previous one) or,
+  /// with [PhotoSlot.extra], one more of "Altre foto" (false when they
+  /// are already [SellDraft.maxExtras]). Camera files are moved into the
+  /// draft folder, gallery files copied ([fromCamera]).
+  Future<bool> addPhoto(String slotId, String path, {required bool fromCamera}) async {
     final draft = state.draft;
-    if (draft == null) return 0;
-    final room = SellDraft.maxExtras - draft.extras.length;
-    if (room <= 0) return 0;
+    if (draft == null) return false;
+    final extra = slotId == PhotoSlot.extra;
+    if (extra && draft.extraPhotos.length >= SellDraft.maxExtras) return false;
     final dir = await _media.draftDir(draft.id);
-    final stamp = DateTime.now().millisecondsSinceEpoch;
-    final added = <Shot>[];
-    for (final (i, path) in paths.take(room).indexed) {
-      final file = '${SellDraft.extraStep}-$stamp-$i.jpg';
+    final file = '$slotId-${DateTime.now().microsecondsSinceEpoch}.jpg';
+    if (fromCamera) {
+      await _moveFile(path, '${dir.path}/$file');
+    } else {
       // Gallery files belong to the gallery: copy, never move.
       await File(path).copy('${dir.path}/$file');
-      added.add(Shot(stepId: SellDraft.extraStep, kind: ShotKind.photo, file: file, takenAt: DateTime.now()));
     }
-    if (!ref.mounted) return added.length;
+    if (!ref.mounted) return true;
     final current = state.draft ?? draft;
-    _set(current.copyWith(extras: [...current.extras, ...added]));
+    final previous = extra ? null : current.photoFor(slotId);
+    _set(current.copyWith(photos: [
+      for (final p in current.photos)
+        if (p != previous) p,
+      Shot(stepId: slotId, kind: ShotKind.photo, file: file, takenAt: DateTime.now()),
+    ]));
+    if (previous != null) await _deleteFiles(dir, [previous.file]);
     _restartIfRunning();
-    return added.length;
+    return true;
   }
 
-  Future<void> removeExtraPhoto(String file) async {
+  /// Several gallery photos into "Altre foto", up to [SellDraft.maxExtras].
+  /// Returns how many were added.
+  Future<int> addExtraPhotos(List<String> paths) async {
+    var added = 0;
+    for (final path in paths) {
+      if (!await addPhoto(PhotoSlot.extra, path, fromCamera: false)) break;
+      added++;
+    }
+    return added;
+  }
+
+  Future<void> removePhoto(String file) async {
     final draft = state.draft;
-    if (draft == null || !draft.extras.any((s) => s.file == file)) return;
-    _set(draft.copyWith(extras: [...draft.extras]..removeWhere((s) => s.file == file)));
+    if (draft == null || !draft.photos.any((s) => s.file == file)) return;
+    _set(draft.copyWith(photos: [...draft.photos]..removeWhere((s) => s.file == file)));
     await _deleteFiles(await _media.draftDir(draft.id), [file]);
     _restartIfRunning();
   }
@@ -290,7 +312,7 @@ class SellController extends Notifier<SellState> {
   /// What `listing-drafts/<user>/<draft>/` must hold: name -> (local file,
   /// content type, source key). See publish-listing for the names.
   Map<String, (String, String, String)> _wanted(SellDraft d) {
-    final photos = d.photosIn(state.steps);
+    final photos = d.carousel(state.slots);
     return {
       'video.mp4': (d.video!, 'video/mp4', d.renderedFrom!),
       'cover.jpg': (d.cover!, 'image/jpeg', d.renderedFrom!),
@@ -375,6 +397,7 @@ class SellController extends Notifier<SellState> {
     if (!ref.mounted) return current.id;
     state = SellState.empty;
     ref.invalidate(feedControllerProvider); // the new listing shows up
+    ref.invalidate(myListingsProvider); // and in "I miei annunci"
     return current.id;
   }
 

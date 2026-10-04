@@ -228,7 +228,7 @@ class SellDraft {
     required this.categoryId,
     required this.createdAt,
     this.shots = const {},
-    this.extras = const [],
+    this.photos = const [],
     this.details = SellDetails.empty,
     this.video,
     this.cover,
@@ -241,15 +241,16 @@ class SellDraft {
   final String categoryId; // 'car' | 'motorcycle'
   final DateTime createdAt;
 
-  /// By step id.
+  /// Video clips by step id (every step is a video: the video is never
+  /// replaced by photos).
   final Map<String, Shot> shots;
 
-  /// "Foto aggiuntive": optional photos for the carousel besides the
-  /// steps (interior details, tyres, service book...), in order.
-  final List<Shot> extras;
+  /// Carousel photos, all optional: one per [PhotoSlot] (stepId = slot
+  /// id) plus up to [maxExtras] "Altre foto" (stepId = [PhotoSlot.extra]).
+  final List<Shot> photos;
 
   static const maxExtras = 10;
-  static const extraStep = 'extra';
+
   final SellDetails details;
 
   /// The edited video and its cover, in the draft folder (once made).
@@ -278,16 +279,19 @@ class SellDraft {
           if (shots[step.id]?.kind == ShotKind.video) shots[step.id]!,
       ];
 
-  /// The carousel: step photos in step order, then the extra photos.
-  List<Shot> photosIn(List<CaptureStep> steps) => [
-        for (final step in steps)
-          if (shots[step.id]?.kind == ShotKind.photo) shots[step.id]!,
-        ...extras,
+  Shot? photoFor(String slotId) => photos.where((p) => p.stepId == slotId).firstOrNull;
+
+  List<Shot> get extraPhotos => [for (final p in photos) if (p.stepId == PhotoSlot.extra) p];
+
+  /// The carousel: slot photos in slot order, then the other photos.
+  List<Shot> carousel(List<PhotoSlot> slots) => [
+        for (final slot in slots) ?photoFor(slot.id),
+        ...extraPhotos,
       ];
 
-  /// Required steps still without a shot.
+  /// Required steps still without a clip.
   List<CaptureStep> missingIn(List<CaptureStep> steps) =>
-      [for (final s in steps) if (s.required && !shots.containsKey(s.id)) s];
+      [for (final s in steps) if (s.required && shots[s.id]?.kind != ShotKind.video) s];
 
   /// Ready for "Crea il video": every required step done, at least one
   /// video (the feed shows the video).
@@ -295,21 +299,33 @@ class SellDraft {
       missingIn(steps).isEmpty && videosIn(steps).isNotEmpty;
 
   /// Steps renamed in the catalog (migration 15: 'front_three_quarter'
-  /// became 'front'): a draft started before keeps its shot.
+  /// became 'front').
   static const renamedSteps = {'front_three_quarter': 'front'};
 
-  SellDraft withRenamedSteps(List<CaptureStep> steps) {
+  /// A draft started with an older app or catalog: a renamed step keeps
+  /// its clip, and a step shot as a photo (steps were video or photo
+  /// before) becomes a carousel photo, so that step is to film again.
+  SellDraft normalized(List<CaptureStep> steps, List<PhotoSlot> slots) {
     final ids = {for (final s in steps) s.id};
-    final moves = {
-      for (final e in renamedSteps.entries)
-        if (shots.containsKey(e.key) && !ids.contains(e.key) && ids.contains(e.value) && !shots.containsKey(e.value))
-          e.key: e.value,
-    };
-    if (moves.isEmpty) return this;
-    return copyWith(shots: {
-      for (final s in shots.values)
-        moves[s.stepId] ?? s.stepId: moves.containsKey(s.stepId) ? s.copyWithStep(moves[s.stepId]!) : s,
-    });
+    final slotIds = {for (final s in slots) s.id};
+    final clips = <String, Shot>{};
+    final moved = <Shot>[];
+    for (final shot in shots.values) {
+      var id = shot.stepId;
+      final renamed = renamedSteps[id];
+      if (renamed != null && !ids.contains(id) && ids.contains(renamed) && !shots.containsKey(renamed)) id = renamed;
+      if (shot.kind == ShotKind.video) {
+        clips[id] = id == shot.stepId ? shot : shot.copyWithStep(id);
+      } else {
+        final slot = slotIds.contains(id) && photoFor(id) == null && !moved.any((p) => p.stepId == id)
+            ? id
+            : PhotoSlot.extra;
+        moved.add(shot.copyWithStep(slot));
+      }
+    }
+    final changed = moved.isNotEmpty || clips.keys.toSet().difference(shots.keys.toSet()).isNotEmpty;
+    if (!changed) return this;
+    return copyWith(shots: clips, photos: [...photos, ...moved]);
   }
 
   bool get videoUpToDate => video != null && cover != null && renderedFrom == mediaKey;
@@ -318,7 +334,7 @@ class SellDraft {
 
   SellDraft copyWith({
     Map<String, Shot>? shots,
-    List<Shot>? extras,
+    List<Shot>? photos,
     SellDetails? details,
     Object? video = _unset,
     Object? cover = _unset,
@@ -331,7 +347,7 @@ class SellDraft {
         categoryId: categoryId,
         createdAt: createdAt,
         shots: shots ?? this.shots,
-        extras: extras ?? this.extras,
+        photos: photos ?? this.photos,
         details: details ?? this.details,
         video: identical(video, _unset) ? this.video : video as String?,
         cover: identical(cover, _unset) ? this.cover : cover as String?,
@@ -346,7 +362,7 @@ class SellDraft {
         'category_id': categoryId,
         'created_at': createdAt.toIso8601String(),
         'shots': [for (final s in shots.values) s.toJson()],
-        'extras': [for (final s in extras) s.toJson()],
+        'photos': [for (final s in photos) s.toJson()],
         'details': details.toJson(),
         'video': video,
         'cover': cover,
@@ -364,7 +380,7 @@ class SellDraft {
       categoryId: json['category_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       shots: {for (final s in shots) s.stepId: s},
-      extras: ((json['extras'] as List?) ?? const []).cast<Map<String, dynamic>>().map(Shot.fromJson).toList(),
+      photos: ((json['photos'] as List?) ?? const []).cast<Map<String, dynamic>>().map(Shot.fromJson).toList(),
       details: SellDetails.fromJson(Map<String, dynamic>.from((json['details'] as Map?) ?? const {})),
       video: json['video'] as String?,
       cover: json['cover'] as String?,

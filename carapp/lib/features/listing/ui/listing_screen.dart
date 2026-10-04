@@ -16,6 +16,8 @@ import '../../onboarding/state/onboarding_controller.dart';
 import '../../saved/state/saved_controller.dart';
 import '../../saved/ui/save_action.dart';
 import '../../share/share_listing.dart';
+import '../../my_listings/state/my_listings_controller.dart';
+import '../../my_listings/ui/my_listings_section.dart' show showOfferSheet;
 import '../data/listing_detail.dart';
 import '../state/listing_providers.dart';
 import 'listing_photos.dart';
@@ -301,13 +303,7 @@ class _ContactBar extends ConsumerWidget {
               Text(Formatters.price(listing.priceCents), style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(width: AppSpacing.l),
               if (own)
-                Expanded(
-                  child: Text(
-                    t.inboxYourListing,
-                    textAlign: TextAlign.end,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                )
+                Expanded(child: _OwnListingAction(listingId: listing.id))
               else ...[
                 if (whatsapp) ...[
                   OutlinedButton(
@@ -328,6 +324,32 @@ class _ContactBar extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The seller on their own listing: how many saved it and the offer to
+/// them ("Il tuo annuncio" when nobody saved it yet).
+class _OwnListingAction extends ConsumerWidget {
+  const _OwnListingAction({required this.listingId});
+
+  final String listingId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final mine = ref.watch(myListingProvider(listingId));
+    if (mine == null || !mine.canOffer(DateTime.now())) {
+      return Text(
+        mine == null || mine.saves == 0 ? t.inboxYourListing : t.myListingSaves(mine.saves),
+        textAlign: TextAlign.end,
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+    }
+    return FilledButton.icon(
+      onPressed: () => showOfferSheet(context, mine),
+      icon: const Icon(Icons.local_offer_outlined, size: 18),
+      label: Text(t.ownListingOffer(mine.saves), maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }
 }

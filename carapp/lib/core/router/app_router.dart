@@ -106,6 +106,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             parentNavigatorKey: _rootKey,
             builder: (_, state) => CaptureScreen(
               stepId: state.uri.queryParameters['step'],
+              photos: state.uri.queryParameters['photos'] == '1',
               single: state.uri.queryParameters['single'] == '1',
             ),
           ),
@@ -151,6 +152,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.chat,
         parentNavigatorKey: _rootKey,
         builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: AppRoutes.archivedChats,
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const ArchivedChatsScreen(),
       ),
       GoRoute(
         path: AppRoutes.dealerPage,

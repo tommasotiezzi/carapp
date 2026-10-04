@@ -18,6 +18,41 @@ extension SellLabels on AppLocalizations {
         _ => stepId.replaceAll('_', ' '),
       };
 
+  String photoSlotLabel(String slotId) => switch (slotId) {
+        'front_three_quarter' => photoFront3q,
+        'front' => photoFront,
+        'side' => photoSide,
+        'rear_three_quarter' => photoRear3q,
+        'rear' => photoRear,
+        'dashboard' => photoDashboard,
+        'interior' => photoInterior,
+        'rear_seats' => photoRearSeats,
+        'trunk' => photoTrunk,
+        'wheels' => photoWheels,
+        'tank' => photoTank,
+        'chain_tyres' => photoChainTyres,
+        'exhaust' => photoExhaust,
+        _ => photoOther,
+      };
+
+  /// How to take it: under the title on the camera and in the summary.
+  String photoSlotHint(String slotId) => switch (slotId) {
+        'front_three_quarter' => photoFront3qHint,
+        'front' => photoFrontHint,
+        'side' => photoSideHint,
+        'rear_three_quarter' => photoRear3qHint,
+        'rear' => photoRearHint,
+        'dashboard' => photoDashboardHint,
+        'interior' => photoInteriorHint,
+        'rear_seats' => photoRearSeatsHint,
+        'trunk' => photoTrunkHint,
+        'wheels' => photoWheelsHint,
+        'tank' => photoTankHint,
+        'chain_tyres' => photoChainTyresHint,
+        'exhaust' => photoExhaustHint,
+        _ => captureHoldStill,
+      };
+
   /// The line under the step title on the camera.
   String stepInstruction(CaptureStep step, String categoryId) {
     if (step.id == 'front') return captureAlignFront;

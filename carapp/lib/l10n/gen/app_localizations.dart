@@ -190,6 +190,12 @@ abstract class AppLocalizations {
   /// **'Chiudi'**
   String get commonClose;
 
+  /// No description provided for @commonUndo.
+  ///
+  /// In it, this message translates to:
+  /// **'Annulla'**
+  String get commonUndo;
+
   /// No description provided for @commonRetry.
   ///
   /// In it, this message translates to:
@@ -1738,6 +1744,414 @@ abstract class AppLocalizations {
   /// **'Account eliminato'**
   String get settingsDeleted;
 
+  /// No description provided for @inboxArchive.
+  ///
+  /// In it, this message translates to:
+  /// **'Archivia'**
+  String get inboxArchive;
+
+  /// No description provided for @inboxArchivedDone.
+  ///
+  /// In it, this message translates to:
+  /// **'Chat archiviata'**
+  String get inboxArchivedDone;
+
+  /// No description provided for @inboxArchiveError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad archiviare la chat. Riprova.'**
+  String get inboxArchiveError;
+
+  /// No description provided for @inboxArchived.
+  ///
+  /// In it, this message translates to:
+  /// **'Archiviate ({count})'**
+  String inboxArchived(int count);
+
+  /// No description provided for @inboxArchivedTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Chat archiviate'**
+  String get inboxArchivedTitle;
+
+  /// No description provided for @inboxArchivedEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna chat archiviata'**
+  String get inboxArchivedEmpty;
+
+  /// No description provided for @inboxRestore.
+  ///
+  /// In it, this message translates to:
+  /// **'Ripristina'**
+  String get inboxRestore;
+
+  /// No description provided for @inboxRestored.
+  ///
+  /// In it, this message translates to:
+  /// **'Chat di nuovo nella Inbox'**
+  String get inboxRestored;
+
+  /// No description provided for @offerCardBuyer.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzo riservato a te'**
+  String get offerCardBuyer;
+
+  /// No description provided for @offerCardSeller.
+  ///
+  /// In it, this message translates to:
+  /// **'Offerta a chi l\'ha salvato'**
+  String get offerCardSeller;
+
+  /// No description provided for @offerCardAnswer.
+  ///
+  /// In it, this message translates to:
+  /// **'Rispondi qui per accordarti con il venditore'**
+  String get offerCardAnswer;
+
+  /// No description provided for @myListingsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'I miei annunci'**
+  String get myListingsTitle;
+
+  /// No description provided for @myListingsSell.
+  ///
+  /// In it, this message translates to:
+  /// **'Vendi'**
+  String get myListingsSell;
+
+  /// No description provided for @myListingsEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Non hai ancora annunci. Con le riprese guidate ci vogliono circa 5 minuti.'**
+  String get myListingsEmpty;
+
+  /// No description provided for @myListingUntitled.
+  ///
+  /// In it, this message translates to:
+  /// **'Annuncio senza titolo'**
+  String get myListingUntitled;
+
+  /// No description provided for @myListingActive.
+  ///
+  /// In it, this message translates to:
+  /// **'Online'**
+  String get myListingActive;
+
+  /// No description provided for @myListingSold.
+  ///
+  /// In it, this message translates to:
+  /// **'Venduto'**
+  String get myListingSold;
+
+  /// No description provided for @myListingDraft.
+  ///
+  /// In it, this message translates to:
+  /// **'Bozza'**
+  String get myListingDraft;
+
+  /// No description provided for @myListingExpired.
+  ///
+  /// In it, this message translates to:
+  /// **'Non online'**
+  String get myListingExpired;
+
+  /// No description provided for @myListingSaves.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessuno l\'ha salvato} =1{1 persona l\'ha salvato} other{{count} persone l\'hanno salvato}}'**
+  String myListingSaves(int count);
+
+  /// No description provided for @myListingChats.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessuna chat} =1{1 chat} other{{count} chat}}'**
+  String myListingChats(int count);
+
+  /// No description provided for @myListingOffer.
+  ///
+  /// In it, this message translates to:
+  /// **'Offerta a chi l\'ha salvato'**
+  String get myListingOffer;
+
+  /// No description provided for @myListingOfferSent.
+  ///
+  /// In it, this message translates to:
+  /// **'Offerta inviata: {price}. La prossima tra {hours} h'**
+  String myListingOfferSent(String price, int hours);
+
+  /// No description provided for @myListingActions.
+  ///
+  /// In it, this message translates to:
+  /// **'Azioni'**
+  String get myListingActions;
+
+  /// No description provided for @myListingEditPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'Cambia prezzo'**
+  String get myListingEditPrice;
+
+  /// No description provided for @myListingMarkSold.
+  ///
+  /// In it, this message translates to:
+  /// **'Segna come venduto'**
+  String get myListingMarkSold;
+
+  /// No description provided for @myListingRelist.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimetti in vendita'**
+  String get myListingRelist;
+
+  /// No description provided for @myListingRemove.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi annuncio'**
+  String get myListingRemove;
+
+  /// No description provided for @myListingRemoveTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovere l\'annuncio?'**
+  String get myListingRemoveTitle;
+
+  /// No description provided for @myListingRemoveBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Non sarà più visibile a nessuno. Le chat restano nella Inbox.'**
+  String get myListingRemoveBody;
+
+  /// No description provided for @myListingError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad aggiornare l\'annuncio. Riprova.'**
+  String get myListingError;
+
+  /// No description provided for @offerSheetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Offerta a chi l\'ha salvato'**
+  String get offerSheetTitle;
+
+  /// No description provided for @offerSheetBody.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 persona l\'ha salvato.} other{{count} persone l\'hanno salvato.}} Ricevono un messaggio con il prezzo riservato a loro e possono risponderti subito. Non vedi chi sono finché non ti scrivono; il prezzo pubblico resta {price}.'**
+  String offerSheetBody(int count, String price);
+
+  /// No description provided for @offerSheetPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzo riservato'**
+  String get offerSheetPrice;
+
+  /// No description provided for @offerSheetSend.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Invia a 1 persona} other{Invia a {count} persone}}'**
+  String offerSheetSend(int count);
+
+  /// No description provided for @offerSent.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Offerta inviata a 1 persona} other{Offerta inviata a {count} persone}}'**
+  String offerSent(int count);
+
+  /// No description provided for @offerErrorEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi un prezzo'**
+  String get offerErrorEmpty;
+
+  /// No description provided for @offerErrorNotLower.
+  ///
+  /// In it, this message translates to:
+  /// **'Deve essere più basso del prezzo attuale'**
+  String get offerErrorNotLower;
+
+  /// No description provided for @offerErrorTooLow.
+  ///
+  /// In it, this message translates to:
+  /// **'Non più della metà di sconto'**
+  String get offerErrorTooLow;
+
+  /// No description provided for @offerErrorTooSoon.
+  ///
+  /// In it, this message translates to:
+  /// **'Puoi fare un\'offerta ogni 24 ore'**
+  String get offerErrorTooSoon;
+
+  /// No description provided for @offerErrorNoSavers.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuno l\'ha ancora salvato'**
+  String get offerErrorNoSavers;
+
+  /// No description provided for @offerErrorUnavailable.
+  ///
+  /// In it, this message translates to:
+  /// **'L\'annuncio non è online'**
+  String get offerErrorUnavailable;
+
+  /// No description provided for @offerError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo a inviare l\'offerta. Riprova.'**
+  String get offerError;
+
+  /// No description provided for @priceSheetBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Il nuovo prezzo vale per tutti: chi l\'ha salvato vede che è sceso.'**
+  String get priceSheetBody;
+
+  /// No description provided for @priceSheetPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzo'**
+  String get priceSheetPrice;
+
+  /// No description provided for @ownListingOffer.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Offerta a chi l\'ha salvato (1)} other{Offerta a chi l\'ha salvato ({count})}}'**
+  String ownListingOffer(int count);
+
+  /// No description provided for @profileRoleExplorer.
+  ///
+  /// In it, this message translates to:
+  /// **'Stai esplorando'**
+  String get profileRoleExplorer;
+
+  /// No description provided for @profileRoleBuyer.
+  ///
+  /// In it, this message translates to:
+  /// **'Stai cercando un veicolo'**
+  String get profileRoleBuyer;
+
+  /// No description provided for @profileRoleSeller.
+  ///
+  /// In it, this message translates to:
+  /// **'Stai vendendo'**
+  String get profileRoleSeller;
+
+  /// No description provided for @profileRoleDealer.
+  ///
+  /// In it, this message translates to:
+  /// **'Concessionario'**
+  String get profileRoleDealer;
+
+  /// No description provided for @profileRoleChange.
+  ///
+  /// In it, this message translates to:
+  /// **'Cambia'**
+  String get profileRoleChange;
+
+  /// No description provided for @profileNeedsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Semplifica la tua esperienza scegliendo quello di cui hai bisogno'**
+  String get profileNeedsTitle;
+
+  /// No description provided for @profileNeedBuy.
+  ///
+  /// In it, this message translates to:
+  /// **'Voglio comprare'**
+  String get profileNeedBuy;
+
+  /// No description provided for @profileNeedBuyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa cerchi, salvati e avvisi quando il prezzo scende'**
+  String get profileNeedBuyBody;
+
+  /// No description provided for @profileNeedSell.
+  ///
+  /// In it, this message translates to:
+  /// **'Voglio vendere'**
+  String get profileNeedSell;
+
+  /// No description provided for @profileNeedSellBody.
+  ///
+  /// In it, this message translates to:
+  /// **'I tuoi annunci e chi li ha salvati'**
+  String get profileNeedSellBody;
+
+  /// No description provided for @profileNeedDealer.
+  ///
+  /// In it, this message translates to:
+  /// **'Sono un concessionario'**
+  String get profileNeedDealer;
+
+  /// No description provided for @profileNeedDealerBody.
+  ///
+  /// In it, this message translates to:
+  /// **'La pagina del salone e tutto lo stock nel feed'**
+  String get profileNeedDealerBody;
+
+  /// No description provided for @profileNeedBrowse.
+  ///
+  /// In it, this message translates to:
+  /// **'Sto solo guardando'**
+  String get profileNeedBrowse;
+
+  /// No description provided for @profileNeedBrowseBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna scelta: il profilo resta neutro'**
+  String get profileNeedBrowseBody;
+
+  /// No description provided for @profileSellerGuest.
+  ///
+  /// In it, this message translates to:
+  /// **'Accedi e pubblica: qui vedi i tuoi annunci, quante persone li hanno salvati e puoi fare loro un\'offerta.'**
+  String get profileSellerGuest;
+
+  /// No description provided for @profileDealerPendingTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Completa la verifica del concessionario'**
+  String get profileDealerPendingTitle;
+
+  /// No description provided for @profileDealerPendingBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Ci serve la partita IVA: la controlliamo subito con il registro europeo (VIES).'**
+  String get profileDealerPendingBody;
+
+  /// No description provided for @profileDealerPendingCta.
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica la partita IVA'**
+  String get profileDealerPendingCta;
+
+  /// No description provided for @profileDealerActive.
+  ///
+  /// In it, this message translates to:
+  /// **'Annunci online'**
+  String get profileDealerActive;
+
+  /// No description provided for @profileDealerSaves.
+  ///
+  /// In it, this message translates to:
+  /// **'Salvataggi'**
+  String get profileDealerSaves;
+
+  /// No description provided for @profileDealerChats.
+  ///
+  /// In it, this message translates to:
+  /// **'Chat'**
+  String get profileDealerChats;
+
+  /// No description provided for @profileDealerPage.
+  ///
+  /// In it, this message translates to:
+  /// **'Vedi la pagina del concessionario'**
+  String get profileDealerPage;
+
   /// No description provided for @inboxTitle.
   ///
   /// In it, this message translates to:
@@ -2074,6 +2488,174 @@ abstract class AppLocalizations {
   /// **'Step {current} di {total}'**
   String captureStepOf(int current, int total);
 
+  /// No description provided for @capturePhotoOf.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto {current} di {total}'**
+  String capturePhotoOf(int current, int total);
+
+  /// No description provided for @photoFront3q.
+  ///
+  /// In it, this message translates to:
+  /// **'Anteriore 3/4'**
+  String get photoFront3q;
+
+  /// No description provided for @photoFront3qHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Mettiti all\'angolo anteriore: davanti e fianco insieme, tutto nella sagoma'**
+  String get photoFront3qHint;
+
+  /// No description provided for @photoFront.
+  ///
+  /// In it, this message translates to:
+  /// **'Frontale'**
+  String get photoFront;
+
+  /// No description provided for @photoFrontHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Davanti, al centro, a circa 4 metri'**
+  String get photoFrontHint;
+
+  /// No description provided for @photoSide.
+  ///
+  /// In it, this message translates to:
+  /// **'Fianco'**
+  String get photoSide;
+
+  /// No description provided for @photoSideHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Di lato, a circa 4 metri: tutto il veicolo nella sagoma, ruote comprese'**
+  String get photoSideHint;
+
+  /// No description provided for @photoRear3q.
+  ///
+  /// In it, this message translates to:
+  /// **'Posteriore 3/4'**
+  String get photoRear3q;
+
+  /// No description provided for @photoRear3qHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Dall\'angolo posteriore opposto: dietro e fianco insieme'**
+  String get photoRear3qHint;
+
+  /// No description provided for @photoRear.
+  ///
+  /// In it, this message translates to:
+  /// **'Posteriore'**
+  String get photoRear;
+
+  /// No description provided for @photoRearHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Dietro, al centro, a circa 4 metri'**
+  String get photoRearHint;
+
+  /// No description provided for @photoDashboard.
+  ///
+  /// In it, this message translates to:
+  /// **'Quadro e km'**
+  String get photoDashboard;
+
+  /// No description provided for @photoDashboardHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Quadro acceso: i chilometri devono leggersi bene'**
+  String get photoDashboardHint;
+
+  /// No description provided for @photoInterior.
+  ///
+  /// In it, this message translates to:
+  /// **'Interni anteriori'**
+  String get photoInterior;
+
+  /// No description provided for @photoInteriorHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Dal sedile posteriore al centro: volante, plancia e sedili davanti'**
+  String get photoInteriorHint;
+
+  /// No description provided for @photoRearSeats.
+  ///
+  /// In it, this message translates to:
+  /// **'Sedili posteriori'**
+  String get photoRearSeats;
+
+  /// No description provided for @photoRearSeatsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Dalla portiera posteriore aperta: seduta e schienali'**
+  String get photoRearSeatsHint;
+
+  /// No description provided for @photoTrunk.
+  ///
+  /// In it, this message translates to:
+  /// **'Bagagliaio'**
+  String get photoTrunk;
+
+  /// No description provided for @photoTrunkHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Aperto e vuoto, inquadrato dall\'alto'**
+  String get photoTrunkHint;
+
+  /// No description provided for @photoWheels.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerchi e gomme'**
+  String get photoWheels;
+
+  /// No description provided for @photoWheelsHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Da vicino, una ruota anteriore: si deve vedere il battistrada'**
+  String get photoWheelsHint;
+
+  /// No description provided for @photoTank.
+  ///
+  /// In it, this message translates to:
+  /// **'Serbatoio e sella'**
+  String get photoTank;
+
+  /// No description provided for @photoTankHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Dall\'alto, di lato: serbatoio e sella interi'**
+  String get photoTankHint;
+
+  /// No description provided for @photoChainTyres.
+  ///
+  /// In it, this message translates to:
+  /// **'Gomme e catena'**
+  String get photoChainTyres;
+
+  /// No description provided for @photoChainTyresHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Da vicino: battistrada e catena devono vedersi bene'**
+  String get photoChainTyresHint;
+
+  /// No description provided for @photoExhaust.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarico'**
+  String get photoExhaust;
+
+  /// No description provided for @photoExhaustHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Da vicino, di lato: tutto lo scarico'**
+  String get photoExhaustHint;
+
+  /// No description provided for @photoOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altra foto'**
+  String get photoOther;
+
   /// No description provided for @captureVideo.
   ///
   /// In it, this message translates to:
@@ -2284,12 +2866,6 @@ abstract class AppLocalizations {
   /// **'Video · {seconds} s'**
   String shotsVideo(int seconds);
 
-  /// No description provided for @shotsPhoto.
-  ///
-  /// In it, this message translates to:
-  /// **'Foto'**
-  String get shotsPhoto;
-
   /// No description provided for @shotsTodo.
   ///
   /// In it, this message translates to:
@@ -2314,16 +2890,34 @@ abstract class AppLocalizations {
   /// **'motore acceso'**
   String get shotsEngineOn;
 
-  /// No description provided for @extraPhotosTitle.
+  /// No description provided for @photosTitle.
   ///
   /// In it, this message translates to:
-  /// **'Foto aggiuntive'**
-  String get extraPhotosTitle;
+  /// **'Foto per il carosello'**
+  String get photosTitle;
+
+  /// No description provided for @photosHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Facoltative ma consigliate: chi compra le guarda prima di scrivere. Scattale con la guida o prendile dalla galleria.'**
+  String get photosHint;
+
+  /// No description provided for @photosShootGuided.
+  ///
+  /// In it, this message translates to:
+  /// **'Scatta con la guida'**
+  String get photosShootGuided;
+
+  /// No description provided for @photosOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altre foto'**
+  String get photosOther;
 
   /// No description provided for @extraPhotosHint.
   ///
   /// In it, this message translates to:
-  /// **'Facoltative, fino a {max}: dettagli, gomme, libretto dei tagliandi. Finiscono nel carosello dell\'annuncio.'**
+  /// **'Fino a {max}: dettagli, graffi, libretto dei tagliandi.'**
   String extraPhotosHint(int max);
 
   /// No description provided for @extraPhotosAdd.

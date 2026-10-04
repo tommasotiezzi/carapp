@@ -146,32 +146,52 @@ void main() {
 
       final shots = {
         for (final s in _carSteps.where((s) => s.required))
-          s.id: Shot(stepId: s.id, kind: s.id == 'rear' ? ShotKind.photo : ShotKind.video, file: '${s.id}.x'),
+          s.id: Shot(stepId: s.id, kind: ShotKind.video, file: '${s.id}.mp4'),
       };
-      d = d.copyWith(shots: shots, details: _complete);
+      d = d.copyWith(
+        shots: shots,
+        details: _complete,
+        photos: const [
+          Shot(stepId: 'extra', kind: ShotKind.photo, file: 'x.jpg'),
+          Shot(stepId: 'trunk', kind: ShotKind.photo, file: 't.jpg'),
+          Shot(stepId: 'front_three_quarter', kind: ShotKind.photo, file: 'f.jpg'),
+        ],
+      );
       expect(d.readyIn(_carSteps), isTrue);
       expect(d.videosIn(_carSteps).map((s) => s.stepId),
-          ['front', 'right_side', 'left_side', 'interior_dashboard']);
-      expect(d.photosIn(_carSteps).single.stepId, 'rear');
+          ['front', 'right_side', 'left_side', 'rear', 'interior_dashboard']);
+      // Slots in slot order, then the others.
+      expect(d.carousel(PhotoSlot.defaultsFor('car')).map((p) => p.file), ['f.jpg', 't.jpg', 'x.jpg']);
 
       final key = d.mediaKey;
       final back = SellDraft.fromJson(jsonDecode(jsonEncode(d.toJson())) as Map<String, dynamic>);
       expect(back.mediaKey, key);
       expect(back.details.priceCents, 1490000);
       expect(back.details.attributes['novice_ok'], isTrue);
-      expect(back.shots['rear']!.kind, ShotKind.photo);
+      expect(back.photos.map((p) => p.stepId), ['extra', 'trunk', 'front_three_quarter']);
 
       final retaken = d.copyWith(shots: {...d.shots, 'rear': const Shot(stepId: 'rear', kind: ShotKind.video, file: 'r2.mp4')});
       expect(retaken.mediaKey, isNot(key));
+      expect(d.copyWith(photos: const []).mediaKey, key, reason: 'photos do not change the video');
     });
 
-    test('only photos is not enough: the feed needs a video', () {
-      final d = SellDraft(id: 'd', categoryId: 'car', createdAt: DateTime(2026), shots: {
-        for (final s in _carSteps.where((s) => s.required))
-          s.id: Shot(stepId: s.id, kind: ShotKind.photo, file: '${s.id}.jpg'),
+    test('a step is never a photo: an old photo step goes to the carousel and is to film again', () {
+      final old = SellDraft(id: 'd', categoryId: 'car', createdAt: DateTime(2026), shots: const {
+        'front_three_quarter': Shot(stepId: 'front_three_quarter', kind: ShotKind.video, file: 'f.mp4'),
+        'rear': Shot(stepId: 'rear', kind: ShotKind.photo, file: 'r.jpg'),
+        'left_side': Shot(stepId: 'left_side', kind: ShotKind.photo, file: 'l.jpg'),
       });
-      expect(d.missingIn(_carSteps), isEmpty);
-      expect(d.readyIn(_carSteps), isFalse);
+      final d = old.normalized(_carSteps, PhotoSlot.defaultsFor('car'));
+      expect(d.shots.keys, ['front']);
+      expect(d.shots['front']!.file, 'f.mp4');
+      expect(d.photoFor('rear')!.file, 'r.jpg');
+      expect(d.extraPhotos.single.file, 'l.jpg');
+      expect(d.missingIn(_carSteps).map((s) => s.id), ['right_side', 'left_side', 'rear', 'interior_dashboard']);
+      // A catalog still on the old step leaves the clip alone.
+      final same = SellDraft(id: 'd', categoryId: 'car', createdAt: DateTime(2026), shots: const {
+        'front_three_quarter': Shot(stepId: 'front_three_quarter', kind: ShotKind.video, file: 'f.mp4'),
+      });
+      expect(identical(same.normalized(const [CaptureStep(id: 'front_three_quarter')], const []), same), isTrue);
     });
 
     test('details: required fields and the listing row', () {
@@ -240,18 +260,19 @@ void main() {
     SellController ctrl() => c.read(sellControllerProvider.notifier);
     SellState st() => c.read(sellControllerProvider);
 
-    Future<void> shootAll({String photoStep = 'rear'}) async {
+    /// Every required step filmed, plus the guided rear photo.
+    Future<void> shootAll() async {
       for (final s in _carSteps.where((s) => s.required)) {
-        final kind = s.id == photoStep ? ShotKind.photo : ShotKind.video;
-        await ctrl().addShot(s.id, kind, await cameraFile('${s.id}.${kind == ShotKind.photo ? 'jpg' : 'mp4'}'));
+        await ctrl().addClip(s.id, await cameraFile('${s.id}.mp4'));
       }
+      await ctrl().addPhoto('rear', await cameraFile('rear.jpg'), fromCamera: true);
     }
 
     test('a shot moves into the draft folder, gets a thumbnail, is saved on the phone', () async {
       await ctrl().start('car');
       final id = st().draft!.id;
       final raw = await cameraFile('front.mp4');
-      await ctrl().addShot('front', ShotKind.video, raw);
+      await ctrl().addClip('front', raw);
 
       final shot = st().draft!.shots['front']!;
       final dir = await media.draftDir(id);
@@ -261,19 +282,21 @@ void main() {
       expect(ctrl().savedDraft()!.shots.keys, ['front']);
 
       // Retake: the old files go.
-      await ctrl().addShot('front', ShotKind.photo, await cameraFile('front.jpg'));
+      await ctrl().addClip('front', await cameraFile('front2.mp4'));
       expect(File('${dir.path}/${shot.file}').existsSync(), isFalse);
-      expect(st().draft!.shots['front']!.kind, ShotKind.photo);
+      expect(File('${dir.path}/${shot.thumb}').existsSync(), isFalse);
+      expect(st().draft!.shots['front']!.file, isNot(shot.file));
     });
 
     test('resume the saved draft; another category asks for a new one', () async {
       await ctrl().start('car');
       final id = st().draft!.id;
-      await ctrl().addShot('rear', ShotKind.photo, await cameraFile('rear.jpg'));
+      await ctrl().addClip('rear', await cameraFile('rear.mp4'));
 
       await ctrl().start('car');
       expect(st().draft!.id, id);
       expect(st().draft!.shots, contains('rear'));
+      expect(st().slots.first.id, 'front_three_quarter');
 
       await ctrl().start('motorcycle');
       expect(st().draft!.id, isNot(id));
@@ -287,11 +310,11 @@ void main() {
       await ctrl().prepareMedia();
 
       expect(media.renders.single.map((f) => f.split('-').first),
-          ['front', 'right_side', 'left_side', 'interior_dashboard']);
+          ['front', 'right_side', 'left_side', 'rear', 'interior_dashboard']);
       expect(repo.uploads, ['video.mp4', 'cover.jpg', 'photo-01-rear.jpg']);
       expect(st().phase, MediaPhase.ready);
       expect(st().progress, 1);
-      expect(st().draft!.videoDurationMs, 4 * 5000 - 3 * 600);
+      expect(st().draft!.videoDurationMs, 5 * 5000 - 4 * 600);
 
       // Again: nothing to do.
       await ctrl().prepareMedia();
@@ -304,18 +327,19 @@ void main() {
       await shootAll();
       await ctrl().prepareMedia();
 
-      // The rear photo becomes a video: new video, no carousel photo.
-      await ctrl().addShot('rear', ShotKind.video, await cameraFile('rear.mp4'));
+      // An optional step filmed: new video; the rear photo removed.
+      await ctrl().addClip('engine_bay', await cameraFile('engine.mp4'));
+      await ctrl().removePhoto(st().draft!.photoFor('rear')!.file);
       await ctrl().prepareMedia();
 
       expect(media.renders, hasLength(2));
-      expect(media.renders.last, hasLength(5));
+      expect(media.renders.last, hasLength(6));
       expect(repo.uploads.sublist(3), ['video.mp4', 'cover.jpg']);
       expect(repo.removed, ['photo-01-rear.jpg']);
       expect(st().draft!.uploaded.keys, unorderedEquals(['video.mp4', 'cover.jpg']));
     });
 
-    test('extra photos: copied, in the carousel after the steps, no new video, removable, max 10', () async {
+    test('photos: copied from the gallery, slots before the others, no new video, removable, max 10 others', () async {
       await ctrl().start('car');
       await shootAll();
       await ctrl().prepareMedia();
@@ -323,7 +347,7 @@ void main() {
       final picked = [for (var i = 0; i < 2; i++) await cameraFile('gallery-$i.jpg')];
       expect(await ctrl().addExtraPhotos(picked), 2);
       expect(File(picked.first).existsSync(), isTrue, reason: 'gallery files are copied, not moved');
-      final extras = st().draft!.extras;
+      final extras = st().draft!.extraPhotos;
       expect(extras.map((e) => e.stepId), ['extra', 'extra']);
       expect(File('${media.root.path}/${st().draft!.id}/${extras.first.file}').existsSync(), isTrue);
 
@@ -331,23 +355,32 @@ void main() {
       expect(media.renders, hasLength(1), reason: 'photos do not change the video');
       expect(repo.uploads.sublist(3), ['photo-02-extra.jpg', 'photo-03-extra.jpg']);
 
-      // Retaking the rear photo: still no new video.
-      await ctrl().addShot('rear', ShotKind.photo, await cameraFile('rear2.jpg'));
+      // A slot photo from the gallery goes before the others; retaking the
+      // rear one replaces it. Still no new video.
+      final rear = st().draft!.photoFor('rear')!.file;
+      await ctrl().addPhoto('front', await cameraFile('front.jpg'), fromCamera: false);
+      await ctrl().addPhoto('rear', await cameraFile('rear2.jpg'), fromCamera: true);
+      expect(File('${media.root.path}/${st().draft!.id}/$rear').existsSync(), isFalse);
+      expect(st().draft!.photos.where((p) => p.stepId == 'rear'), hasLength(1));
       await ctrl().prepareMedia();
       expect(media.renders, hasLength(1));
+      expect(st().draft!.uploaded.keys, containsAll(['photo-01-front.jpg', 'photo-02-rear.jpg', 'photo-03-extra.jpg', 'photo-04-extra.jpg']));
 
-      await ctrl().removeExtraPhoto(extras.first.file);
+      await ctrl().removePhoto(extras.first.file);
       await ctrl().prepareMedia();
-      expect(st().draft!.extras.single.file, extras.last.file);
-      expect(repo.removed, ['photo-03-extra.jpg']);
-      expect(st().draft!.uploaded.keys, unorderedEquals(['video.mp4', 'cover.jpg', 'photo-01-rear.jpg', 'photo-02-extra.jpg']));
+      expect(st().draft!.extraPhotos.single.file, extras.last.file);
+      // Names shift when a slot photo comes before (renamed uploads go);
+      // the removed photo's name goes last.
+      expect(repo.removed.last, 'photo-04-extra.jpg');
+      expect(st().draft!.uploaded.keys,
+          unorderedEquals(['video.mp4', 'cover.jpg', 'photo-01-front.jpg', 'photo-02-rear.jpg', 'photo-03-extra.jpg']));
 
       // Survives a restart of the app.
-      expect(ctrl().savedDraft()!.extras.single.file, extras.last.file);
+      expect(ctrl().savedDraft()!.extraPhotos.single.file, extras.last.file);
 
       final many = [for (var i = 0; i < 12; i++) await cameraFile('many-$i.jpg')];
       expect(await ctrl().addExtraPhotos(many), SellDraft.maxExtras - 1);
-      expect(st().draft!.extras, hasLength(SellDraft.maxExtras));
+      expect(st().draft!.extraPhotos, hasLength(SellDraft.maxExtras));
       expect(await ctrl().addExtraPhotos([many.first]), 0);
     });
 
@@ -359,8 +392,6 @@ void main() {
       await ctrl().start('car');
       expect(st().draft!.shots.keys, ['front']);
       expect(st().draft!.shots['front']!.file, 'f.mp4');
-      // A catalog still on the old step leaves it alone.
-      expect(old.withRenamedSteps(const [CaptureStep(id: 'front_three_quarter')]).shots.keys, ['front_three_quarter']);
     });
 
     test('a retake while the video is being made restarts it', () async {
@@ -371,13 +402,13 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(st().phase, MediaPhase.rendering);
 
-      await ctrl().addShot('engine_bay', ShotKind.video, await cameraFile('engine.mp4'));
+      await ctrl().addClip('engine_bay', await cameraFile('engine.mp4'));
       media.renderGate!.complete();
       media.renderGate = null;
       await run;
 
       expect(media.renders, hasLength(2));
-      expect(media.renders.last, hasLength(5));
+      expect(media.renders.last, hasLength(6));
       expect(st().draft!.renderedFrom, st().draft!.mediaKey);
       expect(repo.uploads.where((u) => u == 'video.mp4'), hasLength(1));
     });
@@ -410,7 +441,7 @@ void main() {
       expect(repo.saved.single.$2, 'dealer-1');
       expect(repo.saved.single.$1.details.priceCents, 1490000);
       expect(repo.uploads, contains('video.mp4'));
-      expect(repo.published.single, (id, 4 * 5000 - 3 * 600));
+      expect(repo.published.single, (id, 5 * 5000 - 4 * 600));
       expect(prefs.getString(PrefKeys.sellDraft), isNull);
       expect(Directory('${media.root.path}/$id').existsSync(), isFalse);
       expect(st().draft, isNull);
@@ -523,7 +554,7 @@ void main() {
 
     testWidgets('start: a saved draft can be resumed', (tester) async {
       final draft = SellDraft(id: 'd1', categoryId: 'car', createdAt: DateTime(2026), shots: const {
-        'rear': Shot(stepId: 'rear', kind: ShotKind.photo, file: 'rear.jpg'),
+        'rear': Shot(stepId: 'rear', kind: ShotKind.video, file: 'rear.mp4'),
       });
       await prefs.setString(PrefKeys.sellDraft, jsonEncode(draft.toJson()));
       await tester.pumpWidget(app(const SellStartScreen()));
@@ -548,7 +579,7 @@ void main() {
         await container.read(sellControllerProvider.notifier).start('car');
         for (final s in _carSteps.where((s) => s.required && s.id != 'left_side')) {
           final f = File('${tmp.path}/${s.id}.mp4')..writeAsStringSync('x');
-          await container.read(sellControllerProvider.notifier).addShot(s.id, ShotKind.video, f.path);
+          await container.read(sellControllerProvider.notifier).addClip(s.id, f.path);
         }
       });
       await tester.pumpAndSettle();
@@ -563,8 +594,8 @@ void main() {
       expect(tester.widget<FilledButton>(create).onPressed, isNull);
 
       await tester.runAsync(() async {
-        final f = File('${tmp.path}/left.jpg')..writeAsStringSync('x');
-        await container.read(sellControllerProvider.notifier).addShot('left_side', ShotKind.photo, f.path);
+        final f = File('${tmp.path}/left.mp4')..writeAsStringSync('x');
+        await container.read(sellControllerProvider.notifier).addClip('left_side', f.path);
       });
       await tester.pumpAndSettle();
       expect(find.text('Mancano: Lato sinistro'), findsNothing);
@@ -579,8 +610,8 @@ void main() {
       expect(find.text('capture step=left_side&single=1'), findsOneWidget);
     });
 
-    testWidgets('shots: extra photos from the gallery', (tester) async {
-      tester.view.physicalSize = const Size(430, 1600);
+    testWidgets('shots: guided photos, a slot from the gallery, other photos', (tester) async {
+      tester.view.physicalSize = const Size(430, 2600);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       final picked = File('${tmp.path}/gallery.jpg')..writeAsStringSync('jpg');
@@ -592,7 +623,7 @@ void main() {
           return const ShotsScreen();
         }),
         more: [
-          extraPhotoPickerProvider.overrideWithValue(({required camera, required limit, required maxSide}) async {
+          photoPickerProvider.overrideWithValue(({required camera, required limit, required maxSide}) async {
             asked.add((camera, limit));
             return [picked.path];
           }),
@@ -601,7 +632,24 @@ void main() {
       await tester.runAsync(() => container.read(sellControllerProvider.notifier).start('car'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Foto aggiuntive'), findsOneWidget);
+      expect(find.text('Foto per il carosello'), findsOneWidget);
+      expect(find.text('Anteriore 3/4'), findsOneWidget);
+      expect(find.text('Bagagliaio'), findsOneWidget);
+
+      // A slot: hint, then gallery.
+      await tester.tap(find.text('Bagagliaio'));
+      await tester.pumpAndSettle();
+      expect(find.text('Aperto e vuoto, inquadrato dall\'alto'), findsOneWidget);
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Scegli dalla galleria'));
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+      expect(asked, [(false, 1)]);
+      expect(container.read(sellControllerProvider).draft!.photoFor('trunk'), isNotNull);
+
+      // Other photos.
       await tester.tap(find.text('Aggiungi'));
       await tester.pumpAndSettle();
       await tester.runAsync(() async {
@@ -610,9 +658,13 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 100));
       });
       await tester.pumpAndSettle();
+      expect(asked.last, (false, SellDraft.maxExtras));
+      expect(container.read(sellControllerProvider).draft!.extraPhotos, hasLength(1));
 
-      expect(asked, [(false, SellDraft.maxExtras)]);
-      expect(container.read(sellControllerProvider).draft!.extras, hasLength(1));
+      // Guided camera for every missing slot.
+      await tester.tap(find.text('Scatta con la guida'));
+      await tester.pumpAndSettle();
+      expect(find.text('capture photos=1'), findsOneWidget);
     });
 
     testWidgets('details: validation and publish', (tester) async {
@@ -642,7 +694,7 @@ void main() {
         await container.read(sellControllerProvider.notifier).start('car');
         for (final s in _carSteps.where((s) => s.required)) {
           final f = File('${tmp.path}/${s.id}.mp4')..writeAsStringSync('x');
-          await container.read(sellControllerProvider.notifier).addShot(s.id, ShotKind.video, f.path);
+          await container.read(sellControllerProvider.notifier).addClip(s.id, f.path);
         }
       });
 

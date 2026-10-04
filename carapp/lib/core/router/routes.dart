@@ -20,6 +20,7 @@ class AppRoutes {
   static const listing = '/listing/:id';
   static const chat = '/chat/:id';
   static const newChat = '/chat/new/:listingId';
+  static const archivedChats = '/chats/archived';
   static const dealerDashboard = '/dealer';
   static const settings = '/settings';
   static const dealerPage = '/dealers/:id';
@@ -33,8 +34,10 @@ class AppRoutes {
 
   /// [step] null = the first step still missing; [single] = retake one
   /// step and come back to the summary.
-  static String sellCapturePath({String? step, bool single = false}) {
-    final query = {'step': ?step, if (single) 'single': '1'};
+  /// Video steps, or with [photos] the guided carousel photos ([step] =
+  /// the slot to start from).
+  static String sellCapturePath({String? step, bool photos = false, bool single = false}) {
+    final query = {'step': ?step, if (photos) 'photos': '1', if (single) 'single': '1'};
     return Uri(path: sellCapture, queryParameters: query.isEmpty ? null : query).toString();
   }
   static String sellDonePath(String listingId) => '/sell/done/$listingId';

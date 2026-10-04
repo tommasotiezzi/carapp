@@ -71,12 +71,30 @@ class FakeChatRepository implements ChatRepository {
   String? whatsapp;
   var _sent = 0;
 
-  @override
-  Future<List<ConversationSummary>> inbox({DateTime? before}) async =>
-      inboxRows.where((r) => before == null || r.activityAt.isBefore(before)).toList();
+  final archivedIds = <String>{};
+  final archiveCalls = <(String, bool)>[];
+  bool failArchive = false;
 
   @override
-  Future<ConversationSummary?> conversation(String id) async => rows[id];
+  Future<List<ConversationSummary>> inbox({DateTime? before, bool archived = false}) async => inboxRows
+      .where((r) => before == null || r.activityAt.isBefore(before))
+      .where((r) => archivedIds.contains(r.id) == archived)
+      .map((r) => r.withArchived(archived))
+      .toList();
+
+  @override
+  Future<void> archive(String conversationId, {required bool archived}) async {
+    archiveCalls.add((conversationId, archived));
+    if (failArchive) throw Exception('offline');
+    archived ? archivedIds.add(conversationId) : archivedIds.remove(conversationId);
+  }
+
+  @override
+  Future<int> archivedCount() async => archivedIds.length;
+
+  @override
+  Future<ConversationSummary?> conversation(String id) async =>
+      rows[id]?.withArchived(archivedIds.contains(id));
 
   @override
   Future<String?> conversationIdForListing(String listingId) async =>
@@ -329,6 +347,92 @@ void main() {
       c.read(inboxProvider.notifier).markedRead('c2');
       expect(c.read(unreadChatsProvider), 0);
     });
+
+    test('archive: out of the list and counted; back on undo or on a new message', () async {
+      final repo = FakeChatRepository()
+        ..inboxRows.addAll([
+          _summary('c1', at: DateTime(2026, 10, 4, 12)),
+          _summary('c2', at: DateTime(2026, 10, 4, 11), unread: true, listingId: 'l2'),
+        ])
+        ..archivedIds.add('old');
+      repo.rows['c1'] = repo.inboxRows.first;
+      repo.rows['c2'] = repo.inboxRows.last;
+      final c = _container(repo);
+      final sub = c.listen(inboxProvider, (_, _) {});
+      addTearDown(sub.close);
+      await c.read(inboxProvider.future);
+      expect(c.read(inboxProvider).value!.archivedCount, 1);
+
+      await c.read(inboxProvider.notifier).archive('c2');
+      var state = c.read(inboxProvider).value!;
+      expect(state.items.map((i) => i.id), ['c1']);
+      expect(state.archivedCount, 2);
+      expect(c.read(unreadChatsProvider), 0, reason: 'archived chats do not count');
+      expect(repo.archiveCalls.single, ('c2', true));
+
+      await c.read(inboxProvider.notifier).unarchive(repo.rows['c2']!);
+      state = c.read(inboxProvider).value!;
+      expect(state.items.map((i) => i.id), ['c1', 'c2']);
+      expect(state.archivedCount, 1);
+
+      // Archived on another phone, then a new message brings it back.
+      repo.archivedIds.add('c1');
+      repo.conversationStream.add('c1');
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(c.read(inboxProvider).value!.items.map((i) => i.id), ['c2']);
+      expect(c.read(inboxProvider).value!.archivedCount, 2);
+      repo.archivedIds.remove('c1');
+      repo.rows['c1'] = _summary('c1', at: DateTime(2026, 10, 4, 14), unread: true);
+      repo.conversationStream.add('c1');
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(c.read(inboxProvider).value!.items.map((i) => i.id), ['c1', 'c2']);
+      expect(c.read(inboxProvider).value!.archivedCount, 1);
+    });
+
+    test('a failed archive puts the chat back', () async {
+      final repo = FakeChatRepository()
+        ..inboxRows.add(_summary('c1'))
+        ..failArchive = true;
+      final c = _container(repo);
+      await c.read(inboxProvider.future);
+      await expectLater(c.read(inboxProvider.notifier).archive('c1'), throwsException);
+      expect(c.read(inboxProvider).value!.items.map((i) => i.id), ['c1']);
+      expect(c.read(inboxProvider).value!.archivedCount, 0);
+    });
+  });
+
+  test('offer messages', () {
+    final offer = ChatMessage.fromRow({
+      'id': 'o1',
+      'sender_id': _seller,
+      'body': 'Ha abbassato il prezzo per te: € 4.500 invece di € 5.000',
+      'created_at': '2026-10-04T10:00:00Z',
+      'kind': 'offer',
+      'offer_price_cents': 450000,
+      'offer_list_price_cents': 500000,
+    });
+    expect(offer.isOffer, isTrue);
+    expect(offer.withStatus(MessageStatus.sent).offerListPriceCents, 500000);
+    final text = ChatMessage.fromRow({
+      'id': 't1',
+      'sender_id': _seller,
+      'body': 'Ciao',
+      'created_at': '2026-10-04T10:00:00Z',
+      'kind': 'text',
+    });
+    expect(text.isOffer, isFalse);
+    expect(
+      ConversationSummary.fromRow({
+        'id': 'c1',
+        'listing_id': 'l1',
+        'is_buyer': true,
+        'buyer_id': _me,
+        'activity_at': '2026-10-04T10:00:00Z',
+        'last_message_kind': 'offer',
+        'archived': true,
+      }).lastMessageIsOffer,
+      isTrue,
+    );
   });
 
   group('screens', () {
@@ -383,6 +487,77 @@ void main() {
       expect(find.text('Il tuo annuncio'), findsOneWidget);
       expect(find.text('Venduto'), findsOneWidget);
       expect(find.byKey(const ValueKey('unread-dot')), findsOneWidget);
+    });
+
+    testWidgets('Inbox: swipe to archive, undo, the archived row', (tester) async {
+      final repo = FakeChatRepository()
+        ..inboxRows.addAll([
+          _summary('c1', last: 'Ciao', at: DateTime(2026, 10, 4, 12)),
+          _summary('c2', last: 'Ci sei?', at: DateTime(2026, 10, 4, 11), listingId: 'l2'),
+        ]);
+      repo.rows['c2'] = repo.inboxRows.last;
+      await tester.pumpWidget(app(repo, const InboxScreen()));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('archived-row')), findsNothing);
+
+      await tester.drag(find.text('Ci sei?'), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Ci sei?'), findsNothing);
+      expect(find.text('Chat archiviata'), findsOneWidget);
+      expect(find.text('Archiviate (1)'), findsOneWidget);
+      expect(repo.archiveCalls.single, ('c2', true));
+
+      await tester.tap(find.text('Annulla'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ci sei?'), findsOneWidget);
+      expect(find.byKey(const ValueKey('archived-row')), findsNothing);
+      expect(repo.archiveCalls.last, ('c2', false));
+    });
+
+    testWidgets('Inbox: an offer shows with its tag', (tester) async {
+      final repo = FakeChatRepository()
+        ..inboxRows.add(ConversationSummary.fromRow({
+          'id': 'c1',
+          'listing_id': 'l1',
+          'is_buyer': true,
+          'buyer_id': _me,
+          'other_name': 'Marco',
+          'activity_at': DateTime.now().toUtc().toIso8601String(),
+          'last_message_body': 'Ha abbassato il prezzo per te: € 4.500 invece di € 5.000',
+          'last_message_kind': 'offer',
+          'unread': true,
+        }));
+      await tester.pumpWidget(app(repo, const InboxScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('Marco'), findsOneWidget);
+      expect(find.byIcon(Icons.local_offer_outlined), findsOneWidget);
+    });
+
+    testWidgets('chat: the offer card, reserved price and the list price struck', (tester) async {
+      final repo = FakeChatRepository();
+      repo.rows['c1'] = _summary('c1');
+      repo.messagesOf['c1'] = [
+        ChatMessage.fromRow({
+          'id': 'o1',
+          'sender_id': _seller,
+          'body': 'Ha abbassato il prezzo per te: € 4.500 invece di € 5.000',
+          'created_at': DateTime(2026, 10, 4, 10).toUtc().toIso8601String(),
+          'kind': 'offer',
+          'offer_price_cents': 450000,
+          'offer_list_price_cents': 500000,
+        }),
+      ];
+      await tester.pumpWidget(app(repo, const ChatScreen(conversationId: 'c1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('offer-card')), findsOneWidget);
+      expect(find.text('Prezzo riservato a te'), findsOneWidget);
+      expect(find.text('€ 4.500'), findsOneWidget);
+      final struck = tester.widget<Text>(find.text('€ 5.000'));
+      expect(struck.style?.decoration, TextDecoration.lineThrough);
+      expect(find.textContaining('Rispondi qui'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
     });
 
     testWidgets('Inbox: empty state', (tester) async {

@@ -7,11 +7,19 @@ import '../data/chat_models.dart';
 import '../data/chat_repository.dart';
 
 class InboxState {
-  const InboxState({this.items = const [], this.hasMore = false, this.loadingMore = false});
+  const InboxState({
+    this.items = const [],
+    this.hasMore = false,
+    this.loadingMore = false,
+    this.archivedCount = 0,
+  });
 
   final List<ConversationSummary> items;
   final bool hasMore;
   final bool loadingMore;
+
+  /// Chats the user archived ("Archiviate (3)").
+  final int archivedCount;
 
   static const empty = InboxState();
 
@@ -31,18 +39,29 @@ class InboxState {
     return null;
   }
 
-  InboxState copyWith({List<ConversationSummary>? items, bool? hasMore, bool? loadingMore}) =>
+  InboxState copyWith({
+    List<ConversationSummary>? items,
+    bool? hasMore,
+    bool? loadingMore,
+    int? archivedCount,
+  }) =>
       InboxState(
         items: items ?? this.items,
         hasMore: hasMore ?? this.hasMore,
         loadingMore: loadingMore ?? this.loadingMore,
+        archivedCount: archivedCount ?? this.archivedCount,
       );
 
   /// Adds or replaces [rows] and keeps the newest activity first.
+  /// Archived rows leave the list.
   InboxState upsert(Iterable<ConversationSummary> rows) {
     final byId = {for (final c in items) c.id: c};
     for (final r in rows) {
-      byId[r.id] = r;
+      if (r.archived) {
+        byId.remove(r.id);
+      } else {
+        byId[r.id] = r;
+      }
     }
     final sorted = byId.values.toList()..sort((a, b) => b.activityAt.compareTo(a.activityAt));
     return copyWith(items: sorted);
@@ -86,9 +105,13 @@ class InboxController extends AsyncNotifier<InboxState> {
     // Load once Realtime listens, so nothing falls between the two and
     // no second request is needed.
     await subscribed.future.timeout(subscribeTimeout, onTimeout: () {});
-    final items = await repo.inbox();
+    final (items, archived) = await (repo.inbox(), repo.archivedCount()).wait;
     _loaded = true;
-    return InboxState(items: items, hasMore: items.length == ChatRepository.inboxPageSize);
+    return InboxState(
+      items: items,
+      hasMore: items.length == ChatRepository.inboxPageSize,
+      archivedCount: archived,
+    );
   }
 
   void _onChange(String? conversationId) {
@@ -117,11 +140,16 @@ class InboxController extends AsyncNotifier<InboxState> {
     _changed.clear();
     final repo = ref.read(chatRepositoryProvider);
     try {
-      final rows = await Future.wait(ids.map(repo.conversation));
+      final rows = (await Future.wait(ids.map(repo.conversation))).whereType<ConversationSummary>().toList();
       if (!ref.mounted) return;
       final current = state.value;
       if (current == null) return;
-      state = AsyncData(current.upsert(rows.whereType<ConversationSummary>()));
+      // A chat came back from the archive (new message) or went into it
+      // from another phone: the count changed.
+      final moved = rows.any((r) => r.archived == (current.byId(r.id) != null));
+      final archived = moved ? await repo.archivedCount() : current.archivedCount;
+      if (!ref.mounted) return;
+      state = AsyncData((state.value ?? current).upsert(rows).copyWith(archivedCount: archived));
     } catch (_) {
       // Offline: the catch-up on reconnect brings it back in step.
     }
@@ -161,6 +189,36 @@ class InboxController extends AsyncNotifier<InboxState> {
     }
   }
 
+  /// Swipe "Archivia": out of the list at once, back if it fails.
+  Future<void> archive(String conversationId) async {
+    final current = state.value;
+    final row = current?.byId(conversationId);
+    if (current == null || row == null) return;
+    state = AsyncData(current.copyWith(
+      items: [for (final c in current.items) if (c.id != conversationId) c],
+      archivedCount: current.archivedCount + 1,
+    ));
+    try {
+      await ref.read(chatRepositoryProvider).archive(conversationId, archived: true);
+    } catch (_) {
+      if (!ref.mounted) return;
+      final now = state.value ?? current;
+      state = AsyncData(now.upsert([row]).copyWith(archivedCount: now.archivedCount - 1));
+      rethrow;
+    }
+  }
+
+  /// "Annulla" after archiving, or "Ripristina" in the archived list.
+  Future<void> unarchive(ConversationSummary row) async {
+    await ref.read(chatRepositoryProvider).archive(row.id, archived: false);
+    if (!ref.mounted) return;
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.upsert([row.withArchived(false)]).copyWith(
+      archivedCount: (current.archivedCount - 1).clamp(0, 1 << 30),
+    ));
+  }
+
   /// The chat was opened: drop the unread dot at once (the database is
   /// updated by the chat screen).
   void markedRead(String conversationId) {
@@ -172,6 +230,11 @@ class InboxController extends AsyncNotifier<InboxState> {
 }
 
 final inboxProvider = AsyncNotifierProvider<InboxController, InboxState>(InboxController.new);
+
+/// The archived chats (first page), for "Archiviate".
+final archivedChatsProvider = FutureProvider.autoDispose<List<ConversationSummary>>(
+  (ref) => ref.read(chatRepositoryProvider).inbox(archived: true),
+);
 
 /// Chats with something new: the badge on the Inbox tab.
 final unreadChatsProvider = Provider<int>(

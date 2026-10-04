@@ -122,16 +122,16 @@ class NativeSellMedia implements SellMedia {
 
 final sellMediaProvider = Provider<SellMedia>((ref) => NativeSellMedia());
 
-/// "Foto aggiuntive": one photo from the camera or up to [limit] from the
+/// Carousel photos: one from the camera or up to [limit] from the
 /// gallery, long side at most [maxSide]. Paths of the picked files
 /// (temporary copies); empty when cancelled.
-typedef ExtraPhotoPicker = Future<List<String>> Function({
+typedef PhotoPicker = Future<List<String>> Function({
   required bool camera,
   required int limit,
   required int maxSide,
 });
 
-final extraPhotoPickerProvider = Provider<ExtraPhotoPicker>(
+final photoPickerProvider = Provider<PhotoPicker>(
   (ref) => ({required camera, required limit, required maxSide}) async {
     final picker = ImagePicker();
     final side = maxSide.toDouble();

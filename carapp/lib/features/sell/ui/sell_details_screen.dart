@@ -10,6 +10,7 @@ import '../../../core/geo/italian_capitals.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/utils/thousands_formatter.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../feed/data/feed_filters.dart';
 import '../../onboarding/data/catalog_repository.dart';
@@ -21,6 +22,8 @@ import '../data/sell_repository.dart';
 import '../state/sell_controller.dart';
 import 'sell_labels.dart';
 
+export '../../../core/utils/thousands_formatter.dart';
+
 /// Contact data and dealer membership of the seller (one request each).
 final sellerProfileProvider = FutureProvider.autoDispose<SellerProfile>(
   (ref) => ref.watch(sellRepositoryProvider).sellerProfile(),
@@ -30,27 +33,6 @@ final sellerProfileProvider = FutureProvider.autoDispose<SellerProfile>(
 final sellerAgeConsentProvider = FutureProvider.autoDispose<bool>(
   (ref) => ref.watch(sellRepositoryProvider).hasSellerAgeConsent(),
 );
-
-/// "1234567" -> "1.234.567" while typing.
-class ThousandsFormatter extends TextInputFormatter {
-  const ThousandsFormatter();
-
-  static String format(int value) =>
-      value.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
-
-  static int? parse(String text) => int.tryParse(text.replaceAll(RegExp(r'\D'), ''));
-
-  @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return const TextEditingValue();
-    final text = format(int.parse(digits.length > 12 ? digits.substring(0, 12) : digits));
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-}
 
 /// `/sell/shots/details` (screen 4): the listing data while the video is
 /// made and uploaded; "Pubblica annuncio" waits for it if needed.

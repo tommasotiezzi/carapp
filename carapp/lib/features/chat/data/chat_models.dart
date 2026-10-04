@@ -15,7 +15,9 @@ class ConversationSummary {
     this.lastMessageBody,
     this.lastMessageMine = false,
     this.lastMessageAt,
+    this.lastMessageIsOffer = false,
     this.unread = false,
+    this.archived = false,
   });
 
   final String id;
@@ -40,6 +42,12 @@ class ConversationSummary {
   final DateTime activityAt;
   final bool unread;
 
+  /// The last message is an offer to the people who saved the listing.
+  final bool lastMessageIsOffer;
+
+  /// Archived by the user (for their side only).
+  final bool archived;
+
   bool get listingAvailable => listingStatus == 'active';
 
   /// On the seller side every message not sent by the buyer is "ours"
@@ -47,7 +55,11 @@ class ConversationSummary {
   bool isMine(ChatMessage m, String userId) =>
       m.senderId == userId || (!isBuyer && m.senderId != buyerId);
 
-  ConversationSummary markedRead() => ConversationSummary(
+  ConversationSummary markedRead() => _copy(unread: false);
+
+  ConversationSummary withArchived(bool value) => _copy(archived: value);
+
+  ConversationSummary _copy({bool? unread, bool? archived}) => ConversationSummary(
         id: id,
         listingId: listingId,
         isBuyer: isBuyer,
@@ -62,6 +74,9 @@ class ConversationSummary {
         lastMessageBody: lastMessageBody,
         lastMessageMine: lastMessageMine,
         lastMessageAt: lastMessageAt,
+        lastMessageIsOffer: lastMessageIsOffer,
+        unread: unread ?? this.unread,
+        archived: archived ?? this.archived,
       );
 
   factory ConversationSummary.fromRow(Map<String, dynamic> row) => ConversationSummary(
@@ -80,6 +95,8 @@ class ConversationSummary {
         lastMessageAt: _time(row['last_message_at']),
         activityAt: _time(row['activity_at'])!,
         unread: (row['unread'] as bool?) ?? false,
+        lastMessageIsOffer: row['last_message_kind'] == 'offer',
+        archived: (row['archived'] as bool?) ?? false,
       );
 }
 
@@ -92,6 +109,8 @@ class ChatMessage {
     required this.body,
     required this.createdAt,
     this.status = MessageStatus.sent,
+    this.offerPriceCents,
+    this.offerListPriceCents,
   });
 
   /// Server id, or a local id while [status] is not `sent`.
@@ -101,12 +120,27 @@ class ChatMessage {
   final DateTime createdAt;
   final MessageStatus status;
 
+  /// An offer to the people who saved the listing (`kind = 'offer'`):
+  /// the reserved price and the listing's price at that moment.
+  final int? offerPriceCents;
+  final int? offerListPriceCents;
+
+  bool get isOffer => offerPriceCents != null;
+
   bool get isSent => status == MessageStatus.sent;
 
   ChatMessage withStatus(MessageStatus status) =>
-      ChatMessage(id: id, senderId: senderId, body: body, createdAt: createdAt, status: status);
+      ChatMessage(
+        id: id,
+        senderId: senderId,
+        body: body,
+        createdAt: createdAt,
+        status: status,
+        offerPriceCents: offerPriceCents,
+        offerListPriceCents: offerListPriceCents,
+      );
 
-  static const selectColumns = 'id, sender_id, body, created_at';
+  static const selectColumns = 'id, sender_id, body, created_at, kind, offer_price_cents, offer_list_price_cents';
 
   /// Also parses Realtime payloads (same column names).
   factory ChatMessage.fromRow(Map<String, dynamic> row) => ChatMessage(
@@ -114,6 +148,8 @@ class ChatMessage {
         senderId: row['sender_id'] as String,
         body: row['body'] as String,
         createdAt: _time(row['created_at'])!,
+        offerPriceCents: row['kind'] == 'offer' ? (row['offer_price_cents'] as num?)?.toInt() : null,
+        offerListPriceCents: row['kind'] == 'offer' ? (row['offer_list_price_cents'] as num?)?.toInt() : null,
       );
 }
 
