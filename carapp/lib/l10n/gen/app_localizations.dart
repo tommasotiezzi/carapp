@@ -1186,18 +1186,6 @@ abstract class AppLocalizations {
   /// **'Modifica filtri'**
   String get filterEdit;
 
-  /// No description provided for @searchResults.
-  ///
-  /// In it, this message translates to:
-  /// **'Risultati'**
-  String get searchResults;
-
-  /// No description provided for @searchNoResults.
-  ///
-  /// In it, this message translates to:
-  /// **'Nessun annuncio con questi filtri. Prova ad allargare la ricerca.'**
-  String get searchNoResults;
-
   /// No description provided for @searchLoadMore.
   ///
   /// In it, this message translates to:
@@ -1293,6 +1281,108 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Tutti i veicoli'**
   String get searchAllVehicles;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. golf diesel dal 2018 sotto 15mila'**
+  String get searchHint;
+
+  /// No description provided for @searchClear.
+  ///
+  /// In it, this message translates to:
+  /// **'Cancella'**
+  String get searchClear;
+
+  /// No description provided for @searchRemoveChip.
+  ///
+  /// In it, this message translates to:
+  /// **'Togli {label}'**
+  String searchRemoveChip(String label);
+
+  /// No description provided for @searchIgnored.
+  ///
+  /// In it, this message translates to:
+  /// **'Parole non usate: {words}'**
+  String searchIgnored(String words);
+
+  /// No description provided for @searchRecent.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricerche recenti'**
+  String get searchRecent;
+
+  /// No description provided for @searchClearRecent.
+  ///
+  /// In it, this message translates to:
+  /// **'Cancella tutto'**
+  String get searchClearRecent;
+
+  /// No description provided for @searchPopularBrands.
+  ///
+  /// In it, this message translates to:
+  /// **'Marche popolari'**
+  String get searchPopularBrands;
+
+  /// No description provided for @searchZeroTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun annuncio trovato'**
+  String get searchZeroTitle;
+
+  /// No description provided for @searchTryWithout.
+  ///
+  /// In it, this message translates to:
+  /// **'Prova senza «{label}»'**
+  String searchTryWithout(String label);
+
+  /// No description provided for @searchSaveAndNotify.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva ricerca e avvisami'**
+  String get searchSaveAndNotify;
+
+  /// No description provided for @searchTapHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca un annuncio per aprirlo, oppure guardali tutti nel feed.'**
+  String get searchTapHint;
+
+  /// No description provided for @priceUpTo.
+  ///
+  /// In it, this message translates to:
+  /// **'Fino a {price}'**
+  String priceUpTo(String price);
+
+  /// No description provided for @priceFrom.
+  ///
+  /// In it, this message translates to:
+  /// **'Da {price}'**
+  String priceFrom(String price);
+
+  /// No description provided for @yearUntil.
+  ///
+  /// In it, this message translates to:
+  /// **'Fino al {year}'**
+  String yearUntil(String year);
+
+  /// No description provided for @filterModelCount.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 modello} other{{count} modelli}}'**
+  String filterModelCount(int count);
+
+  /// No description provided for @filterNovice.
+  ///
+  /// In it, this message translates to:
+  /// **'Neopatentati'**
+  String get filterNovice;
+
+  /// No description provided for @filterNoviceNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Auto fino a {kw} kW, il limite di legge. Il rapporto peso/potenza va verificato: il peso non è tra i dati dell\'annuncio.'**
+  String filterNoviceNote(int kw);
 }
 
 class _AppLocalizationsDelegate

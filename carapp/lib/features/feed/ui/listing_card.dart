@@ -20,9 +20,13 @@ class ListingCard extends ConsumerWidget {
     this.topRight,
     this.badge,
     this.unavailableLabel,
+    this.onOpen,
   });
 
   final FeedItem? item;
+
+  /// Called before the listing opens (e.g. Search remembers the query).
+  final VoidCallback? onOpen;
 
   /// Over the top-right corner of the cover (e.g. the bookmark).
   final Widget? topRight;
@@ -75,7 +79,10 @@ class ListingCard extends ConsumerWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(AppRadius.m),
-      onTap: () => context.push(AppRoutes.listingPath(l.id)),
+      onTap: () {
+        onOpen?.call();
+        context.push(AppRoutes.listingPath(l.id));
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

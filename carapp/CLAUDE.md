@@ -62,9 +62,9 @@ lib/
   features/
     feed/      data (FeedItem, FeedRepository, FeedFilters), state (FeedController, FeedFiltersController),
                ui (FeedScreen, FeedVideoView, FeedOverlay with filter pills, FilterSheet + FilterSections,
-               ListingCard grid card, describeFilters() summary)
-    search/    SavedSearch + SavedSearchRepository, state (searchDraft, searchResults with debounce,
-               savedSearches), ui (SearchScreen: saved searches, inline filters, results grid, save sheet)
+               ListingCard grid card, filterChips() / describeFilters() / priceLabel / yearLabel)
+    search/    data (Catalog: all makes + models loaded once, QueryParser, suggest(), RecentSearches,
+               SavedSearch + repository), state (savedSearches), ui (SearchScreen)
     auth/      AuthRepository (email + password, Supabase error codes -> AuthFailure), login_sheet.dart
                (reusable bottom sheet: sign in / create account, confirm-email step if Supabase requires it)
     onboarding/ BuyerPreferences, makesProvider, OnboardingController (local first, synced on login),
@@ -77,8 +77,8 @@ lib/
                rolls back on error), toggleSave() (login sheet for guests), SavedSection (profile grid)
     profile/   ProfileScreen (minimal: login/logout, "Cosa cerco" gated behind signup, "Salvati")
   l10n/app_it.arb (+ gen/)
-test/       transfer cost rules, feed filters, search, listing / Salvati / login / filter sheet / Search widget tests
-            (fake data), SavedController
+test/       query parser, suggestions, recents, chips, logicFilter, transfer cost, feed filters, SavedController;
+            widget tests (fake data): listing, Salvati, login, filter sheet, Search
 ```
 
 Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
@@ -249,9 +249,9 @@ Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses
 
 Save: bookmark on the feed and on the listing screen; guests get the login sheet, then the listing is saved (never un-saved by that tap). `favorites` upsert with `ignoreDuplicates` keeps the first `price_cents_at_save`. Profile "Salvati": two-column grid newest first (orders by `favorites.created_at`), "Sceso di € X" badge when the price dropped since saving, "Non più disponibile" card when RLS hides the listing (remove from the bookmark). Events `save` / `unsave` tracked. Price-drop push alerts come with notifications.
 
-Feed filters: `FeedFilters` (category, price min/max, makes, year min, mileage max, fuel types; same names as `listings` columns, ready to become `saved_searches.filters`). Pills over the video (Prezzo, Marca, Anno, Km) open their section of `FilterSheet`; the tune button opens all sections and shows how many are active. The sheet edits a draft and applies on "Mostra annunci", so the feed reloads once (`FeedController` watches the filters; cursor pagination unchanged). Filters are stored on the phone (`PrefKeys.feedFilters`); until the user applies any, they follow the onboarding preferences (novice driver is not a filter). No results with filters → "Rimuovi i filtri" / "Modifica filtri".
+Feed filters: `FeedFilters` (category, price min/max, makes, models, year min/max, mileage max, fuel types, transmission, novice driver, province, free words; same names as `listings` columns, stored as is in `saved_searches.filters`). **One shared state** for the feed pills, the filter sheet and Search. Novice = cars ≤ 105 kW (legal limit; the 75 kW/t rule cannot be checked, listings have no weight); free words and novice go into one PostgREST `or=(and(...))` built by `logicFilter()`. Pills over the video (Prezzo, Marca, Anno, Km) open their section of `FilterSheet`; the tune button opens all sections and shows how many are active. The sheet edits a draft and applies on "Mostra annunci", so the feed reloads once (`FeedController` watches the filters; cursor pagination unchanged). The feed pager creates video players and tracks `view` only while visible (Search changes the filters while the feed tab is hidden). Filters are stored on the phone (`PrefKeys.feedFilters`); until the user applies any, they follow the onboarding preferences (novice driver is not a filter). No results with filters → "Rimuovi i filtri" / "Modifica filtri".
 
-Search tab (`/search`): saved searches on top (tap = apply to the feed and go there; delete from the ⋮ menu; bell for `notify` only when `feature_flags.push_enabled`), every filter inline (`FilterSections`, same as the sheet), results grid (20 per page, "Carica altri"). The draft starts from and follows the feed filters; edits are debounced (350 ms, superseded builds do not fetch) and the previous grid stays visible while reloading. "Salva ricerca" (login sheet for guests) names it with `describeFilters()` ("Auto · Volkswagen · 5–10k · Dal 2018") and stores `FeedFilters.toJson()` in `saved_searches.filters`; list ordered by name (no documented `created_at` on that table). "Guarda nel feed" applies the draft to the feed.
+Search tab (`/search`): a search box understood locally by `QueryParser` (catalog of every make and model loaded once per session, paginated past PostgREST's 1000-row cap). **No request while typing**: suggestions (`suggest()`) are computed in memory on each keystroke; the query is applied on submit or after a 400 ms pause (waits for the catalog if it is still loading). Parsing: province capitals → `province`; makes (aliases: vw, alfa, mercedes) and models, longest word sequence first, bare numbers ("500", "2008") or 1–2 letter names only next to their make; 4 digits 1950–this year = year ("dal" = min, "fino al" = max, alone = exact); "8000", "8k", "8mila", "sotto 10mila" = max price ("da", "sopra", "oltre", "tra" = min); "100k km" / "100.000 km" = max km; auto/moto, automatica/manuale, neopatentato, fuel synonyms (benzina, gasolio, gpl, metano, ibrida, plug-in, elettrica). Unknown words are searched in version/description **only if nothing structured was recognized**, otherwise ignored and shown as "Parole non usate". What was understood shows as removable chips (+ "Filtri" opens the sheet); changing filters elsewhere clears the box. Before typing: recent searches (phone only, last 10, also for guests), saved searches, popular brands. Results = the feed's own list as a grid (tap opens the listing; "Carica altri"); "Guarda nel feed" switches tab on the same results. Zero results → "Prova senza «last chip»" or "Salva ricerca e avvisami". Saved searches only for signed-in users (login sheet for guests), named with `describeFilters()`, ordered by name (no documented `created_at` on that table); bell for `notify` only when `feature_flags.push_enabled`.
 
 ## Next (in order)
 

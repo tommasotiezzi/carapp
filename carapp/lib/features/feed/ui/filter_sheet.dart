@@ -29,6 +29,8 @@ String filterSectionTitle(AppLocalizations t, FilterSection s) => switch (s) {
       FilterSection.year => t.filterYear,
       FilterSection.mileage => t.prefsMileage,
       FilterSection.fuel => t.specFuel,
+      FilterSection.transmission => t.specTransmission,
+      FilterSection.novice => t.filterNovice,
     };
 
 class FilterSheet extends ConsumerStatefulWidget {
@@ -178,14 +180,14 @@ class _FilterSectionsState extends ConsumerState<FilterSections> {
       FilterSection.year => PillWrap(children: [
           Pill(
             label: t.commonAny,
-            selected: d.yearMin == null,
-            onTap: () => _update((x) => x.copyWith(yearMin: null)),
+            selected: !d.hasYear,
+            onTap: () => _update((x) => x.clear(FilterSection.year)),
           ),
           for (final y in FeedFilters.yearOptions)
             Pill(
               label: t.yearFrom('$y'),
-              selected: d.yearMin == y,
-              onTap: () => _update((x) => x.copyWith(yearMin: y)),
+              selected: d.yearMin == y && d.yearMax == null,
+              onTap: () => _update((x) => x.copyWith(yearMin: y, yearMax: null)),
             ),
         ]),
       FilterSection.mileage => PillWrap(children: [
@@ -218,6 +220,33 @@ class _FilterSectionsState extends ConsumerState<FilterSections> {
                   )),
             ),
         ]),
+      FilterSection.transmission => PillWrap(children: [
+          Pill(
+            label: t.commonAny,
+            selected: d.transmission == null,
+            onTap: () => _update((x) => x.copyWith(transmission: null)),
+          ),
+          for (final tr in FeedFilters.transmissionOptions)
+            Pill(
+              label: t.transmissionLabel(tr),
+              selected: d.transmission == tr,
+              onTap: () => _update((x) => x.copyWith(transmission: tr)),
+            ),
+        ]),
+      FilterSection.novice => Material(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.l),
+          child: SwitchListTile(
+            value: d.noviceDriver,
+            onChanged: (v) => _update((x) => x.copyWith(noviceDriver: v)),
+            title: Text(t.prefsNovice, style: Theme.of(context).textTheme.titleSmall),
+            subtitle: Text(
+              t.filterNoviceNote(FeedFilters.noviceMaxPowerKw),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.l)),
+          ),
+        ),
     };
   }
 
@@ -249,8 +278,8 @@ class _FilterSectionsState extends ConsumerState<FilterSections> {
         return PillWrap(children: [
           Pill(
             label: t.commonAll,
-            selected: selected.isEmpty,
-            onTap: () => _update((x) => x.copyWith(makeIds: const {})),
+            selected: !_draft.hasBrand,
+            onTap: () => _update((x) => x.clear(FilterSection.brand)),
           ),
           for (final m in shown)
             Pill(label: m.name, selected: selected.contains(m.id), onTap: () => toggle(m.id)),

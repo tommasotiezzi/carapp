@@ -4,11 +4,14 @@ import 'package:carapp/core/supabase/supabase_client.dart';
 import 'package:carapp/features/feed/data/feed_filters.dart';
 import 'package:carapp/features/feed/data/feed_item.dart';
 import 'package:carapp/features/feed/data/feed_repository.dart';
+import 'package:carapp/features/feed/state/feed_controller.dart';
 import 'package:carapp/features/feed/state/feed_filters_controller.dart';
 import 'package:carapp/features/feed/ui/filter_summary.dart';
-import 'package:carapp/features/onboarding/data/catalog_repository.dart';
+import 'package:carapp/features/search/data/catalog.dart';
+import 'package:carapp/features/search/data/query_parser.dart';
+import 'package:carapp/features/search/data/recent_searches.dart';
 import 'package:carapp/features/search/data/saved_search.dart';
-import 'package:carapp/features/search/state/search_providers.dart';
+import 'package:carapp/features/search/data/suggestions.dart';
 import 'package:carapp/features/search/ui/search_screen.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
 import 'package:carapp/l10n/gen/app_localizations_it.dart';
@@ -20,11 +23,32 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const _makes = [
-  Make(id: 'vw', name: 'Volkswagen', isPopular: true),
-  Make(id: 'fiat', name: 'Fiat', isPopular: true),
-  Make(id: 'bmw', name: 'BMW', isPopular: true),
-];
+final catalog = Catalog(
+  makes: const [
+    CatalogMake(id: 'vw', name: 'Volkswagen', categoryId: 'car', isPopular: true),
+    CatalogMake(id: 'fiat', name: 'Fiat', categoryId: 'car', isPopular: true),
+    CatalogMake(id: 'alfa', name: 'Alfa Romeo', categoryId: 'car'),
+    CatalogMake(id: 'merc', name: 'Mercedes-Benz', categoryId: 'car'),
+    CatalogMake(id: 'peugeot', name: 'Peugeot', categoryId: 'car'),
+    CatalogMake(id: 'honda-car', name: 'Honda', categoryId: 'car'),
+    CatalogMake(id: 'honda-moto', name: 'Honda', categoryId: 'motorcycle'),
+  ],
+  models: const [
+    CatalogModel(id: 'golf', makeId: 'vw', name: 'Golf'),
+    CatalogModel(id: 'polo', makeId: 'vw', name: 'Polo'),
+    CatalogModel(id: 'up', makeId: 'vw', name: 'up!'),
+    CatalogModel(id: 'panda', makeId: 'fiat', name: 'Panda'),
+    CatalogModel(id: '500', makeId: 'fiat', name: '500'),
+    CatalogModel(id: 'giulia', makeId: 'alfa', name: 'Giulia'),
+    CatalogModel(id: 'classe-a', makeId: 'merc', name: 'Classe A'),
+    CatalogModel(id: 'p2008', makeId: 'peugeot', name: '2008'),
+    CatalogModel(id: 'civic', makeId: 'honda-car', name: 'Civic'),
+    CatalogModel(id: 'cbr', makeId: 'honda-moto', name: 'CBR'),
+  ],
+);
+
+final parser = QueryParser(catalog, currentYear: 2026);
+FeedFilters p(String q) => parser.parse(q).filters;
 
 FeedItem _item(String id) => FeedItem.fromRow({
       'id': id,
@@ -32,14 +56,15 @@ FeedItem _item(String id) => FeedItem.fromRow({
       'published_at': '2026-09-01T10:00:00Z',
       'year': 2019,
       'mileage_km': 50000,
-      'price_cents': 990000,
-      'make': {'name': 'Fiat'},
-      'model': {'name': 'Panda'},
+      'price_cents': 1490000,
+      'make': {'name': 'Volkswagen'},
+      'model': {'name': 'Golf'},
     });
 
 class _FakeFeedRepo extends Fake implements FeedRepository {
   final requests = <FeedFilters>[];
 
+  /// Results only when there is no fuel filter (to test the zero state).
   @override
   Future<List<FeedItem>> fetchPage({
     DateTime? before,
@@ -47,202 +72,306 @@ class _FakeFeedRepo extends Fake implements FeedRepository {
     FeedFilters filters = FeedFilters.empty,
   }) async {
     requests.add(filters);
-    return [_item('a'), _item('b'), _item('c')];
+    return filters.fuelTypes.isEmpty ? [_item('a'), _item('b')] : const [];
   }
 }
 
 class _FakeSearchRepo extends Fake implements SavedSearchRepository {
-  _FakeSearchRepo(this.rows);
-
-  final List<SavedSearch> rows;
-  bool fail = false;
-
   @override
-  Future<List<SavedSearch>> fetchAll() async => [...rows];
-
-  @override
-  Future<SavedSearch> create({
-    required String name,
-    required FeedFilters filters,
-    required bool notify,
-  }) async {
-    if (fail) throw Exception('offline');
-    return SavedSearch(id: 'new', name: name, filters: filters, notify: notify);
-  }
-
-  @override
-  Future<void> delete(String id) async {
-    if (fail) throw Exception('offline');
-  }
+  Future<List<SavedSearch>> fetchAll() async => const [];
 }
 
 void main() {
-  final t = AppLocalizationsIt();
+  group('QueryParser', () {
+    test('the full example', () {
+      final r = parser.parse('Golf diesel dal 2018 sotto 15mila Milano');
+      expect(r.filters, const FeedFilters(
+        modelIds: {'golf'},
+        fuelTypes: {'diesel'},
+        yearMin: 2018,
+        priceMaxCents: 1500000,
+        province: 'MI',
+      ));
+      expect(r.ignored, isEmpty);
+    });
 
-  test('describeFilters builds a readable name', () {
-    expect(describeFilters(t, FeedFilters.empty, _makes), 'Tutti i veicoli');
-    expect(
-      describeFilters(
-        t,
+    test('years: alone = that year, "dal" = from, "fino al" = up to, ranges', () {
+      expect(p('panda 2015'), const FeedFilters(modelIds: {'panda'}, yearMin: 2015, yearMax: 2015));
+      expect(p('dal 2018').yearMin, 2018);
+      expect(p('dal 2018').yearMax, isNull);
+      expect(p('fino al 2012'), const FeedFilters(yearMax: 2012));
+      expect(p('dal 2010 al 2015'), const FeedFilters(yearMin: 2010, yearMax: 2015));
+      expect(p('1949').yearMin, isNull, reason: 'before 1950: not a year');
+      expect(p('2030').yearMin, isNull, reason: 'future: not a year');
+    });
+
+    test('prices: 8000, 8k, 8mila, sotto 10mila = max; da/tra = range', () {
+      for (final q in ['8000', '8k', '8mila', '8.000', '8000 euro', '€ 8000']) {
+        expect(p(q), const FeedFilters(priceMaxCents: 800000), reason: q);
+      }
+      expect(p('sotto 10mila'), const FeedFilters(priceMaxCents: 1000000));
+      expect(p('8,5k'), const FeedFilters(priceMaxCents: 850000));
+      expect(p('da 5000 a 10000'), const FeedFilters(priceMinCents: 500000, priceMaxCents: 1000000));
+      expect(p('tra 5000 e 10000'), const FeedFilters(priceMinCents: 500000, priceMaxCents: 1000000));
+      expect(p('oltre 20k'), const FeedFilters(priceMinCents: 2000000));
+    });
+
+    test('mileage: 100k km, 100.000 km, 100000km = max km', () {
+      for (final q in ['100k km', '100.000 km', '100000km', '100mila km', '100000 chilometri']) {
+        expect(p(q), const FeedFilters(mileageMaxKm: 100000), reason: q);
+      }
+    });
+
+    test('category, transmission, novice, fuel synonyms', () {
+      expect(
+        p('auto automatica neopatentato benzina'),
         const FeedFilters(
           categoryId: 'car',
-          makeIds: {'vw', 'fiat', 'bmw'},
-          priceMinCents: 500000,
-          priceMaxCents: 1000000,
-          yearMin: 2018,
+          transmission: 'automatic',
+          noviceDriver: true,
+          fuelTypes: {'petrol'},
         ),
-        _makes,
-      ),
-      'Auto · BMW, Fiat +1 · 5–10k · Dal 2018',
+      );
+      expect(p('moto manuale').categoryId, 'motorcycle');
+      expect(p('moto manuale').transmission, 'manual');
+      expect(p('gasolio').fuelTypes, {'diesel'});
+      expect(p('gpl metano').fuelTypes, {'lpg', 'cng'});
+      expect(p('elettrica').fuelTypes, {'electric'});
+      expect(p('ibrida').fuelTypes, {'hybrid'});
+      expect(p('ibrida plug-in').fuelTypes, {'plugin_hybrid'});
+      expect(p('neo patentati').noviceDriver, isTrue);
+    });
+
+    test('makes, aliases and models', () {
+      expect(p('alfa giulia'), const FeedFilters(makeIds: {'alfa'}, modelIds: {'giulia'}));
+      expect(p('mercedes classe a'), const FeedFilters(makeIds: {'merc'}, modelIds: {'classe-a'}));
+      expect(p('vw up'), const FeedFilters(makeIds: {'vw'}, modelIds: {'up'}));
+      expect(p('golf polo').modelIds, {'golf', 'polo'});
+    });
+
+    test('numbers are models only next to their make', () {
+      expect(p('fiat 500'), const FeedFilters(makeIds: {'fiat'}, modelIds: {'500'}));
+      expect(p('peugeot 2008'), const FeedFilters(makeIds: {'peugeot'}, modelIds: {'p2008'}));
+      expect(p('2008'), const FeedFilters(yearMin: 2008, yearMax: 2008));
+      expect(p('up').modelIds, isEmpty, reason: 'too short without a make');
+    });
+
+    test('a category keeps only its makes ("moto honda")', () {
+      expect(p('moto honda'), const FeedFilters(categoryId: 'motorcycle', makeIds: {'honda-moto'}));
+      expect(p('honda').makeIds, {'honda-car', 'honda-moto'});
+    });
+
+    test('provinces, accents included', () {
+      expect(p('roma').province, 'RM');
+      expect(p('reggio emilia').province, 'RE');
+      expect(p("L'Aquila").province, 'AQ');
+      expect(p('Forlì').province, 'FC');
+    });
+
+    test('unknown words: free text only when nothing else was understood', () {
+      final withFilters = parser.parse('golf rossa');
+      expect(withFilters.filters, const FeedFilters(modelIds: {'golf'}));
+      expect(withFilters.ignored, ['rossa']);
+
+      final onlyText = parser.parse('tetto panoramico');
+      expect(onlyText.filters, const FeedFilters(textWords: ['tetto', 'panoramico']));
+      expect(onlyText.ignored, isEmpty);
+
+      expect(p('cerco una usata'), FeedFilters.empty, reason: 'stop words only');
+    });
+  });
+
+  group('suggestions (local, every keystroke)', () {
+    test('makes first, then models; a typed make narrows models', () {
+      expect(suggest('volk', catalog).first.label, 'Volkswagen');
+      final golf = suggest('volkswagen go', catalog).single;
+      expect(golf.label, 'Volkswagen Golf');
+      expect(golf.query.trim(), 'volkswagen Golf');
+      expect(suggest('gol', catalog).single.query.trim(), 'Volkswagen Golf');
+      expect(suggest('alfa ro', catalog).single.query.trim(), 'Alfa Romeo');
+      expect(suggest('golf ', catalog), isEmpty, reason: 'word finished');
+      expect(suggest('5', catalog), isEmpty);
+    });
+  });
+
+  test('logicFilter: free words and novice in one safe or=()', () {
+    expect(logicFilter(FeedFilters.empty), isNull);
+    expect(
+      logicFilter(const FeedFilters(textWords: ['tetto', 'a,b)*'])),
+      'and(or(version.ilike.*tetto*,description.ilike.*tetto*),'
+      'or(version.ilike.*ab*,description.ilike.*ab*))',
+    );
+    expect(logicFilter(const FeedFilters(noviceDriver: true)), 'and(or(category_id.neq.car,power_kw.lte.105))');
+    expect(
+      logicFilter(const FeedFilters(noviceDriver: true, categoryId: 'car')),
+      'and(power_kw.lte.105)',
     );
   });
 
-  group('search state', () {
-    late SharedPreferences prefs;
-    late _FakeFeedRepo feed;
-    late ProviderContainer c;
-
-    setUp(() async {
-      SharedPreferences.setMockInitialValues({});
-      prefs = await SharedPreferences.getInstance();
-      feed = _FakeFeedRepo();
-      c = ProviderContainer(overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        feedRepositoryProvider.overrideWithValue(feed),
-        currentUserIdProvider.overrideWithValue('u1'),
-        savedSearchRepositoryProvider.overrideWithValue(_FakeSearchRepo([
-          const SavedSearch(id: 's1', name: 'Zeta', filters: FeedFilters.empty),
-        ])),
-      ]);
-      addTearDown(c.dispose);
-    });
-
-    test('the draft follows the feed filters until edited', () async {
-      await c.read(feedFiltersProvider.notifier).apply(const FeedFilters(yearMin: 2018));
-      expect(c.read(searchDraftProvider).yearMin, 2018);
-
-      c.read(searchDraftProvider.notifier).update(const FeedFilters(yearMin: 2022));
-      expect(c.read(feedFiltersProvider).yearMin, 2018, reason: 'feed untouched');
-    });
-
-    test('quick edits send one request (debounce)', () async {
-      c.listen(searchResultsProvider, (_, _) {});
-      final drafts = c.read(searchDraftProvider.notifier);
-      drafts.update(const FeedFilters(yearMin: 2015));
-      drafts.update(const FeedFilters(yearMin: 2018));
-      drafts.update(const FeedFilters(yearMin: 2020));
-      final state = await c.read(searchResultsProvider.future);
-
-      expect(state.items, hasLength(3));
-      expect(feed.requests, [const FeedFilters(yearMin: 2020)]);
-    });
-
-    test('saved searches: create keeps alphabetical order', () async {
-      await c.read(savedSearchesProvider.future);
-      await c.read(savedSearchesProvider.notifier).create(
-            name: 'Alfa',
-            filters: FeedFilters.empty,
-            notify: true,
-          );
-      expect(c.read(savedSearchesProvider).value!.map((s) => s.name), ['Alfa', 'Zeta']);
-    });
-
-    test('saved searches: a failed delete rolls back', () async {
-      final repo = _FakeSearchRepo([const SavedSearch(id: 's1', name: 'Zeta', filters: FeedFilters.empty)])
-        ..fail = true;
-      final failing = ProviderContainer(overrides: [
-        currentUserIdProvider.overrideWithValue('u1'),
-        savedSearchRepositoryProvider.overrideWithValue(repo),
-      ]);
-      addTearDown(failing.dispose);
-      await failing.read(savedSearchesProvider.future);
-
-      await expectLater(failing.read(savedSearchesProvider.notifier).delete('s1'), throwsException);
-      expect(failing.read(savedSearchesProvider).value, hasLength(1));
-    });
+  test('chips: readable labels, one chip for a brand in two categories', () {
+    final t = AppLocalizationsIt();
+    final f = p('honda civic diesel dal 2018 sotto 8000 milano');
+    expect(
+      filterChips(t, f, catalog).map((c) => c.label),
+      ['Honda', 'Honda Civic', 'Fino a € 8.000', 'Dal 2018', 'Diesel', 'Milano'],
+    );
+    final withoutHonda = filterChips(t, p('honda'), catalog).single.remove(p('honda'));
+    expect(withoutHonda.makeIds, isEmpty);
+    expect(describeFilters(t, FeedFilters.empty, catalog), 'Tutti i veicoli');
   });
 
-  testWidgets('Search screen on a small phone: results, saved search, Guarda nel feed', (tester) async {
-    tester.view.physicalSize = const Size(360, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  test('recent searches: newest first, no duplicates, max 10, on the phone', () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
+    final c = ProviderContainer(overrides: [sharedPreferencesProvider.overrideWithValue(prefs)]);
+    addTearDown(c.dispose);
+    final recents = c.read(recentSearchesProvider.notifier);
 
-    final router = GoRouter(
-      initialLocation: '/search',
-      routes: [
-        GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
-        GoRoute(path: '/feed', builder: (_, _) => const Text('FEED')),
-      ],
-    );
+    for (var i = 0; i < 12; i++) {
+      await recents.add('ricerca $i');
+    }
+    await recents.add('Golf  Diesel');
+    await recents.add('golf diesel');
+    final list = c.read(recentSearchesProvider);
+    expect(list.first, 'golf diesel');
+    expect(list, hasLength(10));
+    expect(list.where((q) => q.toLowerCase().contains('golf')), hasLength(1));
+    expect(prefs.getStringList(PrefKeys.recentSearches), list);
+  });
 
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        supabaseProvider.overrideWithValue(SupabaseClient(
-          'https://test.supabase.co',
-          'anon',
-          authOptions: const AuthClientOptions(autoRefreshToken: false),
-        )),
-        currentUserIdProvider.overrideWithValue('u1'),
-        appConfigProvider.overrideWith((ref) async => AppConfig.empty),
-        makesProvider('car').overrideWith((ref) async => _makes),
-        feedRepositoryProvider.overrideWithValue(_FakeFeedRepo()),
-        savedSearchRepositoryProvider.overrideWithValue(_FakeSearchRepo([
-          const SavedSearch(
-            id: 's1',
-            name: 'Panda economica',
-            filters: FeedFilters(priceMaxCents: 500000),
-          ),
-        ])),
-      ],
-      child: MaterialApp.router(
-        routerConfig: router,
-        locale: const Locale('it'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
+  group('Search screen', () {
+    late _FakeFeedRepo feed;
+    late SharedPreferences prefs;
+
+    Future<ProviderContainer> open(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues({PrefKeys.recentSearches: ['panda gpl']});
+      prefs = await SharedPreferences.getInstance();
+      feed = _FakeFeedRepo();
+
+      final router = GoRouter(
+        initialLocation: '/search',
+        routes: [
+          GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+          GoRoute(path: '/feed', builder: (_, _) => const Text('FEED')),
+          GoRoute(path: '/listing/:id', builder: (_, s) => Text('LISTING ${s.pathParameters['id']}')),
         ],
-      ),
-    ));
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          supabaseProvider.overrideWithValue(SupabaseClient(
+            'https://test.supabase.co',
+            'anon',
+            authOptions: const AuthClientOptions(autoRefreshToken: false),
+          )),
+          currentUserIdProvider.overrideWithValue(null),
+          currentUserProvider.overrideWithValue(null),
+          appConfigProvider.overrideWith((ref) async => AppConfig.empty),
+          catalogProvider.overrideWith((ref) async => catalog),
+          feedRepositoryProvider.overrideWithValue(feed),
+          savedSearchRepositoryProvider.overrideWithValue(_FakeSearchRepo()),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('it'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+      return ProviderScope.containerOf(tester.element(find.byType(SearchScreen)));
+    }
 
-    expect(find.text('Ricerche salvate'), findsOneWidget);
-    expect(find.text('Panda economica'), findsOneWidget);
-    expect(find.text('Fino a 5k'), findsWidgets); // summary + price pill
+    testWidgets('home shows recents and popular brands; typing sends nothing until the pause',
+        (tester) async {
+      final c = await open(tester);
+      // In the app the feed list is already loaded at launch.
+      c.listen(feedControllerProvider, (_, _) {});
+      await c.read(feedControllerProvider.future);
+      expect(find.text('Ricerche recenti'), findsOneWidget);
+      expect(find.text('panda gpl'), findsOneWidget);
+      expect(find.text('Marche popolari'), findsOneWidget);
+      final before = feed.requests.length;
 
-    // Pick a filter...
-    await tester.dragUntilVisible(
-      find.text('Dal 2022'),
-      find.byType(CustomScrollView),
-      const Offset(0, -100),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Dal 2022'));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'gol');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, 'Volkswagen Golf'), findsOneWidget, reason: 'local suggestion');
+      expect(feed.requests.length, before, reason: 'no request while typing');
 
-    // ...the results follow it (after the debounce)...
-    await tester.pump(SearchResultsController.debounce);
-    await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
-      find.text('Risultati'),
-      find.byType(CustomScrollView),
-      const Offset(0, -200),
-    );
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
-    await tester.pumpAndSettle();
-    expect(find.text('Fiat Panda'), findsWidgets);
+      await tester.enterText(find.byType(TextField), 'golf');
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(feed.requests.length, before, reason: 'still within the pause');
+      await tester.pump(SearchScreen.typingPause);
+      await tester.pumpAndSettle();
+      expect(c.read(feedFiltersProvider).modelIds, {'golf'});
+      expect(feed.requests.length, before + 1, reason: 'one request after the pause');
+    });
 
-    // ...then watch it in the feed.
-    await tester.tap(find.text('Guarda nel feed'));
-    await tester.pumpAndSettle();
+    testWidgets('submit: chips, results grid, recent saved; tap opens the listing', (tester) async {
+      final c = await open(tester);
+      await tester.enterText(find.byType(TextField), 'golf dal 2018 rossa');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
 
-    expect(find.text('FEED'), findsOneWidget);
-    final container = ProviderScope.containerOf(tester.element(find.text('FEED')));
-    expect(container.read(feedFiltersProvider).yearMin, 2022);
+      expect(c.read(feedFiltersProvider), const FeedFilters(modelIds: {'golf'}, yearMin: 2018));
+      expect(find.widgetWithText(InputChip, 'Volkswagen Golf'), findsOneWidget);
+      expect(find.widgetWithText(InputChip, 'Dal 2018'), findsOneWidget);
+      expect(find.text('Parole non usate: rossa'), findsOneWidget);
+      expect(c.read(recentSearchesProvider).first, 'golf dal 2018 rossa');
+
+      await tester.dragUntilVisible(
+        find.text('€ 14.900').first,
+        find.byType(CustomScrollView),
+        const Offset(0, -150),
+      );
+      await tester.tap(find.text('€ 14.900').first);
+      await tester.pumpAndSettle();
+      expect(find.text('LISTING a'), findsOneWidget);
+    });
+
+    testWidgets('zero results: try without the last chip', (tester) async {
+      final c = await open(tester);
+      await tester.enterText(find.byType(TextField), 'golf diesel');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nessun annuncio trovato'), findsOneWidget);
+      expect(find.text('Salva ricerca e avvisami'), findsOneWidget);
+      await tester.tap(find.text('Prova senza «Diesel»'));
+      await tester.pumpAndSettle();
+
+      expect(c.read(feedFiltersProvider), const FeedFilters(modelIds: {'golf'}));
+      expect(find.text('Nessun annuncio trovato'), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, isEmpty,
+          reason: 'the chips changed: the box no longer describes them');
+    });
+
+    testWidgets('shared state: a change from the feed pills shows up here', (tester) async {
+      final c = await open(tester);
+      await c.read(feedFiltersProvider.notifier).apply(const FeedFilters(fuelTypes: {'lpg'}));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(InputChip, 'GPL'), findsOneWidget);
+    });
+
+    testWidgets('"Guarda nel feed" switches to the feed with the same filters', (tester) async {
+      final c = await open(tester);
+      await tester.enterText(find.byType(TextField), 'golf');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guarda nel feed'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('FEED'), findsOneWidget);
+      expect(c.read(feedFiltersProvider).modelIds, {'golf'});
+    });
   });
 }

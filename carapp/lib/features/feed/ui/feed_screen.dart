@@ -86,6 +86,10 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
   bool _onboardingOpen = false;
   DateTime _shownAt = DateTime.now();
 
+  /// Index whose `view` was tracked; watch time is only sent for it.
+  int? _viewTracked;
+  bool _dependenciesReady = false;
+
   // The current video plays only when all three allow it.
   bool _visible = true; // false on another tab or under a full-screen route
   bool _appActive = true;
@@ -97,8 +101,9 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _syncPlayers();
-    _trackView(_current);
+    // Players and the first `view` wait for didChangeDependencies: the
+    // pager can be (re)built while hidden, e.g. when Search changes the
+    // shared filters, and must not download videos or count views then.
   }
 
   @override
@@ -107,10 +112,14 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     // go_router turns tickers off for inactive tabs, and the Navigator does
     // the same for pages covered by a full-screen route (/sell, /listing...).
     final visible = TickerMode.valuesOf(context).enabled;
-    if (visible != _visible) {
-      _visible = visible;
-      _updatePlayback();
+    if (_dependenciesReady && visible == _visible) return;
+    _dependenciesReady = true;
+    _visible = visible;
+    if (visible) {
+      _syncPlayers();
+      if (_viewTracked != _current) _trackView(_current);
     }
+    _updatePlayback();
   }
 
   @override
@@ -166,6 +175,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     }
 
     for (final i in keep) {
+      if (!_visible) break; // created when the feed shows up
       if (_players.containsKey(i)) continue;
       final url = _videoUrl(i);
       if (url == null) continue;
@@ -238,12 +248,13 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
 
   void _trackView(int i) {
     if (i >= widget.items.length) return;
+    _viewTracked = i;
     _shownAt = DateTime.now();
     ref.read(eventTrackerProvider).track(AnalyticsEvent.view, listingId: widget.items[i].id);
   }
 
   void _trackWatchTime(int i) {
-    if (i >= widget.items.length) return;
+    if (i >= widget.items.length || _viewTracked != i) return;
     final ms = DateTime.now().difference(_shownAt).inMilliseconds;
     ref.read(eventTrackerProvider).track(
           AnalyticsEvent.watchTime,

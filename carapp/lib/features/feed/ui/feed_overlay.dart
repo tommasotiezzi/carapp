@@ -9,10 +9,11 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/data/catalog_repository.dart';
-import '../../onboarding/ui/budget_label.dart';
 import '../data/feed_filters.dart';
 import '../data/feed_item.dart';
 import '../state/feed_filters_controller.dart';
+import '../../search/data/catalog.dart';
+import 'filter_summary.dart';
 
 /// Everything drawn over the video: side actions, caption, filter pills.
 class FeedOverlay extends StatelessWidget {
@@ -356,6 +357,12 @@ class _FilterPills extends ConsumerWidget {
     final f = ref.watch(feedFiltersProvider);
 
     String brandLabel() {
+      if (f.modelIds.isNotEmpty) {
+        // Models come from the Search box; names need the catalog.
+        final catalog = ref.watch(catalogProvider).value;
+        final model = f.modelIds.length == 1 ? catalog?.modelById[f.modelIds.first] : null;
+        return model?.name ?? t.filterModelCount(f.modelIds.length);
+      }
       if (f.makeIds.isEmpty) return t.filterBrand;
       if (f.makeIds.length > 1) return t.filterBrandCount(f.makeIds.length);
       final makes = ref.watch(makesProvider(f.categoryId ?? 'car')).value ?? const [];
@@ -363,19 +370,10 @@ class _FilterPills extends ConsumerWidget {
           t.filterBrandCount(1);
     }
 
-    final budget = f.budget;
     final pills = [
-      (
-        FilterSection.price,
-        f.hasPrice,
-        budget != null ? t.budgetLabel(budget) : t.filterPrice,
-      ),
-      (FilterSection.brand, f.makeIds.isNotEmpty, brandLabel()),
-      (
-        FilterSection.year,
-        f.yearMin != null,
-        f.yearMin != null ? t.yearFrom('${f.yearMin}') : t.filterYear,
-      ),
+      (FilterSection.price, f.hasPrice, priceLabel(t, f)),
+      (FilterSection.brand, f.hasBrand, brandLabel()),
+      (FilterSection.year, f.hasYear, yearLabel(t, f)),
       (
         FilterSection.mileage,
         f.mileageMaxKm != null,

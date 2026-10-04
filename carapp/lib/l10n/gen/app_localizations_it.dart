@@ -624,13 +624,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get filterEdit => 'Modifica filtri';
 
   @override
-  String get searchResults => 'Risultati';
-
-  @override
-  String get searchNoResults =>
-      'Nessun annuncio con questi filtri. Prova ad allargare la ricerca.';
-
-  @override
   String get searchLoadMore => 'Carica altri';
 
   @override
@@ -678,4 +671,78 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get searchAllVehicles => 'Tutti i veicoli';
+
+  @override
+  String get searchHint => 'Es. golf diesel dal 2018 sotto 15mila';
+
+  @override
+  String get searchClear => 'Cancella';
+
+  @override
+  String searchRemoveChip(String label) {
+    return 'Togli $label';
+  }
+
+  @override
+  String searchIgnored(String words) {
+    return 'Parole non usate: $words';
+  }
+
+  @override
+  String get searchRecent => 'Ricerche recenti';
+
+  @override
+  String get searchClearRecent => 'Cancella tutto';
+
+  @override
+  String get searchPopularBrands => 'Marche popolari';
+
+  @override
+  String get searchZeroTitle => 'Nessun annuncio trovato';
+
+  @override
+  String searchTryWithout(String label) {
+    return 'Prova senza «$label»';
+  }
+
+  @override
+  String get searchSaveAndNotify => 'Salva ricerca e avvisami';
+
+  @override
+  String get searchTapHint =>
+      'Tocca un annuncio per aprirlo, oppure guardali tutti nel feed.';
+
+  @override
+  String priceUpTo(String price) {
+    return 'Fino a $price';
+  }
+
+  @override
+  String priceFrom(String price) {
+    return 'Da $price';
+  }
+
+  @override
+  String yearUntil(String year) {
+    return 'Fino al $year';
+  }
+
+  @override
+  String filterModelCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count modelli',
+      one: '1 modello',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get filterNovice => 'Neopatentati';
+
+  @override
+  String filterNoviceNote(int kw) {
+    return 'Auto fino a $kw kW, il limite di legge. Il rapporto peso/potenza va verificato: il peso non è tra i dati dell\'annuncio.';
+  }
 }
