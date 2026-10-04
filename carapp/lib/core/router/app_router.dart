@@ -12,6 +12,11 @@ import '../../features/onboarding/ui/intent_screen.dart';
 import '../../features/onboarding/ui/preferences_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/search/ui/search_screen.dart';
+import '../../features/sell/ui/capture_screen.dart';
+import '../../features/sell/ui/sell_details_screen.dart';
+import '../../features/sell/ui/sell_done_screen.dart';
+import '../../features/sell/ui/sell_start_screen.dart';
+import '../../features/sell/ui/shots_screen.dart';
 import '../../features/settings/ui/settings_screen.dart';
 import '../media/shared_video.dart';
 import '../widgets/placeholder_screen.dart';
@@ -88,10 +93,38 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Sell flow: start -> capture -> shots -> details, then done.
       GoRoute(
         path: AppRoutes.sell,
         parentNavigatorKey: _rootKey,
-        builder: (_, __) => const PlaceholderScreen(title: 'Cosa vuoi vendere?'),
+        pageBuilder: (_, state) => _modal(state, const SellStartScreen()),
+        routes: [
+          GoRoute(
+            path: 'capture',
+            parentNavigatorKey: _rootKey,
+            builder: (_, state) => CaptureScreen(
+              stepId: state.uri.queryParameters['step'],
+              single: state.uri.queryParameters['single'] == '1',
+            ),
+          ),
+          GoRoute(
+            path: 'shots',
+            parentNavigatorKey: _rootKey,
+            builder: (_, _) => const ShotsScreen(),
+            routes: [
+              GoRoute(
+                path: 'details',
+                parentNavigatorKey: _rootKey,
+                builder: (_, _) => const SellDetailsScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'done/:id',
+            parentNavigatorKey: _rootKey,
+            builder: (_, state) => SellDoneScreen(listingId: state.pathParameters['id']!),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.listing,

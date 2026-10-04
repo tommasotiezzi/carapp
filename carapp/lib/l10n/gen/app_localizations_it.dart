@@ -1063,4 +1063,467 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get shareError => 'Non riusciamo ad aprire la condivisione.';
+
+  @override
+  String get sellTitle => 'Cosa vuoi vendere?';
+
+  @override
+  String get sellSubtitle =>
+      'Ti guidiamo ripresa per ripresa: servono circa 5 minuti.';
+
+  @override
+  String get sellCar => 'Auto';
+
+  @override
+  String get sellCarHint => 'anche furgoni';
+
+  @override
+  String get sellMoto => 'Moto';
+
+  @override
+  String get sellMotoHint => 'anche scooter';
+
+  @override
+  String get sellBeforeTitle => 'Prima di iniziare';
+
+  @override
+  String get sellBeforeCar =>
+      'Auto pulita e luce di giorno · motore pronto per l\'avviamento · se vuoi, copri la targa.';
+
+  @override
+  String get sellBeforeMoto =>
+      'Moto pulita e luce di giorno · motore pronto per l\'avviamento · se vuoi, copri la targa.';
+
+  @override
+  String get sellStart => 'Inizia le riprese';
+
+  @override
+  String get sellStartNote => 'Puoi fermarti quando vuoi: salviamo la bozza';
+
+  @override
+  String get sellDraftTitle => 'Hai un annuncio in corso';
+
+  @override
+  String sellDraftBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count riprese fatte',
+      one: '1 ripresa fatta',
+      zero: 'Nessuna ripresa ancora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sellResume => 'Riprendi';
+
+  @override
+  String get sellRestart => 'Ricomincia';
+
+  @override
+  String get sellRestartTitle => 'Ricominciare da capo?';
+
+  @override
+  String get sellRestartBody =>
+      'Le riprese e i dati di questa bozza verranno eliminati.';
+
+  @override
+  String captureStepOf(int current, int total) {
+    return 'Step $current di $total';
+  }
+
+  @override
+  String captureVideo(int seconds) {
+    return 'Video $seconds s';
+  }
+
+  @override
+  String get capturePhoto => 'Foto';
+
+  @override
+  String get captureSkip => 'Salta';
+
+  @override
+  String captureNext(String step) {
+    return 'Prossimo: $step';
+  }
+
+  @override
+  String get captureLast => 'Ultima ripresa';
+
+  @override
+  String get capturePlateTip => 'Se vuoi, copri la targa';
+
+  @override
+  String get captureHoldStill => 'Tieni fermo il telefono';
+
+  @override
+  String captureRecording(int seconds) {
+    return 'Registrazione · $seconds s';
+  }
+
+  @override
+  String get captureAlignCar => 'Allinea l\'auto alla sagoma, a circa 4 metri';
+
+  @override
+  String get captureAlignMoto => 'Allinea la moto alla sagoma, a circa 3 metri';
+
+  @override
+  String get captureHintKm => 'Motore acceso: inquadra il quadro con i km';
+
+  @override
+  String get captureHintEngineBay => 'Apri il cofano e inquadra il motore';
+
+  @override
+  String get captureHintDefects =>
+      'Inquadra da vicino graffi, ammaccature o usura';
+
+  @override
+  String get captureHintChain => 'Inquadra da vicino catena e battistrada';
+
+  @override
+  String get captureHintExhaust =>
+      'Inquadra lo scarico, meglio a motore acceso';
+
+  @override
+  String get captureTorch => 'Torcia';
+
+  @override
+  String get captureShots => 'Le tue riprese';
+
+  @override
+  String get captureCameraDenied =>
+      'Per le riprese servono fotocamera e microfono. Attivali nelle impostazioni del telefono.';
+
+  @override
+  String get captureCameraError => 'Non riusciamo ad aprire la fotocamera.';
+
+  @override
+  String get captureSaveError => 'Ripresa non salvata, riprova.';
+
+  @override
+  String get sellStepFront3q => 'Fronte 3/4';
+
+  @override
+  String get sellStepRightSide => 'Lato destro';
+
+  @override
+  String get sellStepLeftSide => 'Lato sinistro';
+
+  @override
+  String get sellStepRear => 'Posteriore';
+
+  @override
+  String get sellStepInterior => 'Interni e quadro km';
+
+  @override
+  String get sellStepEngineBay => 'Vano motore';
+
+  @override
+  String get sellStepDefects => 'Difetti visibili';
+
+  @override
+  String get sellStepTank => 'Serbatoio e quadro km';
+
+  @override
+  String get sellStepChain => 'Catena e gomme';
+
+  @override
+  String get sellStepExhaust => 'Scarico';
+
+  @override
+  String get shotsTitle => 'Le tue riprese';
+
+  @override
+  String shotsSubtitle(int done, int total) {
+    return '$done di $total completate. Al resto pensiamo noi: montiamo il video e creiamo il carosello.';
+  }
+
+  @override
+  String shotsVideo(int seconds) {
+    return 'Video · $seconds s';
+  }
+
+  @override
+  String get shotsPhoto => 'Foto';
+
+  @override
+  String get shotsTodo => 'Da fare';
+
+  @override
+  String get shotsOptional => 'Facoltativo';
+
+  @override
+  String get shotsOptionalDefects => 'Facoltativo · aumenta la fiducia';
+
+  @override
+  String get shotsEngineOn => 'motore acceso';
+
+  @override
+  String get shotsDefectsTip =>
+      'Mostrare i difetti rende l\'annuncio più credibile: chi compra si fida di più.';
+
+  @override
+  String get shotsCreate => 'Crea il video';
+
+  @override
+  String get shotsCreateNote => 'Poi aggiungi prezzo, dati e descrizione';
+
+  @override
+  String shotsMissing(String steps) {
+    return 'Mancano: $steps';
+  }
+
+  @override
+  String get shotsNeedVideo => 'Serve almeno una ripresa video';
+
+  @override
+  String get shotsRetake => 'Rifai';
+
+  @override
+  String get shotsDelete => 'Elimina';
+
+  @override
+  String get detailsTitle => 'Dati e prezzo';
+
+  @override
+  String detailsPreparing(int percent) {
+    return 'Stiamo preparando il video · $percent%';
+  }
+
+  @override
+  String get detailsReady => 'Video pronto';
+
+  @override
+  String get detailsFailed => 'Video non pronto · tocca per riprovare';
+
+  @override
+  String get detailsMake => 'Marca';
+
+  @override
+  String get detailsModel => 'Modello';
+
+  @override
+  String get detailsYear => 'Anno';
+
+  @override
+  String get detailsKm => 'Chilometri';
+
+  @override
+  String get detailsFuel => 'Alimentazione';
+
+  @override
+  String get detailsMore =>
+      '+ Altri dettagli (cambio, potenza, classe Euro, proprietari)';
+
+  @override
+  String get detailsLess => 'Meno dettagli';
+
+  @override
+  String get detailsVersion => 'Versione';
+
+  @override
+  String get detailsVersionHint => 'es. 1.6 TDI Life';
+
+  @override
+  String get detailsGearbox => 'Cambio';
+
+  @override
+  String get detailsPower => 'Potenza (kW)';
+
+  @override
+  String detailsPowerCv(int cv) {
+    return '≈ $cv CV';
+  }
+
+  @override
+  String get detailsEuro => 'Classe Euro';
+
+  @override
+  String get detailsOwners => 'Proprietari';
+
+  @override
+  String get detailsColor => 'Colore';
+
+  @override
+  String get detailsServiceHistory => 'Tagliandi documentati';
+
+  @override
+  String get detailsBodyType => 'Carrozzeria';
+
+  @override
+  String get detailsNovice => 'Adatta ai neopatentati';
+
+  @override
+  String get detailsMotoType => 'Tipo';
+
+  @override
+  String get detailsDisplacement => 'Cilindrata (cc)';
+
+  @override
+  String get detailsLicense => 'Patente';
+
+  @override
+  String get detailsPrice => 'Prezzo';
+
+  @override
+  String get detailsDescription => 'Descrizione';
+
+  @override
+  String get detailsDescriptionHint =>
+      'Racconta lo stato, i tagliandi, gli extra…';
+
+  @override
+  String get detailsWhere => 'Dove si trova';
+
+  @override
+  String get detailsCity => 'Città';
+
+  @override
+  String get detailsProvince => 'Provincia';
+
+  @override
+  String get detailsWhatsapp => 'Contatto su WhatsApp';
+
+  @override
+  String get detailsWhatsappHint => 'Mostra il tuo numero a chi è interessato';
+
+  @override
+  String get detailsWhatsappDealer =>
+      'Mostra il numero WhatsApp del concessionario';
+
+  @override
+  String get detailsPhone => 'Numero di telefono';
+
+  @override
+  String get detailsSellerAge =>
+      'Ho almeno 18 anni, oppure vendo con il consenso di un genitore';
+
+  @override
+  String get detailsPublish => 'Pubblica annuncio';
+
+  @override
+  String get detailsPublishing => 'Pubblicazione…';
+
+  @override
+  String get detailsRequired => 'Obbligatorio';
+
+  @override
+  String detailsInvalidYear(int max) {
+    return 'Tra 1950 e $max';
+  }
+
+  @override
+  String get detailsInvalidPhone => 'Numero non valido';
+
+  @override
+  String get detailsChoose => 'Scegli';
+
+  @override
+  String get detailsSearchMake => 'Cerca marca';
+
+  @override
+  String get detailsSearchModel => 'Cerca modello';
+
+  @override
+  String get detailsChooseMakeFirst => 'Prima scegli la marca';
+
+  @override
+  String get detailsFixFields => 'Completa i campi evidenziati';
+
+  @override
+  String get publishErrorIncomplete => 'Mancano alcuni dati obbligatori.';
+
+  @override
+  String get publishErrorMedia =>
+      'Il video non è ancora caricato: riprova tra poco.';
+
+  @override
+  String get publishErrorNetwork => 'Connessione assente o lenta: riprova.';
+
+  @override
+  String get publishError => 'Non siamo riusciti a pubblicare, riprova.';
+
+  @override
+  String doneTitle(String model) {
+    return 'La tua $model è online';
+  }
+
+  @override
+  String get doneTitleGeneric => 'Il tuo annuncio è online';
+
+  @override
+  String doneBody(int weeks) {
+    return 'Ti avvisiamo a ogni nuovo contatto. Tra $weeks settimane ti chiederemo se è ancora disponibile.';
+  }
+
+  @override
+  String get doneShare => 'Condividi il link';
+
+  @override
+  String get doneOpen => 'Vedi l\'annuncio';
+
+  @override
+  String get bodyCityCar => 'Citycar';
+
+  @override
+  String get bodyHatchback => 'Due volumi';
+
+  @override
+  String get bodySedan => 'Berlina';
+
+  @override
+  String get bodyStationWagon => 'Station wagon';
+
+  @override
+  String get bodySuv => 'SUV';
+
+  @override
+  String get bodyCoupe => 'Coupé';
+
+  @override
+  String get bodyConvertible => 'Cabrio';
+
+  @override
+  String get bodyMinivan => 'Monovolume';
+
+  @override
+  String get bodyVan => 'Furgone';
+
+  @override
+  String get bodyPickup => 'Pick-up';
+
+  @override
+  String get motoNaked => 'Naked';
+
+  @override
+  String get motoSport => 'Sportiva';
+
+  @override
+  String get motoTouring => 'Turismo';
+
+  @override
+  String get motoAdventure => 'Adventure';
+
+  @override
+  String get motoEnduro => 'Enduro';
+
+  @override
+  String get motoCross => 'Cross';
+
+  @override
+  String get motoCustom => 'Custom';
+
+  @override
+  String get motoScooter => 'Scooter';
+
+  @override
+  String get motoMotard => 'Motard';
+
+  @override
+  String get captureRecord => 'Registra';
+
+  @override
+  String get captureTakePhoto => 'Scatta';
 }

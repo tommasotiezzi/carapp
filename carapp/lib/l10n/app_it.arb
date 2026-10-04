@@ -362,5 +362,241 @@
   "@whatsappPrefill": {"placeholders": {"title": {"type": "String"}, "app": {"type": "String"}}},
   "shareText": "{summary}\nGuarda l'annuncio su {app}: {link}",
   "@shareText": {"placeholders": {"summary": {"type": "String"}, "app": {"type": "String"}, "link": {"type": "String"}}},
-  "shareError": "Non riusciamo ad aprire la condivisione."
+  "shareError": "Non riusciamo ad aprire la condivisione.",
+  "sellTitle": "Cosa vuoi vendere?",
+  "sellSubtitle": "Ti guidiamo ripresa per ripresa: servono circa 5 minuti.",
+  "sellCar": "Auto",
+  "sellCarHint": "anche furgoni",
+  "sellMoto": "Moto",
+  "sellMotoHint": "anche scooter",
+  "sellBeforeTitle": "Prima di iniziare",
+  "sellBeforeCar": "Auto pulita e luce di giorno · motore pronto per l'avviamento · se vuoi, copri la targa.",
+  "sellBeforeMoto": "Moto pulita e luce di giorno · motore pronto per l'avviamento · se vuoi, copri la targa.",
+  "sellStart": "Inizia le riprese",
+  "sellStartNote": "Puoi fermarti quando vuoi: salviamo la bozza",
+  "sellDraftTitle": "Hai un annuncio in corso",
+  "sellDraftBody": "{count, plural, =0{Nessuna ripresa ancora} =1{1 ripresa fatta} other{{count} riprese fatte}}",
+  "@sellDraftBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sellResume": "Riprendi",
+  "sellRestart": "Ricomincia",
+  "sellRestartTitle": "Ricominciare da capo?",
+  "sellRestartBody": "Le riprese e i dati di questa bozza verranno eliminati.",
+  "captureStepOf": "Step {current} di {total}",
+  "@captureStepOf": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "captureVideo": "Video {seconds} s",
+  "@captureVideo": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "capturePhoto": "Foto",
+  "captureSkip": "Salta",
+  "captureNext": "Prossimo: {step}",
+  "@captureNext": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      }
+    }
+  },
+  "captureLast": "Ultima ripresa",
+  "capturePlateTip": "Se vuoi, copri la targa",
+  "captureHoldStill": "Tieni fermo il telefono",
+  "captureRecording": "Registrazione · {seconds} s",
+  "@captureRecording": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "captureAlignCar": "Allinea l'auto alla sagoma, a circa 4 metri",
+  "captureAlignMoto": "Allinea la moto alla sagoma, a circa 3 metri",
+  "captureHintKm": "Motore acceso: inquadra il quadro con i km",
+  "captureHintEngineBay": "Apri il cofano e inquadra il motore",
+  "captureHintDefects": "Inquadra da vicino graffi, ammaccature o usura",
+  "captureHintChain": "Inquadra da vicino catena e battistrada",
+  "captureHintExhaust": "Inquadra lo scarico, meglio a motore acceso",
+  "captureTorch": "Torcia",
+  "captureShots": "Le tue riprese",
+  "captureCameraDenied": "Per le riprese servono fotocamera e microfono. Attivali nelle impostazioni del telefono.",
+  "captureCameraError": "Non riusciamo ad aprire la fotocamera.",
+  "captureSaveError": "Ripresa non salvata, riprova.",
+  "sellStepFront3q": "Fronte 3/4",
+  "sellStepRightSide": "Lato destro",
+  "sellStepLeftSide": "Lato sinistro",
+  "sellStepRear": "Posteriore",
+  "sellStepInterior": "Interni e quadro km",
+  "sellStepEngineBay": "Vano motore",
+  "sellStepDefects": "Difetti visibili",
+  "sellStepTank": "Serbatoio e quadro km",
+  "sellStepChain": "Catena e gomme",
+  "sellStepExhaust": "Scarico",
+  "shotsTitle": "Le tue riprese",
+  "shotsSubtitle": "{done} di {total} completate. Al resto pensiamo noi: montiamo il video e creiamo il carosello.",
+  "@shotsSubtitle": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "shotsVideo": "Video · {seconds} s",
+  "@shotsVideo": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "shotsPhoto": "Foto",
+  "shotsTodo": "Da fare",
+  "shotsOptional": "Facoltativo",
+  "shotsOptionalDefects": "Facoltativo · aumenta la fiducia",
+  "shotsEngineOn": "motore acceso",
+  "shotsDefectsTip": "Mostrare i difetti rende l'annuncio più credibile: chi compra si fida di più.",
+  "shotsCreate": "Crea il video",
+  "shotsCreateNote": "Poi aggiungi prezzo, dati e descrizione",
+  "shotsMissing": "Mancano: {steps}",
+  "@shotsMissing": {
+    "placeholders": {
+      "steps": {
+        "type": "String"
+      }
+    }
+  },
+  "shotsNeedVideo": "Serve almeno una ripresa video",
+  "shotsRetake": "Rifai",
+  "shotsDelete": "Elimina",
+  "detailsTitle": "Dati e prezzo",
+  "detailsPreparing": "Stiamo preparando il video · {percent}%",
+  "@detailsPreparing": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsReady": "Video pronto",
+  "detailsFailed": "Video non pronto · tocca per riprovare",
+  "detailsMake": "Marca",
+  "detailsModel": "Modello",
+  "detailsYear": "Anno",
+  "detailsKm": "Chilometri",
+  "detailsFuel": "Alimentazione",
+  "detailsMore": "+ Altri dettagli (cambio, potenza, classe Euro, proprietari)",
+  "detailsLess": "Meno dettagli",
+  "detailsVersion": "Versione",
+  "detailsVersionHint": "es. 1.6 TDI Life",
+  "detailsGearbox": "Cambio",
+  "detailsPower": "Potenza (kW)",
+  "detailsPowerCv": "≈ {cv} CV",
+  "@detailsPowerCv": {
+    "placeholders": {
+      "cv": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsEuro": "Classe Euro",
+  "detailsOwners": "Proprietari",
+  "detailsColor": "Colore",
+  "detailsServiceHistory": "Tagliandi documentati",
+  "detailsBodyType": "Carrozzeria",
+  "detailsNovice": "Adatta ai neopatentati",
+  "detailsMotoType": "Tipo",
+  "detailsDisplacement": "Cilindrata (cc)",
+  "detailsLicense": "Patente",
+  "detailsPrice": "Prezzo",
+  "detailsDescription": "Descrizione",
+  "detailsDescriptionHint": "Racconta lo stato, i tagliandi, gli extra…",
+  "detailsWhere": "Dove si trova",
+  "detailsCity": "Città",
+  "detailsProvince": "Provincia",
+  "detailsWhatsapp": "Contatto su WhatsApp",
+  "detailsWhatsappHint": "Mostra il tuo numero a chi è interessato",
+  "detailsWhatsappDealer": "Mostra il numero WhatsApp del concessionario",
+  "detailsPhone": "Numero di telefono",
+  "detailsSellerAge": "Ho almeno 18 anni, oppure vendo con il consenso di un genitore",
+  "detailsPublish": "Pubblica annuncio",
+  "detailsPublishing": "Pubblicazione…",
+  "detailsRequired": "Obbligatorio",
+  "detailsInvalidYear": "Tra 1950 e {max}",
+  "@detailsInvalidYear": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsInvalidPhone": "Numero non valido",
+  "detailsChoose": "Scegli",
+  "detailsSearchMake": "Cerca marca",
+  "detailsSearchModel": "Cerca modello",
+  "detailsChooseMakeFirst": "Prima scegli la marca",
+  "detailsFixFields": "Completa i campi evidenziati",
+  "publishErrorIncomplete": "Mancano alcuni dati obbligatori.",
+  "publishErrorMedia": "Il video non è ancora caricato: riprova tra poco.",
+  "publishErrorNetwork": "Connessione assente o lenta: riprova.",
+  "publishError": "Non siamo riusciti a pubblicare, riprova.",
+  "doneTitle": "La tua {model} è online",
+  "@doneTitle": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "doneTitleGeneric": "Il tuo annuncio è online",
+  "doneBody": "Ti avvisiamo a ogni nuovo contatto. Tra {weeks} settimane ti chiederemo se è ancora disponibile.",
+  "@doneBody": {
+    "placeholders": {
+      "weeks": {
+        "type": "int"
+      }
+    }
+  },
+  "doneShare": "Condividi il link",
+  "doneOpen": "Vedi l'annuncio",
+  "bodyCityCar": "Citycar",
+  "bodyHatchback": "Due volumi",
+  "bodySedan": "Berlina",
+  "bodyStationWagon": "Station wagon",
+  "bodySuv": "SUV",
+  "bodyCoupe": "Coupé",
+  "bodyConvertible": "Cabrio",
+  "bodyMinivan": "Monovolume",
+  "bodyVan": "Furgone",
+  "bodyPickup": "Pick-up",
+  "motoNaked": "Naked",
+  "motoSport": "Sportiva",
+  "motoTouring": "Turismo",
+  "motoAdventure": "Adventure",
+  "motoEnduro": "Enduro",
+  "motoCross": "Cross",
+  "motoCustom": "Custom",
+  "motoScooter": "Scooter",
+  "motoMotard": "Motard",
+  "captureRecord": "Registra",
+  "captureTakePhoto": "Scatta"
 }

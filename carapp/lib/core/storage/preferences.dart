@@ -19,4 +19,5 @@ class PrefKeys {
   static const feedFilters = 'feed_filters_v1';
   static const recentSearches = 'recent_searches_v1';
   static const pendingConsents = 'pending_consents_v1';
+  static const sellDraft = 'sell_draft_v1';
 }

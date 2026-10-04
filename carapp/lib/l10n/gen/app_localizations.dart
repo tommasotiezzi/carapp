@@ -1965,6 +1965,840 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Non riusciamo ad aprire la condivisione.'**
   String get shareError;
+
+  /// No description provided for @sellTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa vuoi vendere?'**
+  String get sellTitle;
+
+  /// No description provided for @sellSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Ti guidiamo ripresa per ripresa: servono circa 5 minuti.'**
+  String get sellSubtitle;
+
+  /// No description provided for @sellCar.
+  ///
+  /// In it, this message translates to:
+  /// **'Auto'**
+  String get sellCar;
+
+  /// No description provided for @sellCarHint.
+  ///
+  /// In it, this message translates to:
+  /// **'anche furgoni'**
+  String get sellCarHint;
+
+  /// No description provided for @sellMoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Moto'**
+  String get sellMoto;
+
+  /// No description provided for @sellMotoHint.
+  ///
+  /// In it, this message translates to:
+  /// **'anche scooter'**
+  String get sellMotoHint;
+
+  /// No description provided for @sellBeforeTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima di iniziare'**
+  String get sellBeforeTitle;
+
+  /// No description provided for @sellBeforeCar.
+  ///
+  /// In it, this message translates to:
+  /// **'Auto pulita e luce di giorno · motore pronto per l\'avviamento · se vuoi, copri la targa.'**
+  String get sellBeforeCar;
+
+  /// No description provided for @sellBeforeMoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Moto pulita e luce di giorno · motore pronto per l\'avviamento · se vuoi, copri la targa.'**
+  String get sellBeforeMoto;
+
+  /// No description provided for @sellStart.
+  ///
+  /// In it, this message translates to:
+  /// **'Inizia le riprese'**
+  String get sellStart;
+
+  /// No description provided for @sellStartNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Puoi fermarti quando vuoi: salviamo la bozza'**
+  String get sellStartNote;
+
+  /// No description provided for @sellDraftTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Hai un annuncio in corso'**
+  String get sellDraftTitle;
+
+  /// No description provided for @sellDraftBody.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessuna ripresa ancora} =1{1 ripresa fatta} other{{count} riprese fatte}}'**
+  String sellDraftBody(int count);
+
+  /// No description provided for @sellResume.
+  ///
+  /// In it, this message translates to:
+  /// **'Riprendi'**
+  String get sellResume;
+
+  /// No description provided for @sellRestart.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricomincia'**
+  String get sellRestart;
+
+  /// No description provided for @sellRestartTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricominciare da capo?'**
+  String get sellRestartTitle;
+
+  /// No description provided for @sellRestartBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Le riprese e i dati di questa bozza verranno eliminati.'**
+  String get sellRestartBody;
+
+  /// No description provided for @captureStepOf.
+  ///
+  /// In it, this message translates to:
+  /// **'Step {current} di {total}'**
+  String captureStepOf(int current, int total);
+
+  /// No description provided for @captureVideo.
+  ///
+  /// In it, this message translates to:
+  /// **'Video {seconds} s'**
+  String captureVideo(int seconds);
+
+  /// No description provided for @capturePhoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto'**
+  String get capturePhoto;
+
+  /// No description provided for @captureSkip.
+  ///
+  /// In it, this message translates to:
+  /// **'Salta'**
+  String get captureSkip;
+
+  /// No description provided for @captureNext.
+  ///
+  /// In it, this message translates to:
+  /// **'Prossimo: {step}'**
+  String captureNext(String step);
+
+  /// No description provided for @captureLast.
+  ///
+  /// In it, this message translates to:
+  /// **'Ultima ripresa'**
+  String get captureLast;
+
+  /// No description provided for @capturePlateTip.
+  ///
+  /// In it, this message translates to:
+  /// **'Se vuoi, copri la targa'**
+  String get capturePlateTip;
+
+  /// No description provided for @captureHoldStill.
+  ///
+  /// In it, this message translates to:
+  /// **'Tieni fermo il telefono'**
+  String get captureHoldStill;
+
+  /// No description provided for @captureRecording.
+  ///
+  /// In it, this message translates to:
+  /// **'Registrazione · {seconds} s'**
+  String captureRecording(int seconds);
+
+  /// No description provided for @captureAlignCar.
+  ///
+  /// In it, this message translates to:
+  /// **'Allinea l\'auto alla sagoma, a circa 4 metri'**
+  String get captureAlignCar;
+
+  /// No description provided for @captureAlignMoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Allinea la moto alla sagoma, a circa 3 metri'**
+  String get captureAlignMoto;
+
+  /// No description provided for @captureHintKm.
+  ///
+  /// In it, this message translates to:
+  /// **'Motore acceso: inquadra il quadro con i km'**
+  String get captureHintKm;
+
+  /// No description provided for @captureHintEngineBay.
+  ///
+  /// In it, this message translates to:
+  /// **'Apri il cofano e inquadra il motore'**
+  String get captureHintEngineBay;
+
+  /// No description provided for @captureHintDefects.
+  ///
+  /// In it, this message translates to:
+  /// **'Inquadra da vicino graffi, ammaccature o usura'**
+  String get captureHintDefects;
+
+  /// No description provided for @captureHintChain.
+  ///
+  /// In it, this message translates to:
+  /// **'Inquadra da vicino catena e battistrada'**
+  String get captureHintChain;
+
+  /// No description provided for @captureHintExhaust.
+  ///
+  /// In it, this message translates to:
+  /// **'Inquadra lo scarico, meglio a motore acceso'**
+  String get captureHintExhaust;
+
+  /// No description provided for @captureTorch.
+  ///
+  /// In it, this message translates to:
+  /// **'Torcia'**
+  String get captureTorch;
+
+  /// No description provided for @captureShots.
+  ///
+  /// In it, this message translates to:
+  /// **'Le tue riprese'**
+  String get captureShots;
+
+  /// No description provided for @captureCameraDenied.
+  ///
+  /// In it, this message translates to:
+  /// **'Per le riprese servono fotocamera e microfono. Attivali nelle impostazioni del telefono.'**
+  String get captureCameraDenied;
+
+  /// No description provided for @captureCameraError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad aprire la fotocamera.'**
+  String get captureCameraError;
+
+  /// No description provided for @captureSaveError.
+  ///
+  /// In it, this message translates to:
+  /// **'Ripresa non salvata, riprova.'**
+  String get captureSaveError;
+
+  /// No description provided for @sellStepFront3q.
+  ///
+  /// In it, this message translates to:
+  /// **'Fronte 3/4'**
+  String get sellStepFront3q;
+
+  /// No description provided for @sellStepRightSide.
+  ///
+  /// In it, this message translates to:
+  /// **'Lato destro'**
+  String get sellStepRightSide;
+
+  /// No description provided for @sellStepLeftSide.
+  ///
+  /// In it, this message translates to:
+  /// **'Lato sinistro'**
+  String get sellStepLeftSide;
+
+  /// No description provided for @sellStepRear.
+  ///
+  /// In it, this message translates to:
+  /// **'Posteriore'**
+  String get sellStepRear;
+
+  /// No description provided for @sellStepInterior.
+  ///
+  /// In it, this message translates to:
+  /// **'Interni e quadro km'**
+  String get sellStepInterior;
+
+  /// No description provided for @sellStepEngineBay.
+  ///
+  /// In it, this message translates to:
+  /// **'Vano motore'**
+  String get sellStepEngineBay;
+
+  /// No description provided for @sellStepDefects.
+  ///
+  /// In it, this message translates to:
+  /// **'Difetti visibili'**
+  String get sellStepDefects;
+
+  /// No description provided for @sellStepTank.
+  ///
+  /// In it, this message translates to:
+  /// **'Serbatoio e quadro km'**
+  String get sellStepTank;
+
+  /// No description provided for @sellStepChain.
+  ///
+  /// In it, this message translates to:
+  /// **'Catena e gomme'**
+  String get sellStepChain;
+
+  /// No description provided for @sellStepExhaust.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarico'**
+  String get sellStepExhaust;
+
+  /// No description provided for @shotsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Le tue riprese'**
+  String get shotsTitle;
+
+  /// No description provided for @shotsSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'{done} di {total} completate. Al resto pensiamo noi: montiamo il video e creiamo il carosello.'**
+  String shotsSubtitle(int done, int total);
+
+  /// No description provided for @shotsVideo.
+  ///
+  /// In it, this message translates to:
+  /// **'Video · {seconds} s'**
+  String shotsVideo(int seconds);
+
+  /// No description provided for @shotsPhoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto'**
+  String get shotsPhoto;
+
+  /// No description provided for @shotsTodo.
+  ///
+  /// In it, this message translates to:
+  /// **'Da fare'**
+  String get shotsTodo;
+
+  /// No description provided for @shotsOptional.
+  ///
+  /// In it, this message translates to:
+  /// **'Facoltativo'**
+  String get shotsOptional;
+
+  /// No description provided for @shotsOptionalDefects.
+  ///
+  /// In it, this message translates to:
+  /// **'Facoltativo · aumenta la fiducia'**
+  String get shotsOptionalDefects;
+
+  /// No description provided for @shotsEngineOn.
+  ///
+  /// In it, this message translates to:
+  /// **'motore acceso'**
+  String get shotsEngineOn;
+
+  /// No description provided for @shotsDefectsTip.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostrare i difetti rende l\'annuncio più credibile: chi compra si fida di più.'**
+  String get shotsDefectsTip;
+
+  /// No description provided for @shotsCreate.
+  ///
+  /// In it, this message translates to:
+  /// **'Crea il video'**
+  String get shotsCreate;
+
+  /// No description provided for @shotsCreateNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Poi aggiungi prezzo, dati e descrizione'**
+  String get shotsCreateNote;
+
+  /// No description provided for @shotsMissing.
+  ///
+  /// In it, this message translates to:
+  /// **'Mancano: {steps}'**
+  String shotsMissing(String steps);
+
+  /// No description provided for @shotsNeedVideo.
+  ///
+  /// In it, this message translates to:
+  /// **'Serve almeno una ripresa video'**
+  String get shotsNeedVideo;
+
+  /// No description provided for @shotsRetake.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai'**
+  String get shotsRetake;
+
+  /// No description provided for @shotsDelete.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina'**
+  String get shotsDelete;
+
+  /// No description provided for @detailsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Dati e prezzo'**
+  String get detailsTitle;
+
+  /// No description provided for @detailsPreparing.
+  ///
+  /// In it, this message translates to:
+  /// **'Stiamo preparando il video · {percent}%'**
+  String detailsPreparing(int percent);
+
+  /// No description provided for @detailsReady.
+  ///
+  /// In it, this message translates to:
+  /// **'Video pronto'**
+  String get detailsReady;
+
+  /// No description provided for @detailsFailed.
+  ///
+  /// In it, this message translates to:
+  /// **'Video non pronto · tocca per riprovare'**
+  String get detailsFailed;
+
+  /// No description provided for @detailsMake.
+  ///
+  /// In it, this message translates to:
+  /// **'Marca'**
+  String get detailsMake;
+
+  /// No description provided for @detailsModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Modello'**
+  String get detailsModel;
+
+  /// No description provided for @detailsYear.
+  ///
+  /// In it, this message translates to:
+  /// **'Anno'**
+  String get detailsYear;
+
+  /// No description provided for @detailsKm.
+  ///
+  /// In it, this message translates to:
+  /// **'Chilometri'**
+  String get detailsKm;
+
+  /// No description provided for @detailsFuel.
+  ///
+  /// In it, this message translates to:
+  /// **'Alimentazione'**
+  String get detailsFuel;
+
+  /// No description provided for @detailsMore.
+  ///
+  /// In it, this message translates to:
+  /// **'+ Altri dettagli (cambio, potenza, classe Euro, proprietari)'**
+  String get detailsMore;
+
+  /// No description provided for @detailsLess.
+  ///
+  /// In it, this message translates to:
+  /// **'Meno dettagli'**
+  String get detailsLess;
+
+  /// No description provided for @detailsVersion.
+  ///
+  /// In it, this message translates to:
+  /// **'Versione'**
+  String get detailsVersion;
+
+  /// No description provided for @detailsVersionHint.
+  ///
+  /// In it, this message translates to:
+  /// **'es. 1.6 TDI Life'**
+  String get detailsVersionHint;
+
+  /// No description provided for @detailsGearbox.
+  ///
+  /// In it, this message translates to:
+  /// **'Cambio'**
+  String get detailsGearbox;
+
+  /// No description provided for @detailsPower.
+  ///
+  /// In it, this message translates to:
+  /// **'Potenza (kW)'**
+  String get detailsPower;
+
+  /// No description provided for @detailsPowerCv.
+  ///
+  /// In it, this message translates to:
+  /// **'≈ {cv} CV'**
+  String detailsPowerCv(int cv);
+
+  /// No description provided for @detailsEuro.
+  ///
+  /// In it, this message translates to:
+  /// **'Classe Euro'**
+  String get detailsEuro;
+
+  /// No description provided for @detailsOwners.
+  ///
+  /// In it, this message translates to:
+  /// **'Proprietari'**
+  String get detailsOwners;
+
+  /// No description provided for @detailsColor.
+  ///
+  /// In it, this message translates to:
+  /// **'Colore'**
+  String get detailsColor;
+
+  /// No description provided for @detailsServiceHistory.
+  ///
+  /// In it, this message translates to:
+  /// **'Tagliandi documentati'**
+  String get detailsServiceHistory;
+
+  /// No description provided for @detailsBodyType.
+  ///
+  /// In it, this message translates to:
+  /// **'Carrozzeria'**
+  String get detailsBodyType;
+
+  /// No description provided for @detailsNovice.
+  ///
+  /// In it, this message translates to:
+  /// **'Adatta ai neopatentati'**
+  String get detailsNovice;
+
+  /// No description provided for @detailsMotoType.
+  ///
+  /// In it, this message translates to:
+  /// **'Tipo'**
+  String get detailsMotoType;
+
+  /// No description provided for @detailsDisplacement.
+  ///
+  /// In it, this message translates to:
+  /// **'Cilindrata (cc)'**
+  String get detailsDisplacement;
+
+  /// No description provided for @detailsLicense.
+  ///
+  /// In it, this message translates to:
+  /// **'Patente'**
+  String get detailsLicense;
+
+  /// No description provided for @detailsPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzo'**
+  String get detailsPrice;
+
+  /// No description provided for @detailsDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Descrizione'**
+  String get detailsDescription;
+
+  /// No description provided for @detailsDescriptionHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Racconta lo stato, i tagliandi, gli extra…'**
+  String get detailsDescriptionHint;
+
+  /// No description provided for @detailsWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove si trova'**
+  String get detailsWhere;
+
+  /// No description provided for @detailsCity.
+  ///
+  /// In it, this message translates to:
+  /// **'Città'**
+  String get detailsCity;
+
+  /// No description provided for @detailsProvince.
+  ///
+  /// In it, this message translates to:
+  /// **'Provincia'**
+  String get detailsProvince;
+
+  /// No description provided for @detailsWhatsapp.
+  ///
+  /// In it, this message translates to:
+  /// **'Contatto su WhatsApp'**
+  String get detailsWhatsapp;
+
+  /// No description provided for @detailsWhatsappHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra il tuo numero a chi è interessato'**
+  String get detailsWhatsappHint;
+
+  /// No description provided for @detailsWhatsappDealer.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra il numero WhatsApp del concessionario'**
+  String get detailsWhatsappDealer;
+
+  /// No description provided for @detailsPhone.
+  ///
+  /// In it, this message translates to:
+  /// **'Numero di telefono'**
+  String get detailsPhone;
+
+  /// No description provided for @detailsSellerAge.
+  ///
+  /// In it, this message translates to:
+  /// **'Ho almeno 18 anni, oppure vendo con il consenso di un genitore'**
+  String get detailsSellerAge;
+
+  /// No description provided for @detailsPublish.
+  ///
+  /// In it, this message translates to:
+  /// **'Pubblica annuncio'**
+  String get detailsPublish;
+
+  /// No description provided for @detailsPublishing.
+  ///
+  /// In it, this message translates to:
+  /// **'Pubblicazione…'**
+  String get detailsPublishing;
+
+  /// No description provided for @detailsRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Obbligatorio'**
+  String get detailsRequired;
+
+  /// No description provided for @detailsInvalidYear.
+  ///
+  /// In it, this message translates to:
+  /// **'Tra 1950 e {max}'**
+  String detailsInvalidYear(int max);
+
+  /// No description provided for @detailsInvalidPhone.
+  ///
+  /// In it, this message translates to:
+  /// **'Numero non valido'**
+  String get detailsInvalidPhone;
+
+  /// No description provided for @detailsChoose.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli'**
+  String get detailsChoose;
+
+  /// No description provided for @detailsSearchMake.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca marca'**
+  String get detailsSearchMake;
+
+  /// No description provided for @detailsSearchModel.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca modello'**
+  String get detailsSearchModel;
+
+  /// No description provided for @detailsChooseMakeFirst.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima scegli la marca'**
+  String get detailsChooseMakeFirst;
+
+  /// No description provided for @detailsFixFields.
+  ///
+  /// In it, this message translates to:
+  /// **'Completa i campi evidenziati'**
+  String get detailsFixFields;
+
+  /// No description provided for @publishErrorIncomplete.
+  ///
+  /// In it, this message translates to:
+  /// **'Mancano alcuni dati obbligatori.'**
+  String get publishErrorIncomplete;
+
+  /// No description provided for @publishErrorMedia.
+  ///
+  /// In it, this message translates to:
+  /// **'Il video non è ancora caricato: riprova tra poco.'**
+  String get publishErrorMedia;
+
+  /// No description provided for @publishErrorNetwork.
+  ///
+  /// In it, this message translates to:
+  /// **'Connessione assente o lenta: riprova.'**
+  String get publishErrorNetwork;
+
+  /// No description provided for @publishError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non siamo riusciti a pubblicare, riprova.'**
+  String get publishError;
+
+  /// No description provided for @doneTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'La tua {model} è online'**
+  String doneTitle(String model);
+
+  /// No description provided for @doneTitleGeneric.
+  ///
+  /// In it, this message translates to:
+  /// **'Il tuo annuncio è online'**
+  String get doneTitleGeneric;
+
+  /// No description provided for @doneBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Ti avvisiamo a ogni nuovo contatto. Tra {weeks} settimane ti chiederemo se è ancora disponibile.'**
+  String doneBody(int weeks);
+
+  /// No description provided for @doneShare.
+  ///
+  /// In it, this message translates to:
+  /// **'Condividi il link'**
+  String get doneShare;
+
+  /// No description provided for @doneOpen.
+  ///
+  /// In it, this message translates to:
+  /// **'Vedi l\'annuncio'**
+  String get doneOpen;
+
+  /// No description provided for @bodyCityCar.
+  ///
+  /// In it, this message translates to:
+  /// **'Citycar'**
+  String get bodyCityCar;
+
+  /// No description provided for @bodyHatchback.
+  ///
+  /// In it, this message translates to:
+  /// **'Due volumi'**
+  String get bodyHatchback;
+
+  /// No description provided for @bodySedan.
+  ///
+  /// In it, this message translates to:
+  /// **'Berlina'**
+  String get bodySedan;
+
+  /// No description provided for @bodyStationWagon.
+  ///
+  /// In it, this message translates to:
+  /// **'Station wagon'**
+  String get bodyStationWagon;
+
+  /// No description provided for @bodySuv.
+  ///
+  /// In it, this message translates to:
+  /// **'SUV'**
+  String get bodySuv;
+
+  /// No description provided for @bodyCoupe.
+  ///
+  /// In it, this message translates to:
+  /// **'Coupé'**
+  String get bodyCoupe;
+
+  /// No description provided for @bodyConvertible.
+  ///
+  /// In it, this message translates to:
+  /// **'Cabrio'**
+  String get bodyConvertible;
+
+  /// No description provided for @bodyMinivan.
+  ///
+  /// In it, this message translates to:
+  /// **'Monovolume'**
+  String get bodyMinivan;
+
+  /// No description provided for @bodyVan.
+  ///
+  /// In it, this message translates to:
+  /// **'Furgone'**
+  String get bodyVan;
+
+  /// No description provided for @bodyPickup.
+  ///
+  /// In it, this message translates to:
+  /// **'Pick-up'**
+  String get bodyPickup;
+
+  /// No description provided for @motoNaked.
+  ///
+  /// In it, this message translates to:
+  /// **'Naked'**
+  String get motoNaked;
+
+  /// No description provided for @motoSport.
+  ///
+  /// In it, this message translates to:
+  /// **'Sportiva'**
+  String get motoSport;
+
+  /// No description provided for @motoTouring.
+  ///
+  /// In it, this message translates to:
+  /// **'Turismo'**
+  String get motoTouring;
+
+  /// No description provided for @motoAdventure.
+  ///
+  /// In it, this message translates to:
+  /// **'Adventure'**
+  String get motoAdventure;
+
+  /// No description provided for @motoEnduro.
+  ///
+  /// In it, this message translates to:
+  /// **'Enduro'**
+  String get motoEnduro;
+
+  /// No description provided for @motoCross.
+  ///
+  /// In it, this message translates to:
+  /// **'Cross'**
+  String get motoCross;
+
+  /// No description provided for @motoCustom.
+  ///
+  /// In it, this message translates to:
+  /// **'Custom'**
+  String get motoCustom;
+
+  /// No description provided for @motoScooter.
+  ///
+  /// In it, this message translates to:
+  /// **'Scooter'**
+  String get motoScooter;
+
+  /// No description provided for @motoMotard.
+  ///
+  /// In it, this message translates to:
+  /// **'Motard'**
+  String get motoMotard;
+
+  /// No description provided for @captureRecord.
+  ///
+  /// In it, this message translates to:
+  /// **'Registra'**
+  String get captureRecord;
+
+  /// No description provided for @captureTakePhoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Scatta'**
+  String get captureTakePhoto;
 }
 
 class _AppLocalizationsDelegate
