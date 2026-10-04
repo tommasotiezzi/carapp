@@ -75,7 +75,10 @@ class _LoginSheetState extends ConsumerState<_LoginSheet> {
       _busy = true;
       _error = null;
     });
+    // Read before awaiting: the sheet may be dismissed meanwhile, and
+    // `ref` is unusable once the widget is gone.
     final auth = ref.read(authRepositoryProvider);
+    final onboarding = ref.read(onboardingControllerProvider.notifier);
     try {
       if (_signUp) {
         final result = await auth.signUp(email: email, password: password);
@@ -88,7 +91,7 @@ class _LoginSheetState extends ConsumerState<_LoginSheet> {
       }
       TextInput.finishAutofillContext();
       // Push what the user chose in onboarding to their account.
-      await ref.read(onboardingControllerProvider.notifier).syncIfLoggedIn();
+      await onboarding.syncIfLoggedIn();
       if (mounted) Navigator.of(context).pop(true);
     } on AuthFailureException catch (e) {
       if (mounted) setState(() => _error = _message(t, e.failure));

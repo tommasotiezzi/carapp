@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/vehicle_labels.dart';
+import '../../../core/media/shared_video.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
@@ -19,9 +20,12 @@ import 'listing_video_header.dart';
 /// `/listing/:id`: video on top, price and total cost, photos, specs,
 /// description, seller, Q&A, sticky Contact. Also the target of share links.
 class ListingScreen extends ConsumerWidget {
-  const ListingScreen({super.key, required this.id});
+  const ListingScreen({super.key, required this.id, this.lentVideo});
 
   final String id;
+
+  /// The feed's player when opened from the feed (see SharedVideo).
+  final SharedVideo? lentVideo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +47,7 @@ class ListingScreen extends ConsumerWidget {
               actionLabel: t.listingBackToFeed,
               onAction: () => context.go(AppRoutes.feed),
             )
-          : _ListingBody(listing: l),
+          : _ListingBody(listing: l, lentVideo: lentVideo),
     );
   }
 }
@@ -53,9 +57,10 @@ void _back(BuildContext context) =>
     context.canPop() ? context.pop() : context.go(AppRoutes.feed);
 
 class _ListingBody extends StatefulWidget {
-  const _ListingBody({required this.listing});
+  const _ListingBody({required this.listing, this.lentVideo});
 
   final ListingDetail listing;
+  final SharedVideo? lentVideo;
 
   @override
   State<_ListingBody> createState() => _ListingBodyState();
@@ -118,7 +123,12 @@ class _ListingBodyState extends State<_ListingBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ListingVideoHeader(listing: l, height: _videoHeight, visible: _videoVisible),
+                ListingVideoHeader(
+                  listing: l,
+                  height: _videoHeight,
+                  visible: _videoVisible,
+                  lent: widget.lentVideo,
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.page, AppSpacing.xl, AppSpacing.page, 0,
@@ -188,7 +198,13 @@ class _ListingBodyState extends State<_ListingBody> {
                       return _RoundButton(
                         icon: saved ? Icons.bookmark : Icons.bookmark_border,
                         tooltip: saved ? t.savedRemove : t.commonSave,
-                        onTap: () => toggleSave(context, ref, listingId: l.id, priceCents: l.priceCents),
+                        onTap: () => toggleSave(
+                          context,
+                          ref,
+                          listingId: l.id,
+                          priceCents: l.priceCents,
+                          item: l.toFeedItem(),
+                        ),
                       );
                     },
                   ),

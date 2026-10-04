@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/ui/login_sheet.dart';
+import '../../feed/data/feed_item.dart';
 import '../state/saved_controller.dart';
 
 /// The Save button action, shared by the feed and the listing screen.
@@ -14,6 +15,7 @@ Future<void> toggleSave(
   WidgetRef ref, {
   required String listingId,
   required int? priceCents,
+  FeedItem? item,
 }) async {
   final t = AppLocalizations.of(context);
   final saved = !ref.read(isSavedProvider(listingId));
@@ -31,7 +33,7 @@ Future<void> toggleSave(
   try {
     await ref
         .read(savedControllerProvider.notifier)
-        .setSaved(listingId: listingId, saved: saved, priceCents: priceCents);
+        .setSaved(listingId: listingId, saved: saved, priceCents: priceCents, item: item);
     show(saved ? t.savedAdded : t.savedRemoved);
   } catch (_) {
     show(t.savedError);

@@ -1,3 +1,5 @@
+import '../../feed/data/feed_item.dart';
+
 /// Everything the listing screen shows, from one `listings` row and its joins.
 class ListingDetail {
   const ListingDetail({
@@ -57,6 +59,26 @@ class ListingDetail {
   final List<ListingPhoto> photos;
 
   bool get isDealer => sellerType == 'dealer';
+
+  /// The card data for grids (e.g. adding it to "Salvati" without a request).
+  FeedItem toFeedItem() => FeedItem(
+        id: id,
+        sellerType: sellerType,
+        publishedAt: publishedAt ?? DateTime.now(),
+        makeName: makeName,
+        modelName: modelName,
+        version: version,
+        year: year,
+        mileageKm: mileageKm,
+        priceCents: priceCents,
+        fuelType: fuelType,
+        powerKw: powerKw,
+        description: description,
+        city: city,
+        coverPath: coverPath,
+        videoPath: videoPath,
+        dealerName: dealer?.displayName,
+      );
 
   /// "Volkswagen Golf"
   String get title =>

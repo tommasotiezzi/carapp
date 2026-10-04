@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_client.dart';
+import '../../onboarding/data/catalog_repository.dart';
 
 class CatalogMake {
   const CatalogMake({
@@ -52,6 +53,16 @@ class Catalog {
       makeById[modelById[modelId]?.makeId]?.categoryId;
 
   // ---- normalized indexes, built on first use ----
+
+  /// (make, normalized name), for prefix search on every keystroke.
+  late final List<(CatalogMake, String)> normalizedMakes = [
+    for (final m in makes) (m, normalize(m.name)),
+  ];
+
+  /// (model, normalized name).
+  late final List<(CatalogModel, String)> normalizedModels = [
+    for (final m in models) (m, normalize(m.name)),
+  ];
 
   /// normalized name or alias -> makes ("honda" exists for cars and motorcycles).
   late final Map<String, List<CatalogMake>> makesByKey = () {
@@ -129,16 +140,12 @@ class CatalogRepository {
   /// PostgREST returns at most 1000 rows per request (Supabase default).
   static const _page = 1000;
 
-  Future<Catalog> load() async {
-    final makeRows = await _client.from('makes').select('id, name, category_id, is_popular');
+  /// [allMakes] comes from `allMakesProvider` (already loaded by
+  /// onboarding or the filter sheet): only the models are fetched here.
+  Future<Catalog> load(List<Make> allMakes) async {
     final makes = [
-      for (final r in makeRows)
-        CatalogMake(
-          id: r['id'] as String,
-          name: r['name'] as String,
-          categoryId: r['category_id'] as String,
-          isPopular: (r['is_popular'] as bool?) ?? false,
-        ),
+      for (final m in allMakes)
+        CatalogMake(id: m.id, name: m.name, categoryId: m.categoryId, isPopular: m.isPopular),
     ];
 
     final models = <CatalogModel>[];
@@ -167,6 +174,7 @@ final catalogRepositoryProvider = Provider<CatalogRepository>(
 );
 
 /// Kept for the whole session (not auto-disposed).
-final catalogProvider = FutureProvider<Catalog>(
-  (ref) => ref.watch(catalogRepositoryProvider).load(),
-);
+final catalogProvider = FutureProvider<Catalog>((ref) async {
+  final makes = await ref.watch(allMakesProvider.future);
+  return ref.watch(catalogRepositoryProvider).load(makes);
+});

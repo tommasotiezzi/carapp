@@ -23,12 +23,16 @@ class _FakeRepo extends Fake implements FavoritesRepository {
 
   final Set<String> ids;
   bool fail = false;
+  int fetchAllCalls = 0;
 
   @override
   Future<Set<String>> fetchIds() async => {...ids};
 
   @override
-  Future<List<SavedListing>> fetchAll() async => const [];
+  Future<List<SavedListing>> fetchAll() async {
+    fetchAllCalls++;
+    return [for (final id in ids) SavedListing(listingId: id, priceCentsAtSave: 100)];
+  }
 
   @override
   Future<void> save({required String listingId, required int? priceCents}) async {
@@ -113,6 +117,19 @@ void main() {
       expect(tracker.events, isEmpty);
     });
 
+    test('Salvati follows save / unsave locally, without reloading', () async {
+      final salvati = await container.read(savedListingsProvider.future);
+      expect(salvati.map((r) => r.listingId), ['a']);
+      final ctrl = container.read(savedControllerProvider.notifier);
+
+      await ctrl.setSaved(listingId: 'l1', saved: true, priceCents: 1450000, item: _item(price: 1450000));
+      expect(container.read(savedListingsProvider).value!.map((r) => r.listingId), ['l1', 'a']);
+
+      await ctrl.setSaved(listingId: 'a', saved: false);
+      expect(container.read(savedListingsProvider).value!.map((r) => r.listingId), ['l1']);
+      expect(repo.fetchAllCalls, 1, reason: 'loaded once, then updated locally');
+    });
+
     test('guests have nothing saved', () async {
       final guest = ProviderContainer(overrides: [
         currentUserIdProvider.overrideWithValue(null),
@@ -135,10 +152,10 @@ void main() {
           'anon',
           authOptions: const AuthClientOptions(autoRefreshToken: false),
         )),
-        savedListingsProvider.overrideWith((ref) async => [
+        savedListingsProvider.overrideWith(() => _FixedSalvati([
               SavedListing(listingId: 'l1', priceCentsAtSave: 1500000, listing: _item(price: 1450000)),
               const SavedListing(listingId: 'l2', priceCentsAtSave: 900000),
-            ]),
+            ])),
       ],
       child: const MaterialApp(
         locale: Locale('it'),
@@ -165,4 +182,13 @@ void main() {
     expect(find.text('Volkswagen Golf'), findsOneWidget);
     expect(find.text('Non più disponibile'), findsOneWidget);
   });
+}
+
+class _FixedSalvati extends SavedListingsController {
+  _FixedSalvati(this.rows);
+
+  final List<SavedListing> rows;
+
+  @override
+  Future<List<SavedListing>> build() async => rows;
 }

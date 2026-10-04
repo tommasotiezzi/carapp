@@ -48,8 +48,10 @@ List<SearchSuggestion> suggest(String text, Catalog catalog, {int limit = 6}) {
   // A two-word make being typed ("alfa ro" -> Alfa Romeo): its first word
   // also matches as an alias, so check the pair before anything else.
   if (pair != null) {
-    final pairMakes = catalog.makes.where((m) => Catalog.normalize(m.name).startsWith(pair)).toList()
-      ..sort(byPopularity);
+    final pairMakes = [
+      for (final (m, key) in catalog.normalizedMakes)
+        if (key.startsWith(pair)) m,
+    ]..sort(byPopularity);
     for (final m in pairMakes) {
       add(SearchSuggestion(label: m.name, query: complete(m.name, replacesPair: true)));
     }
@@ -57,23 +59,26 @@ List<SearchSuggestion> suggest(String text, Catalog catalog, {int limit = 6}) {
   }
 
   if (typedMakes.isEmpty) {
-    final makes = catalog.makes.where((m) => Catalog.normalize(m.name).startsWith(partial)).toList()
-      ..sort(byPopularity);
+    final makes = [
+      for (final (m, key) in catalog.normalizedMakes)
+        if (key.startsWith(partial)) m,
+    ]..sort(byPopularity);
     for (final m in makes) {
       add(SearchSuggestion(label: m.name, query: complete(m.name)));
     }
   }
 
-  final models = catalog.models.where((m) {
-    if (typedMakes.isNotEmpty && !typedMakes.contains(m.makeId)) return false;
-    final key = Catalog.normalize(m.name);
-    // Without a make, single letters/numbers are too vague to suggest.
-    if (typedMakes.isEmpty && partial.length < 3) return false;
-    return key.startsWith(partial) || (pair != null && key.startsWith(pair));
-  }).toList()
-    ..sort((a, b) => a.name.length.compareTo(b.name.length));
-  for (final m in models) {
-    final key = Catalog.normalize(m.name);
+  // Without a make, 1-2 characters are too vague to suggest models.
+  final models = typedMakes.isEmpty && partial.length < 3
+      ? <(CatalogModel, String)>[]
+      : [
+          for (final (m, key) in catalog.normalizedModels)
+            if ((typedMakes.isEmpty || typedMakes.contains(m.makeId)) &&
+                (key.startsWith(partial) || (pair != null && key.startsWith(pair))))
+              (m, key),
+        ]
+    ..sort((a, b) => a.$1.name.length.compareTo(b.$1.name.length));
+  for (final (m, key) in models) {
     final replacesPair = pair != null && key.startsWith(pair) && !key.startsWith(partial);
     // With the make already typed, complete just the model name.
     add(SearchSuggestion(

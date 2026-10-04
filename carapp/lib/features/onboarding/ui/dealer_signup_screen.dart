@@ -55,12 +55,15 @@ class _DealerSignupScreenState extends ConsumerState<DealerSignupScreen> {
       _busy = true;
       _error = null;
     });
+    // Read before awaiting: the user may leave the screen meanwhile.
+    final dealers = ref.read(dealerRepositoryProvider);
+    final onboarding = ref.read(onboardingControllerProvider.notifier);
     try {
-      await ref.read(dealerRepositoryProvider).signUp(
+      await dealers.signUp(
             vatNumber: vat,
             displayName: _nameCtrl.text,
           );
-      await ref.read(onboardingControllerProvider.notifier).complete(keepPreferences: false);
+      await onboarding.complete(keepPreferences: false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.dealerCreated)));
       exitOnboarding(context);

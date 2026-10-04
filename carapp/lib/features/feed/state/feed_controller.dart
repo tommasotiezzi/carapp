@@ -10,11 +10,19 @@ class FeedState {
     this.items = const [],
     this.isLoadingMore = false,
     this.hasMore = true,
+    this.generation = 0,
   });
 
   final List<FeedItem> items;
   final bool isLoadingMore;
   final bool hasMore;
+
+  /// New for every first page (new filters, refresh); kept by loadMore.
+  /// The pager uses it as its key, so a new list never reuses the
+  /// previous list's video players (they are kept by position).
+  final int generation;
+
+  static int _nextGeneration = 0;
 
   FeedState copyWith({
     List<FeedItem>? items,
@@ -25,6 +33,7 @@ class FeedState {
         items: items ?? this.items,
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
         hasMore: hasMore ?? this.hasMore,
+        generation: generation,
       );
 }
 
@@ -41,7 +50,11 @@ class FeedController extends AsyncNotifier<FeedState> {
     final items = await ref
         .read(feedRepositoryProvider)
         .fetchPage(pageSize: _pageSize, filters: filters);
-    return FeedState(items: items, hasMore: items.length == _pageSize);
+    return FeedState(
+      items: items,
+      hasMore: items.length == _pageSize,
+      generation: ++FeedState._nextGeneration,
+    );
   }
 
   /// Called when the user gets close to the end of what is loaded.
@@ -53,10 +66,13 @@ class FeedController extends AsyncNotifier<FeedState> {
     state = AsyncData(current.copyWith(isLoadingMore: true));
     try {
       final next = await ref.read(feedRepositoryProvider).fetchPage(
-            before: current.items.last.publishedAt,
+            after: current.items.last,
             pageSize: _pageSize,
             filters: ref.read(feedFiltersProvider),
           );
+      // Filters changed (or refresh) while loading: this page belongs to
+      // the old list and must not be appended to the new one.
+      if (!_stillShowing(current)) return;
       state = AsyncData(current.copyWith(
         items: [...current.items, ...next],
         isLoadingMore: false,
@@ -64,13 +80,16 @@ class FeedController extends AsyncNotifier<FeedState> {
       ));
     } catch (_) {
       // Keep what we have; the next scroll retries.
-      state = AsyncData(current.copyWith(isLoadingMore: false));
+      if (_stillShowing(current)) state = AsyncData(current.copyWith(isLoadingMore: false));
     }
   }
 
+  bool _stillShowing(FeedState list) =>
+      ref.mounted && state.value?.generation == list.generation;
+
   Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(build);
+    ref.invalidateSelf();
+    await future;
   }
 }
 
