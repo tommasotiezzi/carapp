@@ -11,6 +11,8 @@ import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/state/onboarding_controller.dart';
+import '../../saved/state/saved_controller.dart';
+import '../../saved/ui/save_action.dart';
 import '../data/feed_item.dart';
 import '../state/feed_controller.dart';
 import 'feed_overlay.dart';
@@ -276,13 +278,18 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
               ),
               SafeArea(
                 bottom: false,
-                child: FeedOverlay(
-                  item: item,
-                  onOpenDetail: () => _openDetail(item),
-                  onSave: () => _interact(() => _comingSoon('Salva')),
-                  onShare: () => _interact(() => _comingSoon('Condividi')),
-                  onContact: () => _interact(() => _openDetail(item)),
-                  onOpenFilters: () => _interact(() => _comingSoon('Filtri')),
+                child: Consumer(
+                  builder: (context, ref, _) => FeedOverlay(
+                    item: item,
+                    saved: ref.watch(isSavedProvider(item.id)),
+                    onOpenDetail: () => _openDetail(item),
+                    onSave: () => _interact(
+                      () => toggleSave(context, ref, listingId: item.id, priceCents: item.priceCents),
+                    ),
+                    onShare: () => _interact(() => _comingSoon('Condividi')),
+                    onContact: () => _interact(() => _openDetail(item)),
+                    onOpenFilters: () => _interact(() => _comingSoon('Filtri')),
+                  ),
                 ),
               ),
             ],

@@ -7,6 +7,8 @@ import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../../saved/state/saved_controller.dart';
+import '../../saved/ui/save_action.dart';
 import '../data/listing_detail.dart';
 import '../state/listing_providers.dart';
 import 'listing_photos.dart';
@@ -180,10 +182,15 @@ class _ListingBodyState extends State<_ListingBody> {
                     onTap: () => _back(context),
                   ),
                   const Spacer(),
-                  _RoundButton(
-                    icon: Icons.bookmark_border,
-                    tooltip: t.commonSave,
-                    onTap: () => _comingSoon(t.commonSave),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final saved = ref.watch(isSavedProvider(l.id));
+                      return _RoundButton(
+                        icon: saved ? Icons.bookmark : Icons.bookmark_border,
+                        tooltip: saved ? t.savedRemove : t.commonSave,
+                        onTap: () => toggleSave(context, ref, listingId: l.id, priceCents: l.priceCents),
+                      );
+                    },
                   ),
                   const SizedBox(width: AppSpacing.s),
                   _RoundButton(
