@@ -15,6 +15,7 @@ import 'package:carapp/features/search/data/suggestions.dart';
 import 'package:carapp/features/search/ui/search_screen.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
 import 'package:carapp/l10n/gen/app_localizations_it.dart';
+import 'package:carapp/features/onboarding/state/onboarding_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,8 +70,7 @@ class _FakeFeedRepo extends Fake implements FeedRepository {
   Future<List<FeedItem>> fetchPage({
     FeedItem? after,
     int pageSize = 10,
-    FeedFilters filters = FeedFilters.empty,
-  }) async {
+    FeedFilters filters = FeedFilters.empty, SellerRef? seller}) async {
     requests.add(filters);
     return filters.fuelTypes.isEmpty ? [_item('a'), _item('b')] : const [];
   }
@@ -268,7 +268,8 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          supabaseProvider.overrideWithValue(SupabaseClient(
+          homeProvinceProvider.overrideWithValue(null),
+        supabaseProvider.overrideWithValue(SupabaseClient(
             'https://test.supabase.co',
             'anon',
             authOptions: const AuthClientOptions(autoRefreshToken: false),

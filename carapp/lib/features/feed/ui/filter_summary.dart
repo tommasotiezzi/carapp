@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../../../core/geo/italian_capitals.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -33,6 +34,13 @@ String priceLabel(AppLocalizations t, FeedFilters f) {
   return t.filterPrice;
 }
 
+/// "Entro 50 km da Siena" ("Distanza" when off).
+String distanceLabelOf(AppLocalizations t, FeedFilters f) {
+  if (!f.hasDistance) return t.filterDistance;
+  final city = ItalianCapitals.byCode[f.nearProvince]?.name;
+  return city == null ? t.distanceWithin(f.radiusKm!) : t.distanceWithinFrom(f.radiusKm!, city);
+}
+
 /// "Dal 2018", "Fino al 2018", "2018", "2015–2018".
 String yearLabel(AppLocalizations t, FeedFilters f) {
   final min = f.yearMin, max = f.yearMax;
@@ -46,6 +54,10 @@ String yearLabel(AppLocalizations t, FeedFilters f) {
 /// [catalog] turns ids into names; without it, counts are shown.
 List<FilterChipData> filterChips(AppLocalizations t, FeedFilters f, Catalog? catalog) {
   final chips = <FilterChipData>[];
+
+  if (f.hasDistance) {
+    chips.add(FilterChipData(distanceLabelOf(t, f), (x) => x.clear(FilterSection.distance)));
+  }
 
   final category = switch (f.categoryId) {
     'car' => t.vehicleCar,

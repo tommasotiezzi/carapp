@@ -10,6 +10,7 @@ import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/ui/login_sheet.dart';
+import '../../onboarding/state/onboarding_controller.dart';
 import '../../feed/data/feed_filters.dart';
 import '../../feed/state/feed_controller.dart';
 import '../../feed/state/feed_filters_controller.dart';
@@ -111,7 +112,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       if (mounted) setState(() => _ignored = const []);
       return;
     }
-    final parsed = QueryParser(catalog.value ?? Catalog.empty).parse(text);
+    final parsed = QueryParser(
+      catalog.value ?? Catalog.empty,
+      homeProvince: ref.read(homeProvinceProvider),
+    ).parse(text);
     _fromText = parsed.filters;
     if (mounted) setState(() => _ignored = parsed.ignored);
     await ref.read(feedFiltersProvider.notifier).apply(parsed.filters);

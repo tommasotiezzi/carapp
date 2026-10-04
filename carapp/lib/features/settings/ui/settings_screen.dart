@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/geo/capital_picker.dart';
+import '../../../core/geo/italian_capitals.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
@@ -14,6 +16,7 @@ import '../../auth/ui/login_sheet.dart';
 import '../../legal/data/consents.dart';
 import '../../legal/state/consent_providers.dart';
 import '../../legal/ui/consent_checks.dart';
+import '../../onboarding/state/onboarding_controller.dart';
 import '../data/account_repository.dart';
 import '../state/settings_providers.dart';
 import 'account_sheets.dart';
@@ -59,6 +62,8 @@ class SettingsScreen extends ConsumerWidget {
             _AccountSection(email: user.email ?? ''),
             _Header(t.settingsAboutYou),
             const _AboutYouSection(),
+            _Header(t.settingsPublicProfile),
+            const _PublicProfileSection(),
             _Header(t.settingsNotifications),
             const _NotificationsSection(),
             _Header(t.settingsEmails),
@@ -192,7 +197,7 @@ class _AboutYouSection extends ConsumerWidget {
             await _guarded(
               context,
               () => controller.edit(
-                MyProfile(displayName: value, birthDate: profile.birthDate, gender: profile.gender),
+                profile.copyWith(displayName: value),
                 {'display_name': value},
               ),
             );
@@ -209,7 +214,7 @@ class _AboutYouSection extends ConsumerWidget {
               : clear(() => _guarded(
                     context,
                     () => controller.edit(
-                      MyProfile(displayName: profile.displayName, gender: profile.gender),
+                      profile.copyWith(birthDate: null),
                       {'birth_date': null},
                     ),
                   )),
@@ -226,7 +231,7 @@ class _AboutYouSection extends ConsumerWidget {
             await _guarded(
               context,
               () => controller.edit(
-                MyProfile(displayName: profile.displayName, birthDate: picked, gender: profile.gender),
+                profile.copyWith(birthDate: picked),
                 {'birth_date': picked.toIso8601String().substring(0, 10)},
               ),
             );
@@ -241,7 +246,7 @@ class _AboutYouSection extends ConsumerWidget {
               : clear(() => _guarded(
                     context,
                     () => controller.edit(
-                      MyProfile(displayName: profile.displayName, birthDate: profile.birthDate),
+                      profile.copyWith(gender: null),
                       {'gender': null},
                     ),
                   )),
@@ -269,7 +274,7 @@ class _AboutYouSection extends ConsumerWidget {
             await _guarded(
               context,
               () => controller.edit(
-                MyProfile(displayName: profile.displayName, birthDate: profile.birthDate, gender: picked),
+                profile.copyWith(gender: picked),
                 {'gender': picked.dbName},
               ),
             );
@@ -278,6 +283,105 @@ class _AboutYouSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
           child: Text(t.settingsAboutYouNote, style: Theme.of(context).textTheme.bodySmall),
+        ),
+      ],
+    );
+  }
+}
+
+/// What other people see on the user's seller page: capital and the
+/// contacts they choose to show (the name is in "Su di te").
+class _PublicProfileSection extends ConsumerWidget {
+  const _PublicProfileSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final profile = ref.watch(myProfileProvider).value ?? const MyProfile();
+    final controller = ref.read(myProfileProvider.notifier);
+    final onboarding = ref.read(onboardingControllerProvider.notifier);
+    final hasPhone = (profile.phone ?? '').trim().isNotEmpty;
+
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.place_outlined),
+          title: Text(t.settingsWhere),
+          subtitle: Text(ItalianCapitals.byCode[profile.province]?.label ?? t.prefsWhereNone),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final code = await showCapitalPicker(context, selected: profile.province);
+            if (code == null || !context.mounted) return;
+            // Also the center of "vicino a me" and of the distances.
+            onboarding.updatePreferences((p) => p.copyWith(province: code, maxDistanceKm: p.maxDistanceKm ?? 50));
+            await _guarded(
+              context,
+              () => controller.edit(
+                profile.copyWith(province: code),
+                {'province': code, 'city': ItalianCapitals.byCode[code]?.name},
+              ),
+            );
+            await onboarding.savePreferences();
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.phone_outlined),
+          title: Text(t.settingsPhone),
+          subtitle: Text(hasPhone ? profile.phone! : t.settingsAdd),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final phone = await showTextInputSheet(
+              context,
+              title: t.settingsPhone,
+              initial: profile.phone ?? '',
+              maxLength: 20,
+            );
+            if (phone == null || !context.mounted) return;
+            final value = phone.trim().isEmpty ? null : phone.trim();
+            await _guarded(
+              context,
+              () => controller.edit(
+                profile.copyWith(
+                  phone: value,
+                  phonePublic: value != null && profile.phonePublic,
+                  whatsappPublic: value != null && profile.whatsappPublic,
+                ),
+                {
+                  'phone': value,
+                  if (value == null) 'phone_public': false,
+                  if (value == null) 'whatsapp_public': false,
+                },
+              ),
+            );
+          },
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.call_outlined),
+          title: Text(t.settingsPhonePublic),
+          subtitle: hasPhone ? null : Text(t.settingsPhoneNeeded),
+          value: profile.phonePublic,
+          onChanged: !hasPhone
+              ? null
+              : (v) => _guarded(
+                    context,
+                    () => controller.edit(profile.copyWith(phonePublic: v), {'phone_public': v}),
+                  ),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.chat_outlined),
+          title: Text(t.settingsWhatsappPublic),
+          subtitle: hasPhone ? null : Text(t.settingsPhoneNeeded),
+          value: profile.whatsappPublic,
+          onChanged: !hasPhone
+              ? null
+              : (v) => _guarded(
+                    context,
+                    () => controller.edit(profile.copyWith(whatsappPublic: v), {'whatsapp_public': v}),
+                  ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.page, 0, AppSpacing.page, AppSpacing.s),
+          child: Text(t.settingsPublicProfileNote, style: Theme.of(context).textTheme.bodySmall),
         ),
       ],
     );

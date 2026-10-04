@@ -5,12 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/geo/capital_picker.dart';
+import '../../../core/geo/italian_capitals.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../feed/data/feed_filters.dart';
 import '../../onboarding/data/catalog_repository.dart';
+import '../../onboarding/state/onboarding_controller.dart';
 import '../../search/data/catalog.dart';
 import '../../search/data/query_parser.dart';
 import '../data/sell_draft.dart';
@@ -134,6 +137,14 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
   void _prefill(SellerProfile p) {
     if (_prefilled) return;
     _prefilled = true;
+    final home = ref.read(homeProvinceProvider);
+    if (_d.province == null && home != null) {
+      _d = _d.copyWith(province: home);
+      if (_city.text.isEmpty) {
+        _city.text = ItalianCapitals.byCode[home]?.name ?? '';
+        _d = _d.copyWith(city: _city.text);
+      }
+    }
     if (_city.text.isEmpty && (p.city ?? '').isNotEmpty) {
       _city.text = p.city!;
       _d = _d.copyWith(city: p.city);
@@ -383,15 +394,13 @@ class _SellDetailsScreenState extends ConsumerState<SellDetailsScreen> {
                   child: _PickerField(
                     label: t.detailsProvince,
                     value: _d.province,
+                    error: required((_d.province ?? '').isNotEmpty),
                     onTap: () async {
-                      final names = QueryParser.provinceNames.entries.toList()
-                        ..sort((a, b) => a.value.compareTo(b.value));
-                      final picked = await _pick(
-                        context,
-                        hint: t.detailsProvince,
-                        options: [for (final e in names) (e.key, '${e.value} (${e.key})')],
-                      );
-                      if (picked != null) _update((d) => d.copyWith(province: picked));
+                      final picked = await showCapitalPicker(context, selected: _d.province);
+                      if (picked == null) return;
+                      // An empty city becomes the capital's name.
+                      if (_city.text.trim().isEmpty) _city.text = ItalianCapitals.byCode[picked]?.name ?? '';
+                      _update((d) => d.copyWith(province: picked, city: _city.text));
                     },
                   ),
                 ),

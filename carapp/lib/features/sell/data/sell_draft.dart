@@ -99,6 +99,8 @@ class SellDetails {
         if (priceCents == null) 'price_cents',
         if (fuelType == null) 'fuel_type',
         if ((city ?? '').trim().isEmpty) 'city',
+        // The capital places the listing ("entro X km").
+        if ((province ?? '').trim().isEmpty) 'province',
       ];
 
   bool get isComplete => missing.isEmpty;

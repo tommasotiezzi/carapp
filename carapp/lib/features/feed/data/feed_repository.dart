@@ -15,17 +15,28 @@ class FeedRepository {
 
   final SupabaseClient _client;
 
+  /// [seller] narrows to one seller's listings (profile pages).
   Future<List<FeedItem>> fetchPage({
     FeedItem? after,
     int pageSize = 10,
     FeedFilters filters = FeedFilters.empty,
+    SellerRef? seller,
   }) async {
+    final f = filters;
+    // "Entro X km": the provinces whose capital is in range.
+    final provinces = f.provincesInRange;
+    if (provinces != null && provinces.isEmpty) return const [];
+
     var query = _client
         .from('listings')
         .select(FeedItem.selectColumns)
         .eq('status', 'active');
 
-    final f = filters;
+    if (seller != null) {
+      query = seller.isDealer
+          ? query.eq('dealer_id', seller.id)
+          : query.eq('owner_id', seller.id).eq('seller_type', 'private');
+    }
     if (f.categoryId != null) query = query.eq('category_id', f.categoryId!);
     if (f.priceMinCents != null) query = query.gte('price_cents', f.priceMinCents!);
     if (f.priceMaxCents != null) query = query.lte('price_cents', f.priceMaxCents!);
@@ -36,7 +47,11 @@ class FeedRepository {
     if (f.mileageMaxKm != null) query = query.lte('mileage_km', f.mileageMaxKm!);
     if (f.fuelTypes.isNotEmpty) query = query.inFilter('fuel_type', f.fuelTypes.toList());
     if (f.transmission != null) query = query.eq('transmission', f.transmission!);
-    if (f.province != null) query = query.eq('province', f.province!);
+    if (provinces != null) {
+      query = query.inFilter('province', provinces.toList()..sort());
+    } else if (f.province != null) {
+      query = query.eq('province', f.province!);
+    }
     final logic = logicFilter(f, after: after);
     if (logic != null) query = query.or(logic);
 
@@ -82,6 +97,21 @@ String _cursor(FeedItem after) {
 /// break (or widen) the PostgREST filter.
 String _likeSafe(String word) =>
     word.toLowerCase().replaceAll(RegExp(r'[^a-z0-9àèéìòù]'), '');
+
+/// A seller page: a dealer (`dealers.id`) or a private seller (`profiles.id`).
+class SellerRef {
+  const SellerRef.dealer(this.id) : isDealer = true;
+  const SellerRef.private(this.id) : isDealer = false;
+
+  final String id;
+  final bool isDealer;
+
+  @override
+  bool operator ==(Object other) => other is SellerRef && other.id == id && other.isDealer == isDealer;
+
+  @override
+  int get hashCode => Object.hash(id, isDealer);
+}
 
 final feedRepositoryProvider = Provider<FeedRepository>(
   (ref) => FeedRepository(ref.watch(supabaseProvider)),

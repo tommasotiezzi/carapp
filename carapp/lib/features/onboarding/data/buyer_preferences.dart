@@ -37,6 +37,8 @@ class BuyerPreferences {
     this.yearMin,
     this.mileageMaxKm,
     this.noviceDriver = false,
+    this.province,
+    this.maxDistanceKm,
   });
 
   final String? categoryId; // 'car' | 'motorcycle' | null = all
@@ -45,6 +47,13 @@ class BuyerPreferences {
   final int? yearMin;
   final int? mileageMaxKm;
   final bool noviceDriver;
+
+  /// "Dove sei?": the capital the user picked (also on their profile).
+  final String? province;
+
+  /// How far they would go; with [province] it becomes the feed's
+  /// distance filter until they change it.
+  final int? maxDistanceKm;
 
   static const yearOptions = [2015, 2018, 2021];
   static const mileageOptions = [50000, 100000, 150000];
@@ -55,7 +64,9 @@ class BuyerPreferences {
       makeIds.isEmpty &&
       yearMin == null &&
       mileageMaxKm == null &&
-      !noviceDriver;
+      !noviceDriver &&
+      province == null &&
+      maxDistanceKm == null;
 
   static const _unset = Object();
 
@@ -66,6 +77,8 @@ class BuyerPreferences {
     Object? yearMin = _unset,
     Object? mileageMaxKm = _unset,
     bool? noviceDriver,
+    Object? province = _unset,
+    Object? maxDistanceKm = _unset,
   }) =>
       BuyerPreferences(
         categoryId: identical(categoryId, _unset) ? this.categoryId : categoryId as String?,
@@ -75,6 +88,9 @@ class BuyerPreferences {
         mileageMaxKm:
             identical(mileageMaxKm, _unset) ? this.mileageMaxKm : mileageMaxKm as int?,
         noviceDriver: noviceDriver ?? this.noviceDriver,
+        province: identical(province, _unset) ? this.province : province as String?,
+        maxDistanceKm:
+            identical(maxDistanceKm, _unset) ? this.maxDistanceKm : maxDistanceKm as int?,
       );
 
   // ---- local cache ----
@@ -86,6 +102,8 @@ class BuyerPreferences {
         'year_min': yearMin,
         'mileage_max_km': mileageMaxKm,
         'novice_driver': noviceDriver,
+        'province': province,
+        'max_distance_km': maxDistanceKm,
       };
 
   factory BuyerPreferences.fromJson(Map<String, dynamic> json) => BuyerPreferences(
@@ -97,6 +115,8 @@ class BuyerPreferences {
         yearMin: (json['year_min'] as num?)?.toInt(),
         mileageMaxKm: (json['mileage_max_km'] as num?)?.toInt(),
         noviceDriver: (json['novice_driver'] as bool?) ?? false,
+        province: json['province'] as String?,
+        maxDistanceKm: (json['max_distance_km'] as num?)?.toInt(),
       );
 
   // ---- `buyer_preferences` row ----
@@ -110,5 +130,6 @@ class BuyerPreferences {
         'year_min': yearMin,
         'mileage_max_km': mileageMaxKm,
         'novice_driver': noviceDriver,
+        'max_distance_km': maxDistanceKm,
       };
 }

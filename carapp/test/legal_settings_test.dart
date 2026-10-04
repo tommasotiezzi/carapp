@@ -257,7 +257,15 @@ void main() {
       expect(find.text('mario@example.com'), findsOneWidget);
       expect(find.text('Mario'), findsOneWidget);
 
+      // Public profile: capital and the contacts to show.
+      await tester.scrollUntilVisible(find.text('Mostra il numero sul profilo'), 200,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Dove sei'), findsOneWidget);
+      expect(find.text('Prima aggiungi il numero'), findsNWidgets(2));
+
       // Price drop is off (stored row); switch it on.
+      await tester.scrollUntilVisible(find.text('Calo di prezzo dei salvati'), 200,
+          scrollable: find.byType(Scrollable).first);
       await tester.ensureVisible(find.text('Calo di prezzo dei salvati'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Calo di prezzo dei salvati'));

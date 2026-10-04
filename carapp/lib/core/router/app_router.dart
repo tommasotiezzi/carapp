@@ -12,7 +12,9 @@ import '../../features/onboarding/ui/intent_screen.dart';
 import '../../features/onboarding/ui/preferences_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/search/ui/search_screen.dart';
+import '../../features/feed/data/feed_repository.dart';
 import '../../features/sell/ui/capture_screen.dart';
+import '../../features/seller/ui/seller_screen.dart';
 import '../../features/sell/ui/sell_details_screen.dart';
 import '../../features/sell/ui/sell_done_screen.dart';
 import '../../features/sell/ui/sell_start_screen.dart';
@@ -149,6 +151,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.chat,
         parentNavigatorKey: _rootKey,
         builder: (_, state) => ChatScreen(conversationId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: AppRoutes.dealerPage,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => SellerScreen(seller: SellerRef.dealer(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: AppRoutes.sellerPage,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => SellerScreen(seller: SellerRef.private(state.pathParameters['id']!)),
       ),
       GoRoute(
         path: AppRoutes.settings,

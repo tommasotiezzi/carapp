@@ -11,6 +11,7 @@ import 'package:carapp/features/feed/state/feed_controller.dart';
 import 'package:carapp/features/feed/state/feed_filters_controller.dart';
 import 'package:carapp/features/feed/ui/feed_screen.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
+import 'package:carapp/features/onboarding/state/onboarding_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,8 +33,7 @@ class _FakeFeedRepo extends Fake implements FeedRepository {
   Future<List<FeedItem>> fetchPage({
     FeedItem? after,
     int pageSize = 10,
-    FeedFilters filters = FeedFilters.empty,
-  }) async =>
+    FeedFilters filters = FeedFilters.empty, SellerRef? seller}) async =>
       [
         for (final id in ['a', 'b'])
           FeedItem.fromRow({
@@ -56,6 +56,7 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        homeProvinceProvider.overrideWithValue(null),
         supabaseProvider.overrideWithValue(SupabaseClient(
           'https://test.supabase.co',
           'anon',
@@ -170,7 +171,6 @@ class _SlowRepo extends Fake implements FeedRepository {
   Future<List<FeedItem>> fetchPage({
     FeedItem? after,
     int pageSize = 10,
-    FeedFilters filters = FeedFilters.empty,
-  }) =>
+    FeedFilters filters = FeedFilters.empty, SellerRef? seller}) =>
       next!.future;
 }

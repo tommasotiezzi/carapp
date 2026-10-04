@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/geo/distance_label.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/media/shared_video.dart';
 import '../../../core/router/routes.dart';
@@ -11,6 +12,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../chat/ui/contact_actions.dart';
+import '../../onboarding/state/onboarding_controller.dart';
 import '../../saved/state/saved_controller.dart';
 import '../../saved/ui/save_action.dart';
 import '../../share/share_listing.dart';
@@ -151,7 +153,21 @@ class _ListingBodyState extends State<_ListingBody> {
                           children: [
                             const Icon(Icons.place_outlined, size: 16, color: AppColors.inkMuted),
                             const SizedBox(width: AppSpacing.xxs),
-                            Flexible(child: Text(l.location!, style: text.bodyMedium)),
+                            Flexible(
+                              child: Consumer(
+                                builder: (context, ref, _) {
+                                  final distance = distanceLabel(
+                                    t,
+                                    home: ref.watch(homeProvinceProvider),
+                                    province: l.province,
+                                  );
+                                  return Text(
+                                    [l.location!, ?distance].join(' · '),
+                                    style: text.bodyMedium,
+                                  );
+                                },
+                              ),
+                            ),
                           ],
                         ),
                       ],

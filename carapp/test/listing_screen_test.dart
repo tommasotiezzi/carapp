@@ -4,6 +4,7 @@ import 'package:carapp/features/listing/data/listing_detail.dart';
 import 'package:carapp/features/listing/state/listing_providers.dart';
 import 'package:carapp/features/listing/ui/listing_screen.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
+import 'package:carapp/features/onboarding/state/onboarding_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,7 +49,8 @@ final _listing = ListingDetail.fromRow({
 Widget _app(ListingDetail? listing, {List<ListingQuestion> questions = const []}) {
   return ProviderScope(
     overrides: [
-      supabaseProvider.overrideWithValue(SupabaseClient(
+      homeProvinceProvider.overrideWithValue(null),
+        supabaseProvider.overrideWithValue(SupabaseClient(
         'https://test.supabase.co',
         'anon',
         authOptions: const AuthClientOptions(autoRefreshToken: false),

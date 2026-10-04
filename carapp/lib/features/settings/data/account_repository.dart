@@ -19,11 +19,46 @@ enum Gender {
 
 /// The optional parts of `profiles` editable in the settings.
 class MyProfile {
-  const MyProfile({this.displayName, this.birthDate, this.gender});
+  const MyProfile({
+    this.displayName,
+    this.birthDate,
+    this.gender,
+    this.province,
+    this.phone,
+    this.phonePublic = false,
+    this.whatsappPublic = false,
+  });
 
   final String? displayName;
   final DateTime? birthDate;
   final Gender? gender;
+
+  /// Public profile: capital, and the contacts the user chose to show.
+  final String? province;
+  final String? phone;
+  final bool phonePublic;
+  final bool whatsappPublic;
+
+  static const _unset = Object();
+
+  MyProfile copyWith({
+    Object? displayName = _unset,
+    Object? birthDate = _unset,
+    Object? gender = _unset,
+    Object? province = _unset,
+    Object? phone = _unset,
+    bool? phonePublic,
+    bool? whatsappPublic,
+  }) =>
+      MyProfile(
+        displayName: identical(displayName, _unset) ? this.displayName : displayName as String?,
+        birthDate: identical(birthDate, _unset) ? this.birthDate : birthDate as DateTime?,
+        gender: identical(gender, _unset) ? this.gender : gender as Gender?,
+        province: identical(province, _unset) ? this.province : province as String?,
+        phone: identical(phone, _unset) ? this.phone : phone as String?,
+        phonePublic: phonePublic ?? this.phonePublic,
+        whatsappPublic: whatsappPublic ?? this.whatsappPublic,
+      );
 
   static const minAge = 14;
   static const maxDisplayName = 60; // profiles.display_name check
@@ -36,6 +71,10 @@ class MyProfile {
         displayName: row['display_name'] as String?,
         birthDate: DateTime.tryParse((row['birth_date'] as String?) ?? ''),
         gender: Gender.fromDb(row['gender'] as String?),
+        province: row['province'] as String?,
+        phone: row['phone'] as String?,
+        phonePublic: (row['phone_public'] as bool?) ?? false,
+        whatsappPublic: (row['whatsapp_public'] as bool?) ?? false,
       );
 }
 
@@ -60,7 +99,7 @@ class AccountRepository {
   Future<MyProfile> fetchProfile() async {
     final row = await _client
         .from('profiles')
-        .select('display_name, birth_date, gender')
+        .select('display_name, birth_date, gender, province, phone, phone_public, whatsapp_public')
         .eq('id', _userId)
         .single();
     return MyProfile.fromRow(row);

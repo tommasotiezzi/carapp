@@ -2,27 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/geo/capital_picker.dart';
+import '../../../core/geo/italian_capitals.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/pill.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/data/buyer_preferences.dart';
 import '../../onboarding/data/catalog_repository.dart';
+import '../../onboarding/state/onboarding_controller.dart';
 import '../../onboarding/ui/budget_label.dart';
 import '../data/feed_filters.dart';
 import '../state/feed_filters_controller.dart';
 
 /// Filter sheet over the feed. [only] = one pill's section; null = all.
 /// Changes are a draft until "Mostra annunci", so the feed reloads once.
-Future<void> showFilterSheet(BuildContext context, {FilterSection? only}) =>
+/// [initial] / [onApply]: filters other than the feed's (a seller page).
+Future<void> showFilterSheet(
+  BuildContext context, {
+  FilterSection? only,
+  FeedFilters? initial,
+  ValueChanged<FeedFilters>? onApply,
+  List<FilterSection> sections = FilterSection.values,
+}) =>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => FilterSheet(only: only),
+      builder: (_) => FilterSheet(only: only, initial: initial, onApply: onApply, sections: sections),
     );
 
 String filterSectionTitle(AppLocalizations t, FilterSection s) => switch (s) {
+      FilterSection.distance => t.filterDistance,
       FilterSection.vehicle => t.prefsVehicle,
       FilterSection.price => t.filterPrice,
       FilterSection.brand => t.filterBrands,
@@ -34,23 +45,39 @@ String filterSectionTitle(AppLocalizations t, FilterSection s) => switch (s) {
     };
 
 class FilterSheet extends ConsumerStatefulWidget {
-  const FilterSheet({super.key, this.only});
+  const FilterSheet({
+    super.key,
+    this.only,
+    this.initial,
+    this.onApply,
+    this.sections = FilterSection.values,
+  });
 
   final FilterSection? only;
+
+  /// The sections shown when [only] is null.
+  final List<FilterSection> sections;
+  final FeedFilters? initial;
+  final ValueChanged<FeedFilters>? onApply;
 
   @override
   ConsumerState<FilterSheet> createState() => _FilterSheetState();
 }
 
 class _FilterSheetState extends ConsumerState<FilterSheet> {
-  late FeedFilters _draft = ref.read(feedFiltersProvider);
+  late FeedFilters _draft = widget.initial ?? ref.read(feedFiltersProvider);
 
   void _reset() => setState(
         () => _draft = widget.only == null ? FeedFilters.empty : _draft.clear(widget.only!),
       );
 
   Future<void> _apply() async {
-    await ref.read(feedFiltersProvider.notifier).apply(_draft);
+    final onApply = widget.onApply;
+    if (onApply != null) {
+      onApply(_draft);
+    } else {
+      await ref.read(feedFiltersProvider.notifier).apply(_draft);
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -86,7 +113,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               child: FilterSections(
                 filters: _draft,
                 onChanged: (f) => setState(() => _draft = f),
-                sections: single ? [widget.only!] : FilterSection.values,
+                sections: single ? [widget.only!] : widget.sections,
                 showLabels: !single,
               ),
             ),
@@ -148,6 +175,7 @@ class _FilterSectionsState extends ConsumerState<FilterSections> {
   Widget _section(AppLocalizations t, FilterSection s) {
     final d = _draft;
     return switch (s) {
+      FilterSection.distance => _distance(t),
       FilterSection.vehicle => PillWrap(children: [
           for (final (id, label) in [
             (null, t.vehicleAll),
@@ -248,6 +276,66 @@ class _FilterSectionsState extends ConsumerState<FilterSections> {
           ),
         ),
     };
+  }
+
+  /// "Da: Siena (SI)" + Tutta Italia / 25 / 50 / 100 / 200 km. The center
+  /// starts at the user's capital; a radius without one asks for it.
+  Widget _distance(AppLocalizations t) {
+    final d = _draft;
+    final home = ref.watch(homeProvinceProvider);
+    final center = d.nearProvince ?? home;
+
+    Future<String?> pickCenter() async {
+      final code = await showCapitalPicker(context, selected: center);
+      if (code != null && mounted) _update((x) => x.copyWith(nearProvince: code, radiusKm: x.radiusKm ?? 50));
+      return code;
+    }
+
+    Future<void> pickRadius(int? km) async {
+      if (km == null) {
+        _update((x) => x.clear(FilterSection.distance));
+        return;
+      }
+      if (center == null) {
+        final code = await showCapitalPicker(context);
+        if (code == null || !mounted) return;
+        _update((x) => x.copyWith(nearProvince: code, radiusKm: km));
+        return;
+      }
+      _update((x) => x.copyWith(nearProvince: center, radiusKm: km));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(t.distanceFrom, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(width: AppSpacing.s),
+            Flexible(
+              child: OutlinedButton.icon(
+                onPressed: pickCenter,
+                icon: const Icon(Icons.place_outlined, size: 18),
+                label: Text(
+                  ItalianCapitals.byCode[center]?.label ?? t.distancePickCenter,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.s),
+        PillWrap(children: [
+          Pill(label: t.distanceAll, selected: !d.hasDistance, onTap: () => pickRadius(null)),
+          for (final km in FeedFilters.radiusOptions)
+            Pill(
+              label: t.distanceKm(km),
+              selected: d.hasDistance && d.radiusKm == km,
+              onTap: () => pickRadius(km),
+            ),
+        ]),
+      ],
+    );
   }
 
   /// Popular makes (plus the selected ones); "+ Altre" shows them all.

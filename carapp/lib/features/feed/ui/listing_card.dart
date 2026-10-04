@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/geo/distance_label.dart';
 import '../../../core/media/media_url.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/gen/app_localizations.dart';
+import '../../onboarding/state/onboarding_controller.dart';
 import '../data/feed_item.dart';
 
 /// Grid card of a listing (Search results, Salvati): 3:4 cover, price,
@@ -41,6 +44,14 @@ class ListingCard extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final l = item;
     final cover = l == null ? null : MediaUrl.resolve(ref.read(supabaseProvider), l.coverPath);
+
+    // "Firenze · 50 km da te"
+    final distance = l == null
+        ? null
+        : distanceLabel(AppLocalizations.of(context), home: ref.watch(homeProvinceProvider), province: l.province);
+    final place = l == null
+        ? null
+        : [l.city, distance].whereType<String>().where((s) => s.trim().isNotEmpty).join(' · ');
 
     final image = AspectRatio(
       aspectRatio: 3 / 4,
@@ -91,6 +102,7 @@ class ListingCard extends ConsumerWidget {
           Text(Formatters.price(l.priceCents), style: text.titleSmall),
           Text(l.title, style: text.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
           if (facts.isNotEmpty) Text(facts, style: text.bodySmall, maxLines: 1),
+          if ((place ?? '').isNotEmpty) Text(place!, style: text.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );

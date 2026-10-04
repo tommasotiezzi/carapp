@@ -2799,6 +2799,216 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Scatta'**
   String get captureTakePhoto;
+
+  /// No description provided for @filterDistance.
+  ///
+  /// In it, this message translates to:
+  /// **'Distanza'**
+  String get filterDistance;
+
+  /// No description provided for @distanceAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutta Italia'**
+  String get distanceAll;
+
+  /// No description provided for @distanceKm.
+  ///
+  /// In it, this message translates to:
+  /// **'{km} km'**
+  String distanceKm(int km);
+
+  /// No description provided for @distanceWithin.
+  ///
+  /// In it, this message translates to:
+  /// **'Entro {km} km'**
+  String distanceWithin(int km);
+
+  /// No description provided for @distanceWithinFrom.
+  ///
+  /// In it, this message translates to:
+  /// **'Entro {km} km da {city}'**
+  String distanceWithinFrom(int km, String city);
+
+  /// No description provided for @distanceFrom.
+  ///
+  /// In it, this message translates to:
+  /// **'Da'**
+  String get distanceFrom;
+
+  /// No description provided for @distancePickCenter.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli il capoluogo'**
+  String get distancePickCenter;
+
+  /// No description provided for @distanceAway.
+  ///
+  /// In it, this message translates to:
+  /// **'{km} km da te'**
+  String distanceAway(int km);
+
+  /// No description provided for @distanceHere.
+  ///
+  /// In it, this message translates to:
+  /// **'Nella tua provincia'**
+  String get distanceHere;
+
+  /// No description provided for @capitalSearch.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca il capoluogo più vicino a te'**
+  String get capitalSearch;
+
+  /// No description provided for @prefsWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove sei?'**
+  String get prefsWhere;
+
+  /// No description provided for @prefsWhereHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Il capoluogo più vicino a te: così ti mostriamo gli annunci in zona.'**
+  String get prefsWhereHint;
+
+  /// No description provided for @prefsWhereNone.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli il capoluogo'**
+  String get prefsWhereNone;
+
+  /// No description provided for @prefsDistance.
+  ///
+  /// In it, this message translates to:
+  /// **'Fino a che distanza?'**
+  String get prefsDistance;
+
+  /// No description provided for @settingsPublicProfile.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo pubblico'**
+  String get settingsPublicProfile;
+
+  /// No description provided for @settingsPublicProfileNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Chi guarda i tuoi annunci vede il tuo nome, il capoluogo e i contatti che scegli di mostrare. Il numero lo vede solo chi ha un account.'**
+  String get settingsPublicProfileNote;
+
+  /// No description provided for @settingsWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove sei'**
+  String get settingsWhere;
+
+  /// No description provided for @settingsPhone.
+  ///
+  /// In it, this message translates to:
+  /// **'Telefono'**
+  String get settingsPhone;
+
+  /// No description provided for @settingsPhonePublic.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra il numero sul profilo'**
+  String get settingsPhonePublic;
+
+  /// No description provided for @settingsWhatsappPublic.
+  ///
+  /// In it, this message translates to:
+  /// **'Contatto su WhatsApp'**
+  String get settingsWhatsappPublic;
+
+  /// No description provided for @settingsPhoneNeeded.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima aggiungi il numero'**
+  String get settingsPhoneNeeded;
+
+  /// No description provided for @sellerListingsCount.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessun annuncio} =1{1 annuncio} other{{count} annunci}}'**
+  String sellerListingsCount(int count);
+
+  /// No description provided for @sellerMemberSince.
+  ///
+  /// In it, this message translates to:
+  /// **'Su {app} da {date}'**
+  String sellerMemberSince(String app, String date);
+
+  /// No description provided for @sellerCall.
+  ///
+  /// In it, this message translates to:
+  /// **'Chiama'**
+  String get sellerCall;
+
+  /// No description provided for @sellerWebsite.
+  ///
+  /// In it, this message translates to:
+  /// **'Sito'**
+  String get sellerWebsite;
+
+  /// No description provided for @sellerTabListings.
+  ///
+  /// In it, this message translates to:
+  /// **'Annunci'**
+  String get sellerTabListings;
+
+  /// No description provided for @sellerTabReviews.
+  ///
+  /// In it, this message translates to:
+  /// **'Recensioni'**
+  String get sellerTabReviews;
+
+  /// No description provided for @sellerNotFoundTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo non disponibile'**
+  String get sellerNotFoundTitle;
+
+  /// No description provided for @sellerNotFoundBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo venditore non ha annunci online.'**
+  String get sellerNotFoundBody;
+
+  /// No description provided for @sellerNoListings.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun annuncio online'**
+  String get sellerNoListings;
+
+  /// No description provided for @sellerNoMatches.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun annuncio con questi filtri'**
+  String get sellerNoMatches;
+
+  /// No description provided for @sellerSeeAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Vedi tutti gli annunci'**
+  String get sellerSeeAll;
+
+  /// No description provided for @sellerLoginForContacts.
+  ///
+  /// In it, this message translates to:
+  /// **'Accedi per vedere i contatti'**
+  String get sellerLoginForContacts;
+
+  /// No description provided for @sellerPrivateShort.
+  ///
+  /// In it, this message translates to:
+  /// **'Privato'**
+  String get sellerPrivateShort;
+
+  /// No description provided for @sellerNoReviews.
+  ///
+  /// In it, this message translates to:
+  /// **'Ancora nessuna recensione'**
+  String get sellerNoReviews;
 }
 
 class _AppLocalizationsDelegate

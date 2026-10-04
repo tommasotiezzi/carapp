@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/geo/capital_picker.dart';
+import '../../../core/geo/italian_capitals.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/pill.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/buyer_preferences.dart';
+import '../../feed/data/feed_filters.dart';
 import '../data/catalog_repository.dart';
 import '../state/onboarding_controller.dart';
 import 'budget_label.dart';
@@ -71,6 +74,41 @@ class PreferencesScreen extends ConsumerWidget {
                   Text(t.prefsTitle, style: text.headlineMedium),
                   const SizedBox(height: AppSpacing.s),
                   Text(t.prefsSubtitle, style: text.bodyMedium),
+                  const SizedBox(height: AppSpacing.xxl),
+
+                  SectionLabel(t.prefsWhere),
+                  Text(t.prefsWhereHint, style: text.bodySmall),
+                  const SizedBox(height: AppSpacing.s),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final code = await showCapitalPicker(context, selected: p.province);
+                        if (code != null) {
+                          update((x) => x.copyWith(province: code, maxDistanceKm: x.maxDistanceKm ?? 50));
+                        }
+                      },
+                      icon: const Icon(Icons.place_outlined, size: 18),
+                      label: Text(ItalianCapitals.byCode[p.province]?.label ?? t.prefsWhereNone),
+                    ),
+                  ),
+                  if (p.province != null) ...[
+                    const SizedBox(height: AppSpacing.l),
+                    SectionLabel(t.prefsDistance),
+                    PillWrap(children: [
+                      Pill(
+                        label: t.distanceAll,
+                        selected: p.maxDistanceKm == null,
+                        onTap: () => update((x) => x.copyWith(maxDistanceKm: null)),
+                      ),
+                      for (final km in FeedFilters.radiusOptions)
+                        Pill(
+                          label: t.distanceKm(km),
+                          selected: p.maxDistanceKm == km,
+                          onTap: () => update((x) => x.copyWith(maxDistanceKm: km)),
+                        ),
+                    ]),
+                  ],
                   const SizedBox(height: AppSpacing.xxl),
 
                   SectionLabel(t.prefsVehicle),
