@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/l10n/vehicle_labels.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/listing_detail.dart';
 import '../data/transfer_cost.dart';
@@ -19,14 +22,14 @@ class ListingSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.m),
-        child: Row(
-          children: [
-            Expanded(child: Text(text, style: Theme.of(context).textTheme.titleLarge)),
-            ?trailing,
-          ],
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: AppSpacing.m),
+    child: Row(
+      children: [
+        Expanded(child: Text(text, style: Theme.of(context).textTheme.titleLarge)),
+        ?trailing,
+      ],
+    ),
+  );
 }
 
 /// Two-column grid of the vehicle data; empty values are skipped.
@@ -50,11 +53,14 @@ class ListingSpecs extends StatelessWidget {
       (t.specEuroClass, l.euroClass == null ? '' : t.specEuroValue(l.euroClass!)),
       (t.specColor, l.color ?? ''),
       (t.specOwners, l.ownersCount?.toString() ?? ''),
-      (t.specServiceHistory, switch (l.hasServiceHistory) {
-        true => t.commonYes,
-        false => t.commonNo,
-        null => '',
-      }),
+      (
+        t.specServiceHistory,
+        switch (l.hasServiceHistory) {
+          true => t.commonYes,
+          false => t.commonNo,
+          null => '',
+        },
+      ),
       (t.specWarranty, (l.warrantyMonths ?? 0) > 0 ? t.specWarrantyMonths(l.warrantyMonths!) : ''),
     ].where((s) => s.$2.trim().isNotEmpty).toList();
 
@@ -108,25 +114,23 @@ class ListingTotalCost extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final price = listing.priceCents;
     final config = ref.watch(appConfigProvider).value ?? AppConfig.empty;
-    final transfer = TransferCostRules.fromConfig(config.section('transfer_costs'))
-        .estimateCents(categoryId: listing.categoryId, powerKw: listing.powerKw);
+    final transfer = TransferCostRules.fromConfig(
+      config.section('transfer_costs'),
+    ).estimateCents(categoryId: listing.categoryId, powerKw: listing.powerKw);
     if (price == null || transfer == null) return const SizedBox.shrink();
 
     final t = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
 
     Widget row(String label, int cents, {bool total = false}) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
-          child: Row(
-            children: [
-              Expanded(child: Text(label, style: total ? text.titleMedium : text.bodyLarge)),
-              Text(
-                Formatters.price(cents),
-                style: total ? text.titleMedium : text.bodyLarge,
-              ),
-            ],
-          ),
-        );
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: total ? text.titleMedium : text.bodyLarge)),
+          Text(Formatters.price(cents), style: total ? text.titleMedium : text.bodyLarge),
+        ],
+      ),
+    );
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
@@ -224,12 +228,18 @@ class ListingSeller extends ConsumerWidget {
     final config = ref.watch(appConfigProvider).value ?? AppConfig.empty;
     final showReviews = dealer != null && config.flag('reviews_enabled');
 
-    final name = dealer?.displayName ?? t.sellerPrivate;
+    final name =
+        dealer?.displayName ??
+        ((listing.sellerDisplayName ?? '').trim().isEmpty
+            ? t.sellerPrivate
+            : listing.sellerDisplayName!.trim());
+    final pageId = dealer?.id ?? listing.ownerId;
     final location = dealer == null
         ? listing.location
-        : [dealer.city, if ((dealer.province ?? '').isNotEmpty) '(${dealer.province})']
-            .whereType<String>()
-            .join(' ');
+        : [
+            dealer.city,
+            if ((dealer.province ?? '').isNotEmpty) '(${dealer.province})',
+          ].whereType<String>().join(' ');
     final subtitle = [
       if (dealer != null) t.sellerDealer,
       if ((location ?? '').trim().isNotEmpty) location!,
@@ -239,52 +249,53 @@ class ListingSeller extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListingSectionTitle(t.sellerTitle),
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: dealer == null ? AppColors.placeholder : AppColors.primary,
-              child: dealer == null
-                  ? const Icon(Icons.person_outline, color: AppColors.inkSecondary)
-                  : Text(
-                      Formatters.initials(dealer.displayName),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                    ),
-            ),
-            const SizedBox(width: AppSpacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: text.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if (subtitle.isNotEmpty) Text(subtitle, style: text.bodyMedium),
-                  if (dealer?.vatVerified ?? false)
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.xxs),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.verified, size: 16, color: AppColors.primary),
-                          const SizedBox(width: AppSpacing.xxs),
-                          Flexible(child: Text(t.sellerVatVerified, style: text.labelMedium)),
-                        ],
-                      ),
-                    ),
-                ],
+        InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.m),
+          onTap: () => context.push(AppRoutes.sellerPagePath(id: pageId, dealer: dealer != null)),
+          child: Row(
+            children: [
+              UserAvatar(
+                path: dealer?.logoPath ?? listing.sellerAvatarPath,
+                name: name,
+                radius: 26,
+                dealer: dealer != null,
               ),
-            ),
-          ],
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: text.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (subtitle.isNotEmpty) Text(subtitle, style: text.bodyMedium),
+                    if (dealer?.vatVerified ?? false)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.verified, size: 16, color: AppColors.primary),
+                            const SizedBox(width: AppSpacing.xxs),
+                            Flexible(child: Text(t.sellerVatVerified, style: text.labelMedium)),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(t.sellerSeeAll, style: text.labelLarge?.copyWith(color: AppColors.primary)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+            ],
+          ),
         ),
-        if (showReviews) ...[
-          const SizedBox(height: AppSpacing.l),
-          _DealerReviews(dealerId: dealer.id),
-        ],
+        if (showReviews) ...[const SizedBox(height: AppSpacing.l), DealerReviewsSummary(dealerId: dealer.id)],
       ],
     );
   }
 }
 
-class _DealerReviews extends ConsumerWidget {
-  const _DealerReviews({required this.dealerId});
+/// Average stars, count and the latest reviews with a text.
+class DealerReviewsSummary extends ConsumerWidget {
+  const DealerReviewsSummary({super.key, required this.dealerId});
 
   final String dealerId;
 
@@ -341,16 +352,16 @@ class _Stars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 1; i <= 5; i++)
-            Icon(
-              rating >= i
-                  ? Icons.star_rounded
-                  : (rating >= i - 0.5 ? Icons.star_half_rounded : Icons.star_outline_rounded),
-              size: size,
-              color: AppColors.rating,
-            ),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (var i = 1; i <= 5; i++)
+        Icon(
+          rating >= i
+              ? Icons.star_rounded
+              : (rating >= i - 0.5 ? Icons.star_half_rounded : Icons.star_outline_rounded),
+          size: size,
+          color: AppColors.rating,
+        ),
+    ],
+  );
 }

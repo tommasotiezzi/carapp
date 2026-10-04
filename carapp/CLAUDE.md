@@ -13,6 +13,9 @@ TikTok-style vertical video feed to buy and sell used vehicles (cars incl. vans,
 - **Age and consents:** the app is for **14+** (Italian age of digital consent; AM licence at 14, A1 at 16 are part of the target). Sign up requires two ticks: "Ho almeno 14 anni e accetto i Termini e condizioni" and "Ho letto l'Informativa privacy" (the privacy notice is read, not "accepted"); promotional emails are an optional tick, off by default. Minors buy with a parent's consent (stated in the Termini); the sell flow asks private sellers once to declare 18+ or a parent's consent (`seller_age`). Birth date and gender are **never asked in onboarding**: optional in Settings (data minimisation). All to be reviewed with lawyers before launch.
 - **Login:** email + password for now (sign in / create account in the same sheet). Email OTP codes are paused because emails cannot be received yet; bring them back once email delivery works. Google later, Apple required before iOS release if Google is offered.
 - **Dealers:** VAT verified with VIES. Pricing: months 1-3 free; months 4-6 free until 30 total contacts since signup; then €29/month locked (founder price). Manual invoicing, no card at signup. Base / Pro plans configurable from DB. A "contact" = chat with ≥1 buyer message or a WhatsApp click.
+- **Location:** users, dealers and listings are placed at a province capital (capoluogo), chosen from a fixed list of 106 with real coordinates or with "Usa la mia posizione" (coarse GPS → nearest capital; no geocoding service). "Entro X km" compares capitals: from Siena with 100 km you see Florence, not Milan.
+- **Seller pages:** dealers and private sellers have the same public page (picture, name, capital, contacts they choose to show, their listings with filters); dealers also show the VAT badge and reviews. One picture per account ("Foto profilo"); for a dealer it is the dealer's picture (no separate logo). A dealer account is the dealer: no staff management in the app (`dealer_members` only links the account to its dealer) and no private seller page.
+- **"Concessionari vicino a te"** at the top of Search: the place for future sponsored dealers.
 - **Ads:** only sponsored listings (labelled) and coherent partners (financing, insurance). No generic banners.
 
 ## Stack
@@ -41,7 +44,7 @@ flutter run --dart-define-from-file=env.json
 flutter analyze && flutter test   # before every push
 ```
 
-Supabase setup: run the migrations not run yet (09 → 13) in the SQL editor; deploy the Edge Functions `delete-account` and `publish-listing` (Verify JWT on). Auth > Sign In / Providers > Email: keep **"Confirm email" off** while emails cannot be received (otherwise sign up ends on "conferma la tua email" and the account stays unusable). Minimum password length in the app: 8. When OTP codes come back: "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}`.
+Supabase setup: run the migrations not run yet (09 → 14) in the SQL editor; deploy the Edge Functions `delete-account` and `publish-listing` (Verify JWT on). Auth > Sign In / Providers > Email: keep **"Confirm email" off** while emails cannot be received (otherwise sign up ends on "conferma la tua email" and the account stays unusable). Minimum password length in the app: 8. When OTP codes come back: "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}`.
 
 ## Flutter structure (done)
 
@@ -60,6 +63,10 @@ lib/
     media/media_url.dart    storage path -> public URL (http URLs pass through)
     media/shared_video.dart  ref-counted video player (feed lends it to the listing page)
     utils/formatters.dart   € / km / CV
+    geo/italian_capitals.dart  106 capitals + coordinates (generated from ISTAT open data), distanceKm(),
+                            within(center, km), nearestTo(lat, lng); capital_picker.dart (search sheet);
+                            distance_label.dart ("50 km da te"), device_location.dart ("Usa la mia posizione")
+    widgets/user_avatar.dart  profile picture (`avatars` bucket) or initials
     l10n/vehicle_labels.dart  ARB labels for DB enums (fuel_type, transmission_type)
     widgets/pill.dart, placeholder_screen.dart
   features/
@@ -90,6 +97,9 @@ lib/
                draft folder / thumbnails / render with pro_video_editor, SellRepository: draft row, uploads,
                publish-listing), state (SellController: draft on the phone, background render + upload, publish),
                ui (SellStartScreen, CaptureScreen + Silhouette painter, ShotsScreen, SellDetailsScreen, SellDoneScreen)
+    seller/    SellerRepository (dealer row / public_profiles, active count), providers (header, own filters per
+               page, listings scoped to the seller), SellerScreen (/dealers/:id, /seller/:id),
+               nearby dealers (dealers_near RPC) + NearbyDealersSection (Search home)
     share/     listingShareLink() (share site or app link), listingShareSummary(), shareListing() (share sheet + `share` event)
     profile/   ProfileScreen (login, "Cosa cerco" gated behind signup, "Salvati", gear -> settings)
   l10n/app_it.arb (+ gen/)
@@ -98,23 +108,27 @@ test/       query parser, suggestions, recents, chips, logicFilter, transfer cos
             widget tests (fake data): listing, Salvati, login, filter sheet, Search, Inbox, chat (new chat, contact bar);
             chat logic with a fake repository (optimistic send, Realtime echo, retry, catch-up, Inbox refresh);
             share (links, share sheet text, tracking); sell (draft model, controller with fake media/repository:
-            render order, uploads, retakes, publish; start, shots, details, done screens)
+            render order, uploads, retakes, publish; start, shots, details, done screens); capitals and distances,
+            distance filter, search "vicino a me" / "entro N km", seller page (dealer, private guest, not found),
+            "Usa la mia posizione", dealers near you, dealer settings (owner edits, member reads)
 ```
 
 Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
 
-Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`, `/onboarding/preferences[?edit=1]`, `/onboarding/dealer`, `/sell` (+ `/sell/capture?step=&single=1`, `/sell/shots`, `/sell/shots/details`, `/sell/done/:id`), `/listing/:id`, `/chat/:id`, `/chat/new/:listingId`, `/dealer`; share link `/l/:id` -> `/listing/:id`. Deep links: custom scheme `carfeed://app/<path>` (Android intent filter with `flutter_deeplinking_enabled`, iOS `CFBundleURLTypes` + `FlutterDeepLinkingEnabled`; go_router opens `<path>`). https App Links / Universal Links once a final domain exists (see `site/README.md`).
+Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`, `/onboarding/preferences[?edit=1]`, `/onboarding/dealer`, `/sell` (+ `/sell/capture?step=&single=1`, `/sell/shots`, `/sell/shots/details`, `/sell/done/:id`), `/listing/:id`, `/chat/:id`, `/chat/new/:listingId`, `/dealers/:id` and `/seller/:id` (seller pages), `/dealer`; share link `/l/:id` -> `/listing/:id`. Deep links: custom scheme `carfeed://app/<path>` (Android intent filter with `flutter_deeplinking_enabled`, iOS `CFBundleURLTypes` + `FlutterDeepLinkingEnabled`; go_router opens `<path>`). https App Links / Universal Links once a final domain exists (see `site/README.md`).
 
 ## Database
 
-Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`, `09_consents_and_settings`, `10_lock_profile_account_type`, `11_chat`, `12_share`, `13_sell`. All in `supabase/migrations/`; run new ones in the SQL editor. The whole chain 01→13 has been run on Postgres 16 + PostGIS with a stand-in for Supabase's `auth`/`storage` schemas, and the app's queries replayed through PostgREST 12 (anon and authenticated).
+Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`, `09_consents_and_settings`, `10_lock_profile_account_type`, `11_chat`, `12_share`, `13_sell`, `14_profiles_location`. All in `supabase/migrations/`; run new ones in the SQL editor. The whole chain 01→14 has been run on Postgres 16 + PostGIS with a stand-in for Supabase's `auth`/`storage` schemas, and the app's queries replayed through PostgREST 12 (anon and authenticated).
 
 ### Enums
 `account_type` consumer | dealer_member · `user_intent` buy | sell | browse | dealer · `seller_type` private | dealer · `listing_status` draft | active | sold | expired | removed · `media_kind` video | photo | cover · `fuel_type` petrol | diesel | hybrid | plugin_hybrid | electric | lpg | cng | other · `transmission_type` manual | automatic | semi_automatic · `dealer_role` owner | seller · `subscription_status` trial | conditional_free | active | past_due | canceled · `billing_method` manual_invoice | card · `event_type` impression | view | watch_time | zoom | open_detail | save | unsave | share | contact_chat | contact_whatsapp · `notification_type` new_message | price_drop | listing_sold | saved_search_match | new_contact | listing_expiring · `report_reason` scam | misleading_info | already_sold | inappropriate | other · `report_status` open | reviewed | actioned | dismissed · `platform` ios | android | web · `consent_kind` terms | privacy | age_14 | marketing_email | seller_age · `gender` female | male | other | undisclosed
 
 ### Tables (key columns)
 Column defaults worth knowing: all UUID PKs `gen_random_uuid()`; `created_at`/`updated_at` default `now()`; listings `status` default `draft`, `currency` `EUR`, `attributes` `{}`; profiles `account_type` default `consumer`, `whatsapp_public` false, `locale` `it`; subscriptions `status` default `trial`, `billing_method` `manual_invoice`; saved_searches `notify` true; listing_questions `is_public` false; notification_preferences `enabled` true. `events` and `listing_price_history` use bigint identity PKs.
-- **profiles** id (= auth.users), account_type, intent, display_name, avatar_path, phone, whatsapp_public, city, location (geography), locale, onboarding_completed_at, birth_date (optional, ≥ 1900; the app allows 14+ only), gender (optional). Row created by trigger `on_auth_user_created`.
+- **profiles** id (= auth.users), account_type, intent, display_name, avatar_path, phone, whatsapp_public, city, location (geography), locale, onboarding_completed_at, birth_date (optional, ≥ 1900; the app allows 14+ only), gender (optional), province (FK province_capitals, "Dove sei"; `city` = the capital's name), phone_public (show the number on the public page). Row created by trigger `on_auth_user_created`.
+- **province_capitals** (14) code PK ('SI'), name, lat, lng: 106 rows, same list as the app; readable by anon.
+- **public_profiles** (14, view, owner's rights) private sellers only (an active or sold private listing, not a dealer member): id, display_name, avatar_path, city (capital name), province, has_phone, has_whatsapp, phone / whatsapp (only if public and only for signed-in users), member_since. Embeddable from listings: `seller:public_profiles!owner_id(...)` (null on dealer listings).
 - **user_consents** (09) bigint identity PK, profile_id (CASCADE), kind, granted, document_version, platform, created_at. **Append-only** proof of consent: RLS select/insert own, no update/delete. View **current_consents** (security_invoker): latest row per (profile_id, kind).
 - **buyer_preferences** profile_id PK, category_ids[], make_ids[], price_min/max_cents, year_min, mileage_max_km, fuel_types[], max_distance_km, novice_driver
 - **dealers** legal_name, display_name, vat_number (unique, `IT…`), vat_verified_at, vies_payload, address, city, province, location, phone, whatsapp, website, logo_path, description
@@ -183,12 +197,14 @@ Consequences to keep in mind:
 ### Constraints (beyond NOT NULL / PK)
 
 - **Unique:** dealers.vat_number · subscriptions.dealer_id (one per dealer) · makes (category_id, slug) · models (make_id, slug) · conversations (listing_id, buyer_id) · reviews (dealer_id, author_id)
-- **Checks:** listings `listings_seller_consistency` (dealer ⇔ dealer_id not null; private ⇔ dealer_id null) · listings year 1900-2100, mileage/price/power/owners/warranty ≥ 0, euro_class 0-6, description ≤ 3000 · conversations buyer_id ≠ seller_id · messages body 1-2000 chars · reviews rating 1-5, body ≤ 1000 · listing_questions question ≤ 500, answer ≤ 1000 · reports details ≤ 1000 · profiles display_name ≤ 60 · buyer_preferences numeric fields ≥ 0 (max_distance_km > 0)
+- **Checks:** profiles `avatar_path` and dealers `logo_path` never contain `://` (storage paths only) · listings `listings_seller_consistency` (dealer ⇔ dealer_id not null; private ⇔ dealer_id null) · listings year 1900-2100, mileage/price/power/owners/warranty ≥ 0, euro_class 0-6, description ≤ 3000 · conversations buyer_id ≠ seller_id · messages body 1-2000 chars · reviews rating 1-5, body ≤ 1000 · listing_questions question ≤ 500, answer ≤ 1000 · reports details ≤ 1000 · profiles display_name ≤ 60 · buyer_preferences numeric fields ≥ 0 (max_distance_km > 0)
 
 ### Triggers
 
 - `set_updated_at` (moddatetime) before update on: profiles, buyer_preferences, dealers, subscriptions, listings, app_config
 - `on_auth_user_created` after insert on auth.users → `handle_new_user()` (security definer) inserts the `profiles` row
+- `listings_location_from_province` / `profiles_location_from_province` / `dealers_location_from_province` (14, before insert or update of province) → `location_from_province()`: upper-cases the code and sets `location` to the capital's point (null if unknown)
+- `protect_dealer_fields` (14, before update on dealers, anon/authenticated only): the owner cannot change `vat_number`, `vat_verified_at`, `vies_payload`, `legal_name` (`dealer_field_locked`, 42501)
 
 ### RLS (summary)
 RLS on every table. Active listings, media, price history, dealers, reviews, catalogue, active plans and public config are readable by anon. Drafts / sold / expired only by owner or dealer members. Users manage their own profile, preferences, favorites, saved searches, notification prefs. Chat visible only to participants (buyer, seller, dealer members). Reviews only by buyers who chatted with that dealer. Events: insert-only (anon allowed). Stats: seller only. **No client write policy** for: dealer creation/membership, subscriptions, publishing, notifications, stats, price history: these go through functions / Edge Functions.
@@ -199,7 +215,8 @@ RLS on every table. Active listings, media, price history, dealers, reviews, cat
 
 | Table | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
-| profiles | own only (chat partners get the name through `my_conversations()`, never the row: phone, birth date, gender stay private) | own id | own (not `account_type`) | — |
+| profiles | own only (others see sellers through the `public_profiles` view; chat partners get the name through `my_conversations()`) | own id | own (not `account_type`) | — |
+| province_capitals | anon + auth, all | — | — | — |
 | buyer_preferences | own | own | own | own |
 | dealers | anon + auth, all | — (edge function) | members with role owner | — |
 | dealer_members | own rows only (avoids recursion) | — | — | — |
@@ -227,7 +244,7 @@ No known loose spots left in the client write policies: listings are locked by `
 
 ### Indexes
 
-listings: partial `where status = 'active'` on (published_at desc), (category_id, price_cents), (make_id, model_id), (year), (mileage_km), (expires_at), (sponsored_until) where not null; GIST (location); (owner_id, created_at desc); (dealer_id, created_at desc) where dealer_id not null · listing_media (listing_id, sort_order) · listing_price_history (listing_id, changed_at desc) · listing_questions (listing_id, created_at desc) · favorites (listing_id) · saved_searches (profile_id), (last_notified_at) where notify · conversations (buyer_id | seller_id | dealer_id, last_message_at desc) · messages (conversation_id, created_at desc) · dealer_members (profile_id) · dealers GIST (location) · subscriptions (status) · reviews (dealer_id, created_at desc) · makes (category_id, is_popular desc, name) · models (make_id, name) · reports (created_at) where open · events (listing_id, created_at) + BRIN (created_at) · notifications (profile_id, created_at desc), (profile_id) where unread
+listings: partial `where status = 'active'` on (province, published_at desc) (14), (published_at desc), (category_id, price_cents), (make_id, model_id), (year), (mileage_km), (expires_at), (sponsored_until) where not null; GIST (location); (owner_id, created_at desc); (dealer_id, created_at desc) where dealer_id not null · listing_media (listing_id, sort_order) · listing_price_history (listing_id, changed_at desc) · listing_questions (listing_id, created_at desc) · favorites (listing_id) · saved_searches (profile_id), (last_notified_at) where notify · conversations (buyer_id | seller_id | dealer_id, last_message_at desc) · messages (conversation_id, created_at desc) · dealer_members (profile_id) · dealers GIST (location) · subscriptions (status) · reviews (dealer_id, created_at desc) · makes (category_id, is_popular desc, name) · models (make_id, name) · reports (created_at) where open · events (listing_id, created_at) + BRIN (created_at) · notifications (profile_id, created_at desc), (profile_id) where unread
 
 ### Storage
 - `listing-drafts` (private): `{auth.uid}/{uuid}.ext`, owner-only
@@ -276,6 +293,7 @@ Known gap: VAT is trusted from VIES only at signup (no periodic re-check).
   - `my_conversations(p_conversation_id?, p_before?, p_limit = 30)`: Inbox rows, newest activity first: id, listing_id, is_buyer, buyer_id, other_name (dealer name, else the other profile's display_name), other_is_dealer, listing title / cover / price / status, last message body + `last_message_mine`, last_message_at, `activity_at` (page cursor), `unread` (last message after the caller's read marker). One id = one row (chat header, Realtime refresh). Filter written for the conversations indexes.
   - `seller_whatsapp(p_listing_id) → text | null`: the number only for an active listing with `whatsapp_enabled`; dealer → `dealers.whatsapp`, private → `profiles.phone` when `whatsapp_public`. Each answer with a number writes a `contact_whatsapp` event (dashboards count distinct users).
   - Trigger `messages_touch_conversation` (after insert on messages): sets `last_message_at` and the sender side's read marker.
+- `dealers_near(p_provinces text[], p_limit = 20)` (14, invoker, anon + auth): dealers with active listings in those provinces + `active_listings` count, most listings first (future sponsored slot ordering goes here).
 - Realtime publication `supabase_realtime`: `messages`, `conversations` (Realtime applies RLS: each user only receives their own chats).
 - Planned: feed RPC (returns listings + seller display info, since profiles are not readable by others), dealer entitlements (max active listings per plan, checked in publish-listing), price-history trigger, nightly stats aggregation (contacts = conversations + distinct `contact_whatsapp` users), listing expiry, push on new message.
 
@@ -299,9 +317,15 @@ Share: button on the feed and the listing → the phone's share sheet (`share_pl
 
 Sell flow (`+` tab → `/sell`): (1) Auto / Moto, tips, "Inizia le riprese" (guests sign in first); a draft left on the phone shows "Riprendi" / "Ricomincia" (another category asks before dropping it). (2) Capture: steps from `vehicle_categories.capture_steps` (built-in copy if offline), "Step N di M" + segments, step title and instruction, dashed silhouette over the full-screen camera (`Silhouette` painter, replaceable by real SVGs later), plate tip, torch, Video 5 s / Foto toggle, shutter with a 5 s ring (stops by itself), "Salta", last-shot thumbnail "N/M" → summary, "Prossimo: …". Camera 1080p, 30 fps, bitrate from `app_config.media`, audio on (engine sound), portrait locked; an interrupted clip is dropped; permission denied → message + retry. After a shot it moves to the next missing step (then the summary); `single=1` (retake) goes back. (3) "Le tue riprese": each step with thumbnail, "Video · 5 s" / "Foto", check; "Da fare" for missing required ones; dashed "+" rows for optional ones ("Difetti visibili · aumenta la fiducia"); tap → Rifai / Elimina (optional only); "Crea il video" needs every required step and at least one video. (4) "Dati e prezzo": the video is made and uploaded in the background meanwhile ("Stiamo preparando il video · N%": render 0-70%, uploads 70-100%; a retake restarts it; failure → tap to retry); make / model pickers from the catalog, year, km (thousands dots), fuel chips, "+ Altri dettagli" (version, gearbox, kW with ≈ CV, owners, Euro class, colour, service history, body type + novice ok / moto type, cc, licence), price, description, city (a province capital fills the province) + province, WhatsApp switch (private: phone saved to the profile with `whatsapp_public`; dealer: the dealer's number), 18+ / parental-consent tick for private sellers (`seller_age` consent, asked once). "Pubblica annuncio": saves the draft row (upsert, dealer listing when the user is a dealer member), waits for the media, calls `publish-listing`, then deletes the phone copy and refreshes the feed. (5) "La tua Golf è online", next confirmation in `confirm_every_days / 7` weeks, listing card, "Condividi il link", "Vedi l'annuncio". The draft (`PrefKeys.sellDraft` + `<documents>/sell/<id>/`) is saved after every change; uploads are tracked per file and source, so only what changed is uploaded again and stale ones are removed. Not built and not testable here: the native render on a real phone (package tested upstream).
 
+Location and distance: "Dove sei?" in onboarding (optional: capital picker + "Fino a che distanza?" Tutta Italia / 25 / 50 / 100 / 200 km) and in Settings > Profilo pubblico; stored in `BuyerPreferences.province` / `maxDistanceKm` (phone first, synced: `profiles.province` + `city`, `buyer_preferences.max_distance_km`) and read through `homeProvinceProvider`. Filters: `FeedFilters.nearProvince` + `radiusKm` (section "Distanza" first in the sheet, center = the user's capital unless changed; feed pill "Entro 50 km"; chip "Entro 50 km da Siena"); `FeedRepository` turns them into `province=in.(…)` with the provinces whose capital is in range (`ItalianCapitals.within`), so pagination and indexes are the feed's own; crossed with a `province` filter when both are set (no request when nothing can match). Search: "vicino a me" (user's capital, 50 km), "entro 100 km da firenze" (the named city is the center), "km" ≤ 500 is a distance, above a mileage. Cards and the listing page show "Firenze · 50 km da te" (capital to capital, rounded to 5 km above 20). The sell form requires the province (capital picker, starts from the user's) and the database places the listing at its capital.
+
+Seller pages (`/dealers/:id`, `/seller/:id`), opened from the avatar and the name in the feed and from "Venditore" on the listing ("Vedi tutti gli annunci"): header with initials avatar, name (+ VAT-verified badge), "Concessionario · Firenze (FI)" / "Privato · Siena (SI)", "Su Carfeed da settembre 2026", active listings count (head request) and dealer rating; contacts the seller chose: Chiama (tel:), WhatsApp (wa.me), Sito (dealer website); a private seller's number only for signed-in users ("Accedi per vedere i contatti"). Tabs Annunci / Recensioni (dealers, `reviews_enabled`). Annunci: Tutti · Auto · Moto pills, "Filtri" (the filter sheet without "Distanza", with its own state per page), removable chips, the Search-style 2-column grid, "Carica altri" (20 per page, same cursor as the feed). Private seller names now also show in the feed and on the listing (embed of `public_profiles`). Settings > Profilo pubblico: "Foto profilo" (camera or gallery via `image_picker`, 800 px JPEG, `avatars/<user>/<uuid>.jpg`, old one removed; a dealer owner's picture is also `dealers.logo_path`). Private users: Dove sei, Telefono, "Mostra il numero sul profilo" (`phone_public`), "Contatto su WhatsApp" (`whatsapp_public`). Dealer accounts instead edit the dealer page (owner only; members read): name shown, description, Dove si trova, phone, WhatsApp, website (`dealers_update_owner`; VIES fields locked). Pictures show in the feed (side avatar), on the listing ("Venditore"), on seller pages and in "Concessionari vicino a te".
+
+"Usa la mia posizione" (top of every capital picker): `geolocator`, low accuracy (approximate-location permission only, 10 s timeout, last known position as fallback) → `ItalianCapitals.nearestTo`; service off / permission denied / no fix → message, the list stays usable. "Concessionari vicino a te" (top of Search before typing): from the user's capital and their "Fino a che distanza?" (100 km if "Tutta Italia"), `dealers_near` with the provinces in range; horizontal cards (picture, name, VAT badge, "4 annunci", "50 km da te") → dealer page; without a capital: "Dicci dove sei…" → capital picker.
+
 ## Next (in order)
 
 1. **My listings**: list in the profile (active / draft / sold), mark sold, remove, edit price and data, "è ancora disponibile?" confirmation.
-2. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
+2. **Polish**: login nudges, price vs market badge, sponsored dealers in "Concessionari vicino a te".
 
 Later: dealer dashboard (reads `listing_stats_daily`), nightly stats aggregation, listing expiry job, notifications + push (FCM/APNs, `device_tokens`), AI search (Claude via Edge Function, filters only from DB data), Google/Apple login.

@@ -22,6 +22,8 @@ class AppRoutes {
   static const newChat = '/chat/new/:listingId';
   static const dealerDashboard = '/dealer';
   static const settings = '/settings';
+  static const dealerPage = '/dealers/:id';
+  static const sellerPage = '/seller/:id';
 
   /// Short share link: https://<domain>/l/<id> -> /listing/<id>
   static const shareShort = '/l/:id';
@@ -36,6 +38,11 @@ class AppRoutes {
     return Uri(path: sellCapture, queryParameters: query.isEmpty ? null : query).toString();
   }
   static String sellDonePath(String listingId) => '/sell/done/$listingId';
+
+  /// Public page of a seller: a dealer (dealers.id) or a private seller
+  /// (profiles.id).
+  static String sellerPagePath({required String id, required bool dealer}) =>
+      dealer ? '/dealers/$id' : '/seller/$id';
   static String newChatPath(String listingId) => '/chat/new/$listingId';
 
   /// Reachable without completing onboarding (a shared link must open

@@ -59,6 +59,26 @@ class _FakeAccount extends Fake implements AccountRepository {
   Future<void> setNotificationPref(String type, bool enabled) async => prefs[type] = enabled;
 }
 
+class _FakeDealerAccount extends _FakeAccount {
+  _FakeDealerAccount({required this.owner});
+
+  final bool owner;
+  final dealerPatches = <Map<String, dynamic>>[];
+
+  @override
+  Future<MyDealer?> fetchMyDealer() async => MyDealer(
+        id: 'd1',
+        isOwner: owner,
+        displayName: 'Auto Bianchi',
+        phone: '02 1234567',
+        city: 'Milano',
+        province: 'MI',
+      );
+
+  @override
+  Future<void> updateDealer(String dealerId, Map<String, dynamic> patch) async => dealerPatches.add(patch);
+}
+
 final _config = AppConfig(version: 1, values: {
   'legal': {
     'terms_url': 'https://example.com/t',
@@ -257,7 +277,15 @@ void main() {
       expect(find.text('mario@example.com'), findsOneWidget);
       expect(find.text('Mario'), findsOneWidget);
 
+      // Public profile: capital and the contacts to show.
+      await tester.scrollUntilVisible(find.text('Mostra il numero sul profilo'), 200,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Dove sei'), findsOneWidget);
+      expect(find.text('Prima aggiungi il numero'), findsNWidgets(2));
+
       // Price drop is off (stored row); switch it on.
+      await tester.scrollUntilVisible(find.text('Calo di prezzo dei salvati'), 200,
+          scrollable: find.byType(Scrollable).first);
       await tester.ensureVisible(find.text('Calo di prezzo dei salvati'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Calo di prezzo dei salvati'));
@@ -278,6 +306,46 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Accettati il 1 ott 2026'), findsOneWidget);
       expect(find.text('help@example.com'), findsOneWidget);
+    });
+  });
+
+  group('Profilo pubblico of a dealer', () {
+    Future<void> open(WidgetTester tester, _FakeDealerAccount account) async {
+      tester.view.physicalSize = const Size(430, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(await _app(const SettingsScreen(), signedIn: true, account: account));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Nome del concessionario'), 200,
+          scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the owner edits the dealer page, not personal contacts', (tester) async {
+      final account = _FakeDealerAccount(owner: true);
+      await open(tester, account);
+      expect(find.text('Foto profilo'), findsOneWidget);
+      expect(find.text('Auto Bianchi'), findsOneWidget);
+      expect(find.text('Milano (MI)'), findsOneWidget);
+      expect(find.text('02 1234567'), findsOneWidget);
+      expect(find.text('Mostra il numero sul profilo'), findsNothing); // private sellers only
+
+      await tester.tap(find.text('Sito web'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'autobianchi.it');
+      await tester.tap(find.text('Salva').last);
+      await tester.pumpAndSettle();
+      expect(account.dealerPatches.single, {'website': 'autobianchi.it'});
+      expect(find.text('autobianchi.it'), findsOneWidget);
+    });
+
+    testWidgets('a member who is not the owner only reads', (tester) async {
+      final account = _FakeDealerAccount(owner: false);
+      await open(tester, account);
+      expect(find.text('Solo il titolare del concessionario può modificarli.'), findsOneWidget);
+      await tester.tap(find.text('Sito web'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
     });
   });
 }

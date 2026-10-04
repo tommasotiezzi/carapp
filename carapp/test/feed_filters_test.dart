@@ -24,8 +24,7 @@ class _FakeFeedRepo extends Fake implements FeedRepository {
   Future<List<FeedItem>> fetchPage({
     FeedItem? after,
     int pageSize = 10,
-    FeedFilters filters = FeedFilters.empty,
-  }) async {
+    FeedFilters filters = FeedFilters.empty, SellerRef? seller}) async {
     requests.add(filters);
     return const [];
   }

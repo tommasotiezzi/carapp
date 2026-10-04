@@ -30,6 +30,8 @@ class ListingDetail {
     this.dealer,
     this.photos = const [],
     this.whatsappEnabled = false,
+    this.sellerDisplayName,
+    this.sellerAvatarPath,
   });
 
   final String id;
@@ -63,6 +65,10 @@ class ListingDetail {
   /// here: `seller_whatsapp()` gives it to signed-in users).
   final bool whatsappEnabled;
 
+  /// Private sellers: from their public profile (null = no name set).
+  final String? sellerDisplayName;
+  final String? sellerAvatarPath;
+
   bool get isDealer => sellerType == 'dealer';
 
   /// The card data for grids (e.g. adding it to "Salvati" without a request).
@@ -83,6 +89,12 @@ class ListingDetail {
         coverPath: coverPath,
         videoPath: videoPath,
         dealerName: dealer?.displayName,
+        ownerId: ownerId,
+        dealerId: dealer?.id,
+        province: province,
+        sellerDisplayName: sellerDisplayName,
+        sellerAvatarPath: sellerAvatarPath,
+        dealerLogoPath: dealer?.logoPath,
       );
 
   /// "Volkswagen Golf"
@@ -95,8 +107,8 @@ class ListingDetail {
     return province == null || province!.trim().isEmpty ? city : '$city ($province)';
   }
 
-  /// Only rows the screen needs. Profiles are not readable by other users,
-  /// so a private seller stays anonymous here.
+  /// Only rows the screen needs. A private seller is read through
+  /// `public_profiles` (name and picture only; `profiles` stays private).
   static const selectColumns =
       'id, seller_type, owner_id, category_id, published_at, version, year, '
       'mileage_km, price_cents, fuel_type, transmission, power_kw, euro_class, '
@@ -104,7 +116,8 @@ class ListingDetail {
       'city, province, cover_path, video_path, whatsapp_enabled, '
       'make:makes(name), model:models(name), '
       'dealer:dealers(id, display_name, city, province, logo_path, vat_verified_at), '
-      'media:listing_media(kind, storage_path, width, height, sort_order)';
+      'media:listing_media(kind, storage_path, width, height, sort_order), '
+      'seller:public_profiles!owner_id(display_name, avatar_path)';
 
   factory ListingDetail.fromRow(Map<String, dynamic> row) {
     String? nested(String key, String field) =>
@@ -147,6 +160,8 @@ class ListingDetail {
       dealer: dealerRow == null ? null : ListingDealer.fromRow(dealerRow),
       photos: photos,
       whatsappEnabled: (row['whatsapp_enabled'] as bool?) ?? false,
+      sellerDisplayName: nested('seller', 'display_name'),
+      sellerAvatarPath: nested('seller', 'avatar_path'),
     );
   }
 }

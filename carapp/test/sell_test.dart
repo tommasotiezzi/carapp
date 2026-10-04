@@ -8,6 +8,7 @@ import 'package:carapp/core/supabase/supabase_client.dart';
 import 'package:carapp/features/listing/data/listing_detail.dart';
 import 'package:carapp/features/listing/state/listing_providers.dart';
 import 'package:carapp/features/onboarding/data/catalog_repository.dart';
+import 'package:carapp/features/onboarding/state/onboarding_controller.dart';
 import 'package:carapp/features/search/data/catalog.dart';
 import 'package:carapp/features/sell/data/capture_step.dart';
 import 'package:carapp/features/sell/data/sell_draft.dart';
@@ -174,7 +175,7 @@ void main() {
 
     test('details: required fields and the listing row', () {
       expect(SellDetails.empty.missing,
-          ['make_id', 'model_id', 'year', 'mileage_km', 'price_cents', 'fuel_type', 'city']);
+          ['make_id', 'model_id', 'year', 'mileage_km', 'price_cents', 'fuel_type', 'city', 'province']);
       expect(_complete.isComplete, isTrue);
       final row = _complete.toListingRow();
       expect(row['city'], 'Milano');
@@ -545,6 +546,8 @@ void main() {
         catalogProvider.overrideWith((ref) async => catalog),
         makesProvider('car').overrideWith((ref) async => const [Make(id: 'vw', name: 'Volkswagen', categoryId: 'car')]),
         sellerAgeConsentProvider.overrideWith((ref) async => false),
+        // "Dove sei?" = Milano: the form starts from it.
+        homeProvinceProvider.overrideWithValue('MI'),
       ]);
       addTearDown(container.dispose);
       await tester.runAsync(() async {
@@ -577,7 +580,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Dati e prezzo'), findsOneWidget);
-      expect(find.text('Milano'), findsOneWidget); // city from the profile
+      expect(find.text('Milano'), findsOneWidget); // city from the capital
+      expect(find.text('MI'), findsOneWidget); // province
       expect(find.text('Ho almeno 18 anni, oppure vendo con il consenso di un genitore'), findsOneWidget);
 
       await tester.tap(find.text('Pubblica annuncio'));
@@ -611,6 +615,7 @@ void main() {
 
       expect(repo.saved.single.$1.details.toListingRow(), containsPair('price_cents', 1490000));
       expect(repo.saved.single.$1.details.toListingRow(), containsPair('model_id', 'golf'));
+      expect(repo.saved.single.$1.details.toListingRow(), containsPair('province', 'MI'));
       expect(repo.ageConsents, 1);
       expect(repo.published, hasLength(1));
       expect(find.textContaining('done '), findsOneWidget);

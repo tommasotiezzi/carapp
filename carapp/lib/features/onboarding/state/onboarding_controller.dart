@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/geo/italian_capitals.dart';
 import '../../../core/storage/preferences.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../data/buyer_preferences.dart';
@@ -93,8 +94,12 @@ class OnboardingController extends Notifier<OnboardingState> {
     if (userId == null) return;
 
     try {
+      final province = state.preferences.province;
       final profileUpdate = <String, dynamic>{
         if (state.intent != null) 'intent': state.intent!.dbName,
+        // The capital is also the city shown on the public profile.
+        'province': ?province,
+        if (province != null) 'city': ItalianCapitals.byCode[province]?.name,
         if (state.done) 'onboarding_completed_at': DateTime.now().toUtc().toIso8601String(),
       };
       if (profileUpdate.isNotEmpty) {
@@ -112,3 +117,9 @@ class OnboardingController extends Notifier<OnboardingState> {
 
 final onboardingControllerProvider =
     NotifierProvider<OnboardingController, OnboardingState>(OnboardingController.new);
+
+/// The user's capital ("Dove sei?"), null if not chosen. Distances in
+/// cards and "vicino a me" start from here.
+final homeProvinceProvider = Provider<String?>(
+  (ref) => ref.watch(onboardingControllerProvider.select((s) => s.preferences.province)),
+);

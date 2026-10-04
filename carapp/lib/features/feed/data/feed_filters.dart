@@ -1,8 +1,9 @@
+import '../../../core/geo/italian_capitals.dart';
 import '../../onboarding/data/buyer_preferences.dart';
 
 /// The parts of the filter UI. A pill opens one section, the "tune"
 /// button (and "Filtri" in Search) opens them all.
-enum FilterSection { vehicle, price, brand, year, mileage, fuel, transmission, novice }
+enum FilterSection { distance, vehicle, price, brand, year, mileage, fuel, transmission, novice }
 
 /// What the feed and Search show. Empty = everything. One shared state:
 /// the feed pills, the filter sheet and the Search box all edit it.
@@ -23,6 +24,8 @@ class FeedFilters {
     this.noviceDriver = false,
     this.province,
     this.textWords = const [],
+    this.nearProvince,
+    this.radiusKm,
   });
 
   final String? categoryId; // 'car' | 'motorcycle' | null = all
@@ -47,6 +50,11 @@ class FeedFilters {
   /// Search box when nothing else in the query was recognized.
   final List<String> textWords;
 
+  /// "Entro [radiusKm] km da [nearProvince]": capital to capital (see
+  /// ItalianCapitals). Both set, or the filter is off.
+  final String? nearProvince;
+  final int? radiusKm;
+
   static const empty = FeedFilters();
 
   /// Italian rule for the first 3 years of a B licence: max 105 kW
@@ -55,6 +63,7 @@ class FeedFilters {
   static const noviceMaxPowerKw = 105;
 
   static const yearOptions = [2010, 2015, 2018, 2020, 2022];
+  static const radiusOptions = [25, 50, 100, 200];
   static const mileageOptions = [30000, 50000, 100000, 150000];
   static const fuelOptions = [
     'petrol',
@@ -72,6 +81,16 @@ class FeedFilters {
   bool get hasPrice => priceMinCents != null || priceMaxCents != null;
   bool get hasYear => yearMin != null || yearMax != null;
   bool get hasBrand => makeIds.isNotEmpty || modelIds.isNotEmpty;
+  bool get hasDistance => nearProvince != null && radiusKm != null;
+
+  /// Provinces in range (null = no distance filter), crossed with
+  /// [province] when both are set (empty = no listing can match).
+  Set<String>? get provincesInRange {
+    if (!hasDistance) return null;
+    final inRange = ItalianCapitals.within(nearProvince!, radiusKm!);
+    if (province == null) return inRange;
+    return inRange.contains(province) ? {province!} : const {};
+  }
 
   bool get isEmpty => activeCount == 0;
 
@@ -87,6 +106,7 @@ class FeedFilters {
         noviceDriver,
         province != null,
         textWords.isNotEmpty,
+        hasDistance,
       ].where((active) => active).length;
 
   /// Starting point taken from the onboarding "Cosa cerchi?" answers.
@@ -98,10 +118,13 @@ class FeedFilters {
         makeIds: p.makeIds.toSet(),
         yearMin: p.yearMin,
         mileageMaxKm: p.mileageMaxKm,
+        nearProvince: p.maxDistanceKm == null ? null : p.province,
+        radiusKm: p.province == null ? null : p.maxDistanceKm,
       );
 
   /// Clears what [section] controls; the others stay.
   FeedFilters clear(FilterSection section) => switch (section) {
+        FilterSection.distance => copyWith(nearProvince: null, radiusKm: null),
         FilterSection.vehicle =>
           copyWith(categoryId: null, makeIds: const {}, modelIds: const {}),
         FilterSection.price => copyWith(priceMinCents: null, priceMaxCents: null),
@@ -129,6 +152,8 @@ class FeedFilters {
     bool? noviceDriver,
     Object? province = _unset,
     List<String>? textWords,
+    Object? nearProvince = _unset,
+    Object? radiusKm = _unset,
   }) =>
       FeedFilters(
         categoryId: identical(categoryId, _unset) ? this.categoryId : categoryId as String?,
@@ -147,6 +172,8 @@ class FeedFilters {
         noviceDriver: noviceDriver ?? this.noviceDriver,
         province: identical(province, _unset) ? this.province : province as String?,
         textWords: textWords ?? this.textWords,
+        nearProvince: identical(nearProvince, _unset) ? this.nearProvince : nearProvince as String?,
+        radiusKm: identical(radiusKm, _unset) ? this.radiusKm : radiusKm as int?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -163,6 +190,8 @@ class FeedFilters {
         'novice_driver': noviceDriver,
         'province': province,
         'text_words': textWords,
+        'near_province': nearProvince,
+        'radius_km': radiusKm,
       };
 
   /// Missing keys (filters saved by an older app) read as "not set".
@@ -183,6 +212,8 @@ class FeedFilters {
       noviceDriver: (json['novice_driver'] as bool?) ?? false,
       province: json['province'] as String?,
       textWords: List<String>.from((json['text_words'] as List?) ?? const []),
+      nearProvince: json['near_province'] as String?,
+      radiusKm: integer('radius_km'),
     );
   }
 
@@ -201,7 +232,9 @@ class FeedFilters {
       other.transmission == transmission &&
       other.noviceDriver == noviceDriver &&
       other.province == province &&
-      _sameList(other.textWords, textWords);
+      _sameList(other.textWords, textWords) &&
+      other.nearProvince == nearProvince &&
+      other.radiusKm == radiusKm;
 
   @override
   int get hashCode => Object.hash(
@@ -218,6 +251,8 @@ class FeedFilters {
         noviceDriver,
         province,
         Object.hashAll(textWords),
+        nearProvince,
+        radiusKm,
       );
 
   static bool _sameSet(Set<String> a, Set<String> b) => a.length == b.length && a.containsAll(b);

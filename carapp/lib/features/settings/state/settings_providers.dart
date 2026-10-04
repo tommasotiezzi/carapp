@@ -26,6 +26,31 @@ class MyProfileController extends AsyncNotifier<MyProfile?> {
 final myProfileProvider =
     AsyncNotifierProvider<MyProfileController, MyProfile?>(MyProfileController.new);
 
+/// The user's dealer (null if none). Edits are optimistic.
+class MyDealerController extends AsyncNotifier<MyDealer?> {
+  @override
+  Future<MyDealer?> build() async {
+    if (ref.watch(currentUserIdProvider) == null) return null;
+    return ref.read(accountRepositoryProvider).fetchMyDealer();
+  }
+
+  /// Reload after a change made elsewhere (the picture).
+  void refreshLocal() => ref.invalidateSelf();
+
+  Future<void> edit(MyDealer next, Map<String, dynamic> patch) async {
+    final before = state.value;
+    state = AsyncData(next);
+    try {
+      await ref.read(accountRepositoryProvider).updateDealer(next.id, patch);
+    } catch (_) {
+      if (ref.mounted) state = AsyncData(before);
+      rethrow;
+    }
+  }
+}
+
+final myDealerProvider = AsyncNotifierProvider<MyDealerController, MyDealer?>(MyDealerController.new);
+
 /// Per-type notification switches; a missing type is on.
 class NotificationPrefsController extends AsyncNotifier<Map<String, bool>> {
   @override

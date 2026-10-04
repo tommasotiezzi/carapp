@@ -5,6 +5,7 @@ import 'package:carapp/features/saved/data/favorites_repository.dart';
 import 'package:carapp/features/saved/state/saved_controller.dart';
 import 'package:carapp/features/saved/ui/saved_section.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
+import 'package:carapp/features/onboarding/state/onboarding_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -147,6 +148,7 @@ void main() {
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
+        homeProvinceProvider.overrideWithValue(null),
         supabaseProvider.overrideWithValue(SupabaseClient(
           'https://test.supabase.co',
           'anon',

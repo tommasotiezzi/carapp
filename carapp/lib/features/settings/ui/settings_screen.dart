@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/geo/capital_picker.dart';
+import '../../../core/geo/italian_capitals.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/ui/login_sheet.dart';
 import '../../legal/data/consents.dart';
 import '../../legal/state/consent_providers.dart';
 import '../../legal/ui/consent_checks.dart';
+import '../../onboarding/state/onboarding_controller.dart';
 import '../data/account_repository.dart';
 import '../state/settings_providers.dart';
 import 'account_sheets.dart';
@@ -59,6 +65,8 @@ class SettingsScreen extends ConsumerWidget {
             _AccountSection(email: user.email ?? ''),
             _Header(t.settingsAboutYou),
             const _AboutYouSection(),
+            _Header(t.settingsPublicProfile),
+            const _PublicProfileSection(),
             _Header(t.settingsNotifications),
             const _NotificationsSection(),
             _Header(t.settingsEmails),
@@ -192,7 +200,7 @@ class _AboutYouSection extends ConsumerWidget {
             await _guarded(
               context,
               () => controller.edit(
-                MyProfile(displayName: value, birthDate: profile.birthDate, gender: profile.gender),
+                profile.copyWith(displayName: value),
                 {'display_name': value},
               ),
             );
@@ -209,7 +217,7 @@ class _AboutYouSection extends ConsumerWidget {
               : clear(() => _guarded(
                     context,
                     () => controller.edit(
-                      MyProfile(displayName: profile.displayName, gender: profile.gender),
+                      profile.copyWith(birthDate: null),
                       {'birth_date': null},
                     ),
                   )),
@@ -226,7 +234,7 @@ class _AboutYouSection extends ConsumerWidget {
             await _guarded(
               context,
               () => controller.edit(
-                MyProfile(displayName: profile.displayName, birthDate: picked, gender: profile.gender),
+                profile.copyWith(birthDate: picked),
                 {'birth_date': picked.toIso8601String().substring(0, 10)},
               ),
             );
@@ -241,7 +249,7 @@ class _AboutYouSection extends ConsumerWidget {
               : clear(() => _guarded(
                     context,
                     () => controller.edit(
-                      MyProfile(displayName: profile.displayName, birthDate: profile.birthDate),
+                      profile.copyWith(gender: null),
                       {'gender': null},
                     ),
                   )),
@@ -269,7 +277,7 @@ class _AboutYouSection extends ConsumerWidget {
             await _guarded(
               context,
               () => controller.edit(
-                MyProfile(displayName: profile.displayName, birthDate: profile.birthDate, gender: picked),
+                profile.copyWith(gender: picked),
                 {'gender': picked.dbName},
               ),
             );
@@ -278,6 +286,265 @@ class _AboutYouSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
           child: Text(t.settingsAboutYouNote, style: Theme.of(context).textTheme.bodySmall),
+        ),
+      ],
+    );
+  }
+}
+
+/// What other people see on the user's seller page: picture, capital and
+/// the contacts they choose to show (the name is in "Su di te"). For a
+/// dealer account it is the dealer's page: its owner edits it here.
+class _PublicProfileSection extends ConsumerWidget {
+  const _PublicProfileSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final profile = ref.watch(myProfileProvider).value ?? const MyProfile();
+    final dealer = ref.watch(myDealerProvider).value;
+    final name = dealer?.displayName ?? profile.displayName ?? '';
+
+    return Column(
+      children: [
+        ListTile(
+          leading: UserAvatar(path: profile.avatarPath, name: name, dealer: dealer != null),
+          title: Text(t.settingsPhoto),
+          subtitle: Text(t.settingsPhotoChange),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _changePhoto(context, ref, profile, dealer),
+        ),
+        if (dealer != null) _DealerRows(dealer: dealer) else _PrivateRows(profile: profile),
+      ],
+    );
+  }
+
+  /// Camera or gallery, resized on the phone (800 px JPEG), uploaded to
+  /// `avatars/<user>/`; a dealer owner's picture is also the dealer's.
+  static Future<void> _changePhoto(
+    BuildContext context,
+    WidgetRef ref,
+    MyProfile profile,
+    MyDealer? dealer,
+  ) async {
+    final t = AppLocalizations.of(context);
+    final repo = ref.read(accountRepositoryProvider);
+    final controller = ref.read(myProfileProvider.notifier);
+    final dealerController = ref.read(myDealerProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    final old = profile.avatarPath;
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(t.settingsPhotoTake),
+              onTap: () => Navigator.pop(context, 'camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(t.settingsPhotoPick),
+              onTap: () => Navigator.pop(context, 'gallery'),
+            ),
+            if (old != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+                title: Text(t.settingsPhotoRemove, style: const TextStyle(color: AppColors.danger)),
+                onTap: () => Navigator.pop(context, 'remove'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null) return;
+
+    try {
+      String? path;
+      if (choice != 'remove') {
+        final file = await ImagePicker().pickImage(
+          source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
+          maxWidth: 800,
+          maxHeight: 800,
+          imageQuality: 85,
+          requestFullMetadata: false,
+        );
+        if (file == null) return;
+        path = await repo.uploadAvatar(await file.readAsBytes(), '${const Uuid().v4()}.jpg');
+      }
+      await controller.edit(profile.copyWith(avatarPath: path), {'avatar_path': path});
+      if (dealer != null && dealer.isOwner) {
+        await repo.updateDealer(dealer.id, {'logo_path': path});
+        dealerController.refreshLocal();
+      }
+      if (old != null) await repo.removeAvatar(old);
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(t.settingsPhotoError)));
+    }
+  }
+}
+
+class _PrivateRows extends ConsumerWidget {
+  const _PrivateRows({required this.profile});
+
+  final MyProfile profile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final controller = ref.read(myProfileProvider.notifier);
+    final onboarding = ref.read(onboardingControllerProvider.notifier);
+    final hasPhone = (profile.phone ?? '').trim().isNotEmpty;
+
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.place_outlined),
+          title: Text(t.settingsWhere),
+          subtitle: Text(ItalianCapitals.byCode[profile.province]?.label ?? t.prefsWhereNone),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final code = await showCapitalPicker(context, selected: profile.province);
+            if (code == null || !context.mounted) return;
+            // Also the center of "vicino a me" and of the distances.
+            onboarding.updatePreferences((p) => p.copyWith(province: code, maxDistanceKm: p.maxDistanceKm ?? 50));
+            await _guarded(
+              context,
+              () => controller.edit(
+                profile.copyWith(province: code),
+                {'province': code, 'city': ItalianCapitals.byCode[code]?.name},
+              ),
+            );
+            await onboarding.savePreferences();
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.phone_outlined),
+          title: Text(t.settingsPhone),
+          subtitle: Text(hasPhone ? profile.phone! : t.settingsAdd),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () async {
+            final phone = await showTextInputSheet(
+              context,
+              title: t.settingsPhone,
+              initial: profile.phone ?? '',
+              maxLength: 20,
+            );
+            if (phone == null || !context.mounted) return;
+            final value = phone.trim().isEmpty ? null : phone.trim();
+            await _guarded(
+              context,
+              () => controller.edit(
+                profile.copyWith(
+                  phone: value,
+                  phonePublic: value != null && profile.phonePublic,
+                  whatsappPublic: value != null && profile.whatsappPublic,
+                ),
+                {
+                  'phone': value,
+                  if (value == null) 'phone_public': false,
+                  if (value == null) 'whatsapp_public': false,
+                },
+              ),
+            );
+          },
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.call_outlined),
+          title: Text(t.settingsPhonePublic),
+          subtitle: hasPhone ? null : Text(t.settingsPhoneNeeded),
+          value: profile.phonePublic,
+          onChanged: !hasPhone
+              ? null
+              : (v) => _guarded(
+                    context,
+                    () => controller.edit(profile.copyWith(phonePublic: v), {'phone_public': v}),
+                  ),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.chat_outlined),
+          title: Text(t.settingsWhatsappPublic),
+          subtitle: hasPhone ? null : Text(t.settingsPhoneNeeded),
+          value: profile.whatsappPublic,
+          onChanged: !hasPhone
+              ? null
+              : (v) => _guarded(
+                    context,
+                    () => controller.edit(profile.copyWith(whatsappPublic: v), {'whatsapp_public': v}),
+                  ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.page, 0, AppSpacing.page, AppSpacing.s),
+          child: Text(t.settingsPublicProfileNote, style: Theme.of(context).textTheme.bodySmall),
+        ),
+      ],
+    );
+  }
+}
+
+/// The dealer's page data: name shown, description, contacts, place.
+/// Only the owner edits (the database refuses others anyway).
+class _DealerRows extends ConsumerWidget {
+  const _DealerRows({required this.dealer});
+
+  final MyDealer dealer;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final controller = ref.read(myDealerProvider.notifier);
+    final onboarding = ref.read(onboardingControllerProvider.notifier);
+    final d = dealer;
+
+    Future<void> editText(String title, String? current, String column, {int max = 200}) async {
+      final value = await showTextInputSheet(context, title: title, initial: current ?? '', maxLength: max);
+      if (value == null || !context.mounted) return;
+      final v = value.trim().isEmpty ? null : value.trim();
+      if (column == 'display_name' && v == null) return; // required
+      await _guarded(context, () => controller.edit(d.copyWith(column, v), {column: v}));
+    }
+
+    Widget row(IconData icon, String title, String? value, VoidCallback onTap) => ListTile(
+          leading: Icon(icon),
+          title: Text(title),
+          subtitle: Text((value ?? '').isEmpty ? t.settingsAdd : value!, maxLines: 2, overflow: TextOverflow.ellipsis),
+          trailing: d.isOwner ? const Icon(Icons.chevron_right) : null,
+          onTap: d.isOwner ? onTap : null,
+        );
+
+    return Column(
+      children: [
+        row(Icons.storefront_outlined, t.settingsDealerName, d.displayName,
+            () => editText(t.settingsDealerName, d.displayName, 'display_name', max: 80)),
+        row(Icons.notes_outlined, t.settingsDealerDescription, d.description,
+            () => editText(t.settingsDealerDescription, d.description, 'description', max: 1000)),
+        row(Icons.place_outlined, t.settingsDealerWhere, ItalianCapitals.byCode[d.province]?.label, () async {
+          final code = await showCapitalPicker(context, selected: d.province);
+          if (code == null || !context.mounted) return;
+          onboarding.updatePreferences((p) => p.copyWith(province: code, maxDistanceKm: p.maxDistanceKm ?? 50));
+          final city = ItalianCapitals.byCode[code]?.name;
+          await _guarded(
+            context,
+            () => controller.edit(d.copyWith('province', code).copyWith('city', city), {'province': code, 'city': city}),
+          );
+          await onboarding.savePreferences();
+        }),
+        row(Icons.call_outlined, t.settingsPhone, d.phone, () => editText(t.settingsPhone, d.phone, 'phone', max: 20)),
+        row(Icons.chat_outlined, t.whatsappLabel, d.whatsapp,
+            () => editText(t.whatsappLabel, d.whatsapp, 'whatsapp', max: 20)),
+        row(Icons.language, t.settingsDealerWebsite, d.website,
+            () => editText(t.settingsDealerWebsite, d.website, 'website', max: 200)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.page, 0, AppSpacing.page, AppSpacing.s),
+          child: Text(
+            d.isOwner ? t.settingsDealerNote : t.settingsDealerOwnerOnly,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ),
       ],
     );

@@ -2799,6 +2799,342 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Scatta'**
   String get captureTakePhoto;
+
+  /// No description provided for @filterDistance.
+  ///
+  /// In it, this message translates to:
+  /// **'Distanza'**
+  String get filterDistance;
+
+  /// No description provided for @distanceAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutta Italia'**
+  String get distanceAll;
+
+  /// No description provided for @distanceKm.
+  ///
+  /// In it, this message translates to:
+  /// **'{km} km'**
+  String distanceKm(int km);
+
+  /// No description provided for @distanceWithin.
+  ///
+  /// In it, this message translates to:
+  /// **'Entro {km} km'**
+  String distanceWithin(int km);
+
+  /// No description provided for @distanceWithinFrom.
+  ///
+  /// In it, this message translates to:
+  /// **'Entro {km} km da {city}'**
+  String distanceWithinFrom(int km, String city);
+
+  /// No description provided for @distanceFrom.
+  ///
+  /// In it, this message translates to:
+  /// **'Da'**
+  String get distanceFrom;
+
+  /// No description provided for @distancePickCenter.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli il capoluogo'**
+  String get distancePickCenter;
+
+  /// No description provided for @distanceAway.
+  ///
+  /// In it, this message translates to:
+  /// **'{km} km da te'**
+  String distanceAway(int km);
+
+  /// No description provided for @distanceHere.
+  ///
+  /// In it, this message translates to:
+  /// **'Nella tua provincia'**
+  String get distanceHere;
+
+  /// No description provided for @capitalSearch.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca il capoluogo più vicino a te'**
+  String get capitalSearch;
+
+  /// No description provided for @prefsWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove sei?'**
+  String get prefsWhere;
+
+  /// No description provided for @prefsWhereHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Il capoluogo più vicino a te: così ti mostriamo gli annunci in zona.'**
+  String get prefsWhereHint;
+
+  /// No description provided for @prefsWhereNone.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli il capoluogo'**
+  String get prefsWhereNone;
+
+  /// No description provided for @prefsDistance.
+  ///
+  /// In it, this message translates to:
+  /// **'Fino a che distanza?'**
+  String get prefsDistance;
+
+  /// No description provided for @settingsPublicProfile.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo pubblico'**
+  String get settingsPublicProfile;
+
+  /// No description provided for @settingsPublicProfileNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Chi guarda i tuoi annunci vede il tuo nome, il capoluogo e i contatti che scegli di mostrare. Il numero lo vede solo chi ha un account.'**
+  String get settingsPublicProfileNote;
+
+  /// No description provided for @settingsWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove sei'**
+  String get settingsWhere;
+
+  /// No description provided for @settingsPhone.
+  ///
+  /// In it, this message translates to:
+  /// **'Telefono'**
+  String get settingsPhone;
+
+  /// No description provided for @settingsPhonePublic.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra il numero sul profilo'**
+  String get settingsPhonePublic;
+
+  /// No description provided for @settingsWhatsappPublic.
+  ///
+  /// In it, this message translates to:
+  /// **'Contatto su WhatsApp'**
+  String get settingsWhatsappPublic;
+
+  /// No description provided for @settingsPhoneNeeded.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima aggiungi il numero'**
+  String get settingsPhoneNeeded;
+
+  /// No description provided for @sellerListingsCount.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessun annuncio} =1{1 annuncio} other{{count} annunci}}'**
+  String sellerListingsCount(int count);
+
+  /// No description provided for @sellerMemberSince.
+  ///
+  /// In it, this message translates to:
+  /// **'Su {app} da {date}'**
+  String sellerMemberSince(String app, String date);
+
+  /// No description provided for @sellerCall.
+  ///
+  /// In it, this message translates to:
+  /// **'Chiama'**
+  String get sellerCall;
+
+  /// No description provided for @sellerWebsite.
+  ///
+  /// In it, this message translates to:
+  /// **'Sito'**
+  String get sellerWebsite;
+
+  /// No description provided for @sellerTabListings.
+  ///
+  /// In it, this message translates to:
+  /// **'Annunci'**
+  String get sellerTabListings;
+
+  /// No description provided for @sellerTabReviews.
+  ///
+  /// In it, this message translates to:
+  /// **'Recensioni'**
+  String get sellerTabReviews;
+
+  /// No description provided for @sellerNotFoundTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo non disponibile'**
+  String get sellerNotFoundTitle;
+
+  /// No description provided for @sellerNotFoundBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Questo venditore non ha annunci online.'**
+  String get sellerNotFoundBody;
+
+  /// No description provided for @sellerNoListings.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun annuncio online'**
+  String get sellerNoListings;
+
+  /// No description provided for @sellerNoMatches.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun annuncio con questi filtri'**
+  String get sellerNoMatches;
+
+  /// No description provided for @sellerSeeAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Vedi tutti gli annunci'**
+  String get sellerSeeAll;
+
+  /// No description provided for @sellerLoginForContacts.
+  ///
+  /// In it, this message translates to:
+  /// **'Accedi per vedere i contatti'**
+  String get sellerLoginForContacts;
+
+  /// No description provided for @sellerPrivateShort.
+  ///
+  /// In it, this message translates to:
+  /// **'Privato'**
+  String get sellerPrivateShort;
+
+  /// No description provided for @sellerNoReviews.
+  ///
+  /// In it, this message translates to:
+  /// **'Ancora nessuna recensione'**
+  String get sellerNoReviews;
+
+  /// No description provided for @settingsPhoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto profilo'**
+  String get settingsPhoto;
+
+  /// No description provided for @settingsPhotoChange.
+  ///
+  /// In it, this message translates to:
+  /// **'La vede chi guarda i tuoi annunci'**
+  String get settingsPhotoChange;
+
+  /// No description provided for @settingsPhotoTake.
+  ///
+  /// In it, this message translates to:
+  /// **'Scatta una foto'**
+  String get settingsPhotoTake;
+
+  /// No description provided for @settingsPhotoPick.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli dalla galleria'**
+  String get settingsPhotoPick;
+
+  /// No description provided for @settingsPhotoRemove.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi la foto'**
+  String get settingsPhotoRemove;
+
+  /// No description provided for @settingsPhotoError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non siamo riusciti a salvare la foto, riprova.'**
+  String get settingsPhotoError;
+
+  /// No description provided for @settingsDealerName.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome del concessionario'**
+  String get settingsDealerName;
+
+  /// No description provided for @settingsDealerDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Descrizione'**
+  String get settingsDealerDescription;
+
+  /// No description provided for @settingsDealerWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove si trova'**
+  String get settingsDealerWhere;
+
+  /// No description provided for @settingsDealerWebsite.
+  ///
+  /// In it, this message translates to:
+  /// **'Sito web'**
+  String get settingsDealerWebsite;
+
+  /// No description provided for @settingsDealerNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Questi dati compaiono sulla pagina del concessionario, insieme ai tuoi annunci.'**
+  String get settingsDealerNote;
+
+  /// No description provided for @settingsDealerOwnerOnly.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo il titolare del concessionario può modificarli.'**
+  String get settingsDealerOwnerOnly;
+
+  /// No description provided for @capitalUseLocation.
+  ///
+  /// In it, this message translates to:
+  /// **'Usa la mia posizione'**
+  String get capitalUseLocation;
+
+  /// No description provided for @capitalLocating.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerco il capoluogo più vicino…'**
+  String get capitalLocating;
+
+  /// No description provided for @capitalLocationOff.
+  ///
+  /// In it, this message translates to:
+  /// **'La localizzazione del telefono è spenta: attivala o scegli dalla lista.'**
+  String get capitalLocationOff;
+
+  /// No description provided for @capitalLocationDenied.
+  ///
+  /// In it, this message translates to:
+  /// **'Permesso posizione negato: scegli dalla lista.'**
+  String get capitalLocationDenied;
+
+  /// No description provided for @capitalLocationError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo a trovare la tua posizione: scegli dalla lista.'**
+  String get capitalLocationError;
+
+  /// No description provided for @nearbyDealersTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Concessionari vicino a te'**
+  String get nearbyDealersTitle;
+
+  /// No description provided for @nearbyDealersWithin.
+  ///
+  /// In it, this message translates to:
+  /// **'Entro {km} km da {city}'**
+  String nearbyDealersWithin(int km, String city);
+
+  /// No description provided for @nearbyDealersSetPlace.
+  ///
+  /// In it, this message translates to:
+  /// **'Dicci dove sei per vedere i concessionari in zona.'**
+  String get nearbyDealersSetPlace;
+
+  /// No description provided for @nearbyDealersNone.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun concessionario con annunci entro {km} km.'**
+  String nearbyDealersNone(int km);
 }
 
 class _AppLocalizationsDelegate

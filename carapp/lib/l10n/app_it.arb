@@ -598,5 +598,126 @@
   "motoScooter": "Scooter",
   "motoMotard": "Motard",
   "captureRecord": "Registra",
-  "captureTakePhoto": "Scatta"
+  "captureTakePhoto": "Scatta",
+  "filterDistance": "Distanza",
+  "distanceAll": "Tutta Italia",
+  "distanceKm": "{km} km",
+  "@distanceKm": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  },
+  "distanceWithin": "Entro {km} km",
+  "@distanceWithin": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  },
+  "distanceWithinFrom": "Entro {km} km da {city}",
+  "@distanceWithinFrom": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      },
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "distanceFrom": "Da",
+  "distancePickCenter": "Scegli il capoluogo",
+  "distanceAway": "{km} km da te",
+  "@distanceAway": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  },
+  "distanceHere": "Nella tua provincia",
+  "capitalSearch": "Cerca il capoluogo più vicino a te",
+  "prefsWhere": "Dove sei?",
+  "prefsWhereHint": "Il capoluogo più vicino a te: così ti mostriamo gli annunci in zona.",
+  "prefsWhereNone": "Scegli il capoluogo",
+  "prefsDistance": "Fino a che distanza?",
+  "settingsPublicProfile": "Profilo pubblico",
+  "settingsPublicProfileNote": "Chi guarda i tuoi annunci vede il tuo nome, il capoluogo e i contatti che scegli di mostrare. Il numero lo vede solo chi ha un account.",
+  "settingsWhere": "Dove sei",
+  "settingsPhone": "Telefono",
+  "settingsPhonePublic": "Mostra il numero sul profilo",
+  "settingsWhatsappPublic": "Contatto su WhatsApp",
+  "settingsPhoneNeeded": "Prima aggiungi il numero",
+  "sellerListingsCount": "{count, plural, =0{Nessun annuncio} =1{1 annuncio} other{{count} annunci}}",
+  "@sellerListingsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sellerMemberSince": "Su {app} da {date}",
+  "@sellerMemberSince": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sellerCall": "Chiama",
+  "sellerWebsite": "Sito",
+  "sellerTabListings": "Annunci",
+  "sellerTabReviews": "Recensioni",
+  "sellerNotFoundTitle": "Profilo non disponibile",
+  "sellerNotFoundBody": "Questo venditore non ha annunci online.",
+  "sellerNoListings": "Nessun annuncio online",
+  "sellerNoMatches": "Nessun annuncio con questi filtri",
+  "sellerSeeAll": "Vedi tutti gli annunci",
+  "sellerLoginForContacts": "Accedi per vedere i contatti",
+  "sellerPrivateShort": "Privato",
+  "sellerNoReviews": "Ancora nessuna recensione",
+  "settingsPhoto": "Foto profilo",
+  "settingsPhotoChange": "La vede chi guarda i tuoi annunci",
+  "settingsPhotoTake": "Scatta una foto",
+  "settingsPhotoPick": "Scegli dalla galleria",
+  "settingsPhotoRemove": "Rimuovi la foto",
+  "settingsPhotoError": "Non siamo riusciti a salvare la foto, riprova.",
+  "settingsDealerName": "Nome del concessionario",
+  "settingsDealerDescription": "Descrizione",
+  "settingsDealerWhere": "Dove si trova",
+  "settingsDealerWebsite": "Sito web",
+  "settingsDealerNote": "Questi dati compaiono sulla pagina del concessionario, insieme ai tuoi annunci.",
+  "settingsDealerOwnerOnly": "Solo il titolare del concessionario può modificarli.",
+  "capitalUseLocation": "Usa la mia posizione",
+  "capitalLocating": "Cerco il capoluogo più vicino…",
+  "capitalLocationOff": "La localizzazione del telefono è spenta: attivala o scegli dalla lista.",
+  "capitalLocationDenied": "Permesso posizione negato: scegli dalla lista.",
+  "capitalLocationError": "Non riusciamo a trovare la tua posizione: scegli dalla lista.",
+  "nearbyDealersTitle": "Concessionari vicino a te",
+  "nearbyDealersWithin": "Entro {km} km da {city}",
+  "@nearbyDealersWithin": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      },
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "nearbyDealersSetPlace": "Dicci dove sei per vedere i concessionari in zona.",
+  "nearbyDealersNone": "Nessun concessionario con annunci entro {km} km.",
+  "@nearbyDealersNone": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -10,6 +10,8 @@ import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/ui/login_sheet.dart';
+import '../../onboarding/state/onboarding_controller.dart';
+import '../../seller/ui/nearby_dealers_section.dart';
 import '../../feed/data/feed_filters.dart';
 import '../../feed/state/feed_controller.dart';
 import '../../feed/state/feed_filters_controller.dart';
@@ -111,7 +113,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       if (mounted) setState(() => _ignored = const []);
       return;
     }
-    final parsed = QueryParser(catalog.value ?? Catalog.empty).parse(text);
+    final parsed = QueryParser(
+      catalog.value ?? Catalog.empty,
+      homeProvince: ref.read(homeProvinceProvider),
+    ).parse(text);
     _fromText = parsed.filters;
     if (mounted) setState(() => _ignored = parsed.ignored);
     await ref.read(feedFiltersProvider.notifier).apply(parsed.filters);
@@ -243,7 +248,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 }
 
-/// Before typing: recent searches, saved searches, popular brands.
+/// Before typing: dealers near the user, recent searches, saved searches,
+/// popular brands.
 class _Home extends ConsumerWidget {
   const _Home({required this.onSearch, required this.catalog});
 
@@ -265,6 +271,7 @@ class _Home extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const NearbyDealersSection(),
         if (recents.isNotEmpty) ...[
           Row(
             children: [

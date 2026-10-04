@@ -340,6 +340,12 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
                           ),
                         )),
                     onContact: () => _interact(() => _openDetail(item)),
+                    onOpenSeller: item.sellerPageId == null
+                        ? null
+                        : () => context.push(AppRoutes.sellerPagePath(
+                              id: item.sellerPageId!,
+                              dealer: item.isDealer,
+                            )),
                     onOpenFilters: (section) =>
                         _interact(() => showFilterSheet(context, only: section)),
                   ),

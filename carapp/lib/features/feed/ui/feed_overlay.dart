@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/data/catalog_repository.dart';
 import '../data/feed_filters.dart';
@@ -26,9 +27,13 @@ class FeedOverlay extends StatelessWidget {
     required this.onShare,
     required this.onContact,
     required this.onOpenFilters,
+    this.onOpenSeller,
   });
 
   final FeedItem item;
+
+  /// The seller's page (avatar or name); null = no page (old rows).
+  final VoidCallback? onOpenSeller;
   final bool saved;
   final VoidCallback onOpenDetail;
   final VoidCallback onSave;
@@ -65,6 +70,7 @@ class FeedOverlay extends StatelessWidget {
           bottom: 120,
           child: _SideActions(
             item: item,
+            onOpenSeller: onOpenSeller,
             saved: saved,
             onSave: onSave,
             onShare: onShare,
@@ -75,14 +81,9 @@ class FeedOverlay extends StatelessWidget {
           left: AppSpacing.page,
           right: 84,
           bottom: 64,
-          child: _Caption(item: item, onTap: onOpenDetail),
+          child: _Caption(item: item, onTap: onOpenDetail, onOpenSeller: onOpenSeller),
         ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 12,
-          child: _FilterPills(onOpen: onOpenFilters),
-        ),
+        Positioned(left: 0, right: 0, bottom: 12, child: _FilterPills(onOpen: onOpenFilters)),
       ],
     );
   }
@@ -91,6 +92,7 @@ class FeedOverlay extends StatelessWidget {
 class _SideActions extends StatelessWidget {
   const _SideActions({
     required this.item,
+    this.onOpenSeller,
     required this.saved,
     required this.onSave,
     required this.onShare,
@@ -98,6 +100,7 @@ class _SideActions extends StatelessWidget {
   });
 
   final FeedItem item;
+  final VoidCallback? onOpenSeller;
   final bool saved;
   final VoidCallback onSave;
   final VoidCallback onShare;
@@ -108,44 +111,38 @@ class _SideActions extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2C333C),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: Text(
-                Formatters.initials(item.sellerName),
-                style: const TextStyle(
-                  fontFamily: AppFonts.display,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onOpenSeller,
+          child: Semantics(
+            button: onOpenSeller != null,
+            label: item.sellerName,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: UserAvatar(path: item.avatarPath, name: item.sellerName, radius: 22, dark: true),
                 ),
-              ),
-            ),
-            if (item.isDealer)
-              Positioned(
-                bottom: -7,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.feedBackground, width: 2),
+                if (item.isDealer)
+                  Positioned(
+                    bottom: -7,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.feedBackground, width: 2),
+                      ),
+                      child: const Icon(Icons.check, size: 12, color: Colors.white),
+                    ),
                   ),
-                  child: const Icon(Icons.check, size: 12, color: Colors.white),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 22),
         _ActionButton(
@@ -203,10 +200,7 @@ class _ActionButton extends StatelessWidget {
                 Container(
                   width: 48,
                   height: 48,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                   child: Center(child: glyph),
                 )
               else
@@ -230,10 +224,11 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _Caption extends StatelessWidget {
-  const _Caption({required this.item, required this.onTap});
+  const _Caption({required this.item, required this.onTap, this.onOpenSeller});
 
   final FeedItem item;
   final VoidCallback onTap;
+  final VoidCallback? onOpenSeller;
 
   @override
   Widget build(BuildContext context) {
@@ -253,38 +248,38 @@ class _Caption extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Flexible(
-                child: Text(
-                  item.sellerName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    shadows: shadow,
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onOpenSeller ?? onTap,
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    item.sellerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      shadows: shadow,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0x2EFFFFFF),
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  item.isDealer ? 'Concessionario' : 'Privato',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0x2EFFFFFF),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Text(
+                    item.isDealer ? 'Concessionario' : 'Privato',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -304,11 +299,7 @@ class _Caption extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               specs,
-              style: const TextStyle(
-                color: Color(0xE6FFFFFF),
-                fontSize: 14,
-                shadows: shadow,
-              ),
+              style: const TextStyle(color: Color(0xE6FFFFFF), fontSize: 14, shadows: shadow),
             ),
           ],
           if ((item.description ?? '').isNotEmpty) ...[
@@ -317,12 +308,7 @@ class _Caption extends StatelessWidget {
               item.description!,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xD9FFFFFF),
-                fontSize: 13,
-                height: 1.4,
-                shadows: shadow,
-              ),
+              style: const TextStyle(color: Color(0xD9FFFFFF), fontSize: 13, height: 1.4, shadows: shadow),
             ),
           ],
           const SizedBox(height: 6),
@@ -366,11 +352,15 @@ class _FilterPills extends ConsumerWidget {
       if (f.makeIds.isEmpty) return t.filterBrand;
       if (f.makeIds.length > 1) return t.filterBrandCount(f.makeIds.length);
       final makes = ref.watch(makesProvider(f.categoryId ?? 'car')).value ?? const [];
-      return makes.where((m) => m.id == f.makeIds.first).firstOrNull?.name ??
-          t.filterBrandCount(1);
+      return makes.where((m) => m.id == f.makeIds.first).firstOrNull?.name ?? t.filterBrandCount(1);
     }
 
     final pills = [
+      (
+        FilterSection.distance,
+        f.hasDistance,
+        f.hasDistance ? t.distanceWithin(f.radiusKm!) : t.filterDistance,
+      ),
       (FilterSection.price, f.hasPrice, priceLabel(t, f)),
       (FilterSection.brand, f.hasBrand, brandLabel()),
       (FilterSection.year, f.hasYear, yearLabel(t, f)),
@@ -399,11 +389,7 @@ class _FilterPills extends ConsumerWidget {
                   const SizedBox(width: 4),
                   Text(
                     '${f.activeCount}',
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: const TextStyle(color: AppColors.ink, fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                 ],
               ],
@@ -421,13 +407,7 @@ class _FilterPills extends ConsumerWidget {
 
 /// Active = solid white with dark text, readable on any video frame.
 class _GlassPill extends StatelessWidget {
-  const _GlassPill({
-    required this.onTap,
-    this.active = false,
-    this.label,
-    this.child,
-    this.semanticLabel,
-  });
+  const _GlassPill({required this.onTap, this.active = false, this.label, this.child, this.semanticLabel});
 
   final VoidCallback onTap;
   final bool active;
@@ -449,26 +429,21 @@ class _GlassPill extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Material(
             color: active ? Colors.white : AppColors.glassFill,
-            shape: StadiumBorder(
-              side: BorderSide(color: active ? Colors.white : AppColors.glassBorder),
-            ),
+            shape: StadiumBorder(side: BorderSide(color: active ? Colors.white : AppColors.glassBorder)),
             child: InkWell(
               onTap: onTap,
               customBorder: const StadiumBorder(),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Center(
-                  child: child ??
+                  child:
+                      child ??
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             label!,
-                            style: TextStyle(
-                              color: foreground,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: TextStyle(color: foreground, fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(width: 4),
                           Icon(Icons.keyboard_arrow_down, size: 16, color: foreground),

@@ -17,6 +17,12 @@ class FeedItem {
     this.coverPath,
     this.videoPath,
     this.dealerName,
+    this.ownerId,
+    this.dealerId,
+    this.province,
+    this.sellerDisplayName,
+    this.sellerAvatarPath,
+    this.dealerLogoPath,
   });
 
   final String id;
@@ -35,6 +41,19 @@ class FeedItem {
   final String? coverPath;
   final String? videoPath;
   final String? dealerName;
+  final String? ownerId;
+  final String? dealerId;
+
+  /// Two-letter code: distance from the user's capital.
+  final String? province;
+
+  /// Private sellers: the name on their public profile (null = not set).
+  final String? sellerDisplayName;
+  final String? sellerAvatarPath;
+  final String? dealerLogoPath;
+
+  /// The seller's picture: the dealer's, or the private seller's.
+  String? get avatarPath => isDealer ? dealerLogoPath : sellerAvatarPath;
 
   bool get isDealer => sellerType == 'dealer';
 
@@ -44,13 +63,20 @@ class FeedItem {
       .where((s) => s.trim().isNotEmpty)
       .join(' ');
 
-  String get sellerName => isDealer ? (dealerName ?? 'Concessionario') : 'Privato';
+  String get sellerName => isDealer
+      ? (dealerName ?? 'Concessionario')
+      : ((sellerDisplayName ?? '').trim().isEmpty ? 'Privato' : sellerDisplayName!.trim());
+
+  /// Where tapping the seller's name or picture leads.
+  String? get sellerPageId => isDealer ? dealerId : ownerId;
 
   /// Columns the feed needs, nothing more.
   static const selectColumns =
       'id, seller_type, published_at, version, year, mileage_km, price_cents, '
-      'fuel_type, power_kw, description, city, cover_path, video_path, '
-      'make:makes(name), model:models(name), dealer:dealers(display_name)';
+      'fuel_type, power_kw, description, city, province, cover_path, video_path, '
+      'owner_id, dealer_id, '
+      'make:makes(name), model:models(name), dealer:dealers(display_name, logo_path), '
+      'seller:public_profiles!owner_id(display_name, avatar_path)';
 
   factory FeedItem.fromRow(Map<String, dynamic> row) {
     String? nested(String key, String field) =>
@@ -73,6 +99,12 @@ class FeedItem {
       coverPath: row['cover_path'] as String?,
       videoPath: row['video_path'] as String?,
       dealerName: nested('dealer', 'display_name'),
+      ownerId: row['owner_id'] as String?,
+      dealerId: row['dealer_id'] as String?,
+      province: row['province'] as String?,
+      sellerDisplayName: nested('seller', 'display_name'),
+      sellerAvatarPath: nested('seller', 'avatar_path'),
+      dealerLogoPath: nested('dealer', 'logo_path'),
     );
   }
 }

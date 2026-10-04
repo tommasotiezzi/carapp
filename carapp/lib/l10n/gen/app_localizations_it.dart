@@ -1526,4 +1526,204 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get captureTakePhoto => 'Scatta';
+
+  @override
+  String get filterDistance => 'Distanza';
+
+  @override
+  String get distanceAll => 'Tutta Italia';
+
+  @override
+  String distanceKm(int km) {
+    return '$km km';
+  }
+
+  @override
+  String distanceWithin(int km) {
+    return 'Entro $km km';
+  }
+
+  @override
+  String distanceWithinFrom(int km, String city) {
+    return 'Entro $km km da $city';
+  }
+
+  @override
+  String get distanceFrom => 'Da';
+
+  @override
+  String get distancePickCenter => 'Scegli il capoluogo';
+
+  @override
+  String distanceAway(int km) {
+    return '$km km da te';
+  }
+
+  @override
+  String get distanceHere => 'Nella tua provincia';
+
+  @override
+  String get capitalSearch => 'Cerca il capoluogo più vicino a te';
+
+  @override
+  String get prefsWhere => 'Dove sei?';
+
+  @override
+  String get prefsWhereHint =>
+      'Il capoluogo più vicino a te: così ti mostriamo gli annunci in zona.';
+
+  @override
+  String get prefsWhereNone => 'Scegli il capoluogo';
+
+  @override
+  String get prefsDistance => 'Fino a che distanza?';
+
+  @override
+  String get settingsPublicProfile => 'Profilo pubblico';
+
+  @override
+  String get settingsPublicProfileNote =>
+      'Chi guarda i tuoi annunci vede il tuo nome, il capoluogo e i contatti che scegli di mostrare. Il numero lo vede solo chi ha un account.';
+
+  @override
+  String get settingsWhere => 'Dove sei';
+
+  @override
+  String get settingsPhone => 'Telefono';
+
+  @override
+  String get settingsPhonePublic => 'Mostra il numero sul profilo';
+
+  @override
+  String get settingsWhatsappPublic => 'Contatto su WhatsApp';
+
+  @override
+  String get settingsPhoneNeeded => 'Prima aggiungi il numero';
+
+  @override
+  String sellerListingsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count annunci',
+      one: '1 annuncio',
+      zero: 'Nessun annuncio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sellerMemberSince(String app, String date) {
+    return 'Su $app da $date';
+  }
+
+  @override
+  String get sellerCall => 'Chiama';
+
+  @override
+  String get sellerWebsite => 'Sito';
+
+  @override
+  String get sellerTabListings => 'Annunci';
+
+  @override
+  String get sellerTabReviews => 'Recensioni';
+
+  @override
+  String get sellerNotFoundTitle => 'Profilo non disponibile';
+
+  @override
+  String get sellerNotFoundBody => 'Questo venditore non ha annunci online.';
+
+  @override
+  String get sellerNoListings => 'Nessun annuncio online';
+
+  @override
+  String get sellerNoMatches => 'Nessun annuncio con questi filtri';
+
+  @override
+  String get sellerSeeAll => 'Vedi tutti gli annunci';
+
+  @override
+  String get sellerLoginForContacts => 'Accedi per vedere i contatti';
+
+  @override
+  String get sellerPrivateShort => 'Privato';
+
+  @override
+  String get sellerNoReviews => 'Ancora nessuna recensione';
+
+  @override
+  String get settingsPhoto => 'Foto profilo';
+
+  @override
+  String get settingsPhotoChange => 'La vede chi guarda i tuoi annunci';
+
+  @override
+  String get settingsPhotoTake => 'Scatta una foto';
+
+  @override
+  String get settingsPhotoPick => 'Scegli dalla galleria';
+
+  @override
+  String get settingsPhotoRemove => 'Rimuovi la foto';
+
+  @override
+  String get settingsPhotoError =>
+      'Non siamo riusciti a salvare la foto, riprova.';
+
+  @override
+  String get settingsDealerName => 'Nome del concessionario';
+
+  @override
+  String get settingsDealerDescription => 'Descrizione';
+
+  @override
+  String get settingsDealerWhere => 'Dove si trova';
+
+  @override
+  String get settingsDealerWebsite => 'Sito web';
+
+  @override
+  String get settingsDealerNote =>
+      'Questi dati compaiono sulla pagina del concessionario, insieme ai tuoi annunci.';
+
+  @override
+  String get settingsDealerOwnerOnly =>
+      'Solo il titolare del concessionario può modificarli.';
+
+  @override
+  String get capitalUseLocation => 'Usa la mia posizione';
+
+  @override
+  String get capitalLocating => 'Cerco il capoluogo più vicino…';
+
+  @override
+  String get capitalLocationOff =>
+      'La localizzazione del telefono è spenta: attivala o scegli dalla lista.';
+
+  @override
+  String get capitalLocationDenied =>
+      'Permesso posizione negato: scegli dalla lista.';
+
+  @override
+  String get capitalLocationError =>
+      'Non riusciamo a trovare la tua posizione: scegli dalla lista.';
+
+  @override
+  String get nearbyDealersTitle => 'Concessionari vicino a te';
+
+  @override
+  String nearbyDealersWithin(int km, String city) {
+    return 'Entro $km km da $city';
+  }
+
+  @override
+  String get nearbyDealersSetPlace =>
+      'Dicci dove sei per vedere i concessionari in zona.';
+
+  @override
+  String nearbyDealersNone(int km) {
+    return 'Nessun concessionario con annunci entro $km km.';
+  }
 }

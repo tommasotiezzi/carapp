@@ -25,10 +25,19 @@ class ParsedQuery {
 /// - other words: searched in version and description only when nothing
 ///   else was recognized.
 class QueryParser {
-  QueryParser(this.catalog, {int? currentYear}) : currentYear = currentYear ?? DateTime.now().year;
+  QueryParser(this.catalog, {int? currentYear, this.homeProvince})
+      : currentYear = currentYear ?? DateTime.now().year;
 
   final Catalog catalog;
   final int currentYear;
+
+  /// The user's capital ("Dove sei?"): the center of "vicino a me" and of
+  /// "entro 50 km" when no city is named.
+  final String? homeProvince;
+
+  /// "km" up to this is a distance ("entro 50 km"), above a mileage.
+  static const _maxRadiusKm = 500;
+  static const _defaultRadiusKm = 50;
 
   static const _minYear = 1950;
   static const _minPriceEur = 500;
@@ -117,7 +126,8 @@ class QueryParser {
     String? transmission;
     var novice = false;
     final fuels = <String>{};
-    int? priceMin, priceMax, yearMin, yearMax, mileageMax;
+    int? priceMin, priceMax, yearMin, yearMax, mileageMax, radius;
+    var nearMe = false;
     final unknown = <String>[];
     String? mod; // the last modifier word, applies to the next number
 
@@ -127,6 +137,18 @@ class QueryParser {
       final next = i + 1 < tokens.length ? tokens[i + 1] : null;
       final prev = i > 0 ? tokens[i - 1] : null;
 
+      // "vicino a me", "vicino me", "qui vicino"
+      if ((tok == 'vicino' || tok == 'vicini') &&
+          (next == 'me' || (next == 'a' && i + 2 < tokens.length && tokens[i + 2] == 'me'))) {
+        nearMe = true;
+        i += next == 'me' ? 1 : 2;
+        continue;
+      }
+      if (tok == 'qui' && next == 'vicino') {
+        nearMe = true;
+        i++;
+        continue;
+      }
       if (_minMods.contains(tok) || _maxMods.contains(tok)) {
         mod = tok;
         continue;
@@ -167,7 +189,9 @@ class QueryParser {
         final isEuro = next == '€' || next == 'euro' || prev == '€';
         final plainFourDigits = multiplier == 1 && RegExp(r'^\d{4}$').hasMatch(m.group(1)!);
 
-        if (isKm) {
+        if (isKm && value <= _maxRadiusKm) {
+          radius = value; // "entro 50 km", "50 km da siena"
+        } else if (isKm) {
           mileageMax = value;
         } else if (!isEuro && plainFourDigits && value >= _minYear && value <= currentYear) {
           if (mod == 'dal' || mod == 'dopo' || mod == 'da') {
@@ -214,6 +238,16 @@ class QueryParser {
       (priceMin, priceMax) = (priceMax, priceMin);
     }
 
+    // Distance: around the named city, else around the user's capital.
+    String? nearProvince;
+    int? radiusKm;
+    if (radius != null || nearMe) {
+      nearProvince = province ?? homeProvince;
+      radiusKm = nearProvince == null ? null : (radius ?? _defaultRadiusKm);
+      if (radiusKm == null) nearProvince = null;
+      if (nearProvince != null) province = null; // the city is the center
+    }
+
     final structured = FeedFilters(
       categoryId: category,
       priceMinCents: priceMin,
@@ -227,6 +261,8 @@ class QueryParser {
       transmission: transmission,
       noviceDriver: novice,
       province: province,
+      nearProvince: nearProvince,
+      radiusKm: radiusKm,
     );
     final words = {...unknown}.toList();
     if (structured.isEmpty) {
