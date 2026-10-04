@@ -2,8 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/gen/app_localizations.dart';
 import '../data/feed_item.dart';
 
 /// Everything drawn over the video: side actions, caption, filter pills.
@@ -220,7 +222,7 @@ class _Caption extends StatelessWidget {
     final specs = [
       if (item.year != null) '${item.year}',
       Formatters.km(item.mileageKm),
-      Formatters.fuel(item.fuelType),
+      AppLocalizations.of(context).fuelLabel(item.fuelType),
       Formatters.horsepower(item.powerKw),
     ].where((s) => s.isNotEmpty).join(' · ');
 

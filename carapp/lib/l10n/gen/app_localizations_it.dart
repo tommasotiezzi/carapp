@@ -303,4 +303,201 @@ class AppLocalizationsIt extends AppLocalizations {
   String priceBelowAverage(int percent) {
     return '$percent% sotto la media';
   }
+
+  @override
+  String get errorTitle => 'Qualcosa è andato storto';
+
+  @override
+  String get errorBody => 'Controlla la connessione e riprova.';
+
+  @override
+  String get commonYes => 'Sì';
+
+  @override
+  String get commonNo => 'No';
+
+  @override
+  String get fuelPetrol => 'Benzina';
+
+  @override
+  String get fuelDiesel => 'Diesel';
+
+  @override
+  String get fuelHybrid => 'Ibrida';
+
+  @override
+  String get fuelPluginHybrid => 'Ibrida plug-in';
+
+  @override
+  String get fuelElectric => 'Elettrica';
+
+  @override
+  String get fuelLpg => 'GPL';
+
+  @override
+  String get fuelCng => 'Metano';
+
+  @override
+  String get fuelOther => 'Altro';
+
+  @override
+  String get transmissionManual => 'Manuale';
+
+  @override
+  String get transmissionAutomatic => 'Automatico';
+
+  @override
+  String get transmissionSemiAutomatic => 'Semiautomatico';
+
+  @override
+  String get listingNotFoundTitle => 'Annuncio non disponibile';
+
+  @override
+  String get listingNotFoundBody =>
+      'Potrebbe essere stato venduto o rimosso dal venditore.';
+
+  @override
+  String get listingBackToFeed => 'Torna al feed';
+
+  @override
+  String get listingPhotos => 'Foto';
+
+  @override
+  String get listingSpecs => 'Caratteristiche';
+
+  @override
+  String get specYear => 'Anno';
+
+  @override
+  String get specMileage => 'Chilometri';
+
+  @override
+  String get specFuel => 'Alimentazione';
+
+  @override
+  String get specTransmission => 'Cambio';
+
+  @override
+  String get specPower => 'Potenza';
+
+  @override
+  String get specEuroClass => 'Classe ambientale';
+
+  @override
+  String specEuroValue(int euro) {
+    return 'Euro $euro';
+  }
+
+  @override
+  String get specColor => 'Colore';
+
+  @override
+  String get specOwners => 'Proprietari';
+
+  @override
+  String get specServiceHistory => 'Tagliandi documentati';
+
+  @override
+  String get specWarranty => 'Garanzia';
+
+  @override
+  String specWarrantyMonths(int months) {
+    String _temp0 = intl.Intl.pluralLogic(
+      months,
+      locale: localeName,
+      other: '$months mesi',
+      one: '1 mese',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listingDescription => 'Descrizione';
+
+  @override
+  String get listingShowMore => 'Mostra tutto';
+
+  @override
+  String get listingShowLess => 'Mostra meno';
+
+  @override
+  String get costTitle => 'Quanto spendi davvero';
+
+  @override
+  String get costPrice => 'Prezzo';
+
+  @override
+  String get costTransfer => 'Passaggio di proprietà (stima)';
+
+  @override
+  String get costTotal => 'Totale stimato';
+
+  @override
+  String get costNote =>
+      'Stima indicativa: imposta provinciale con la maggiorazione massima più i diritti fissi. Dai concessionari il passaggio può essere già incluso nel prezzo.';
+
+  @override
+  String get sellerTitle => 'Venditore';
+
+  @override
+  String get sellerPrivate => 'Venditore privato';
+
+  @override
+  String get sellerDealer => 'Concessionario';
+
+  @override
+  String get sellerVatVerified => 'Partita IVA verificata';
+
+  @override
+  String get reviewsTitle => 'Recensioni';
+
+  @override
+  String reviewsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count recensioni',
+      one: '1 recensione',
+      zero: 'Nessuna recensione',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get qaTitle => 'Domande e risposte';
+
+  @override
+  String get qaEmpty => 'Nessuna domanda per ora. Chiedi tu per primo.';
+
+  @override
+  String get qaAsk => 'Fai una domanda';
+
+  @override
+  String get qaPending => 'In attesa di risposta';
+
+  @override
+  String get qaYourQuestion => 'La tua domanda';
+
+  @override
+  String get qaHint => 'Es. ha mai avuto incidenti?';
+
+  @override
+  String get qaNote =>
+      'Il venditore può rendere pubblica la risposta per tutti.';
+
+  @override
+  String get qaSend => 'Invia';
+
+  @override
+  String get qaSent => 'Domanda inviata al venditore';
+
+  @override
+  String get qaError => 'Non siamo riusciti a inviare la domanda, riprova.';
+
+  @override
+  String get qaLoginTitle => 'Accedi per fare una domanda';
+
+  @override
+  String get qaLoginSubtitle =>
+      'Il venditore riceve la tua domanda e ti risponde qui.';
 }

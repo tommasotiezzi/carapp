@@ -33,6 +33,7 @@ class AppColors {
   static const successSoft = Color(0xFFDCFCE7);
   static const warningSoft = Color(0xFFFFF6E5);
   static const danger = Color(0xFFB42318);
+  static const rating = Color(0xFFF5A524); // review stars
 }
 
 class AppSpacing {

@@ -633,6 +633,354 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'{percent}% sotto la media'**
   String priceBelowAverage(int percent);
+
+  /// No description provided for @errorTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Qualcosa è andato storto'**
+  String get errorTitle;
+
+  /// No description provided for @errorBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Controlla la connessione e riprova.'**
+  String get errorBody;
+
+  /// No description provided for @commonYes.
+  ///
+  /// In it, this message translates to:
+  /// **'Sì'**
+  String get commonYes;
+
+  /// No description provided for @commonNo.
+  ///
+  /// In it, this message translates to:
+  /// **'No'**
+  String get commonNo;
+
+  /// No description provided for @fuelPetrol.
+  ///
+  /// In it, this message translates to:
+  /// **'Benzina'**
+  String get fuelPetrol;
+
+  /// No description provided for @fuelDiesel.
+  ///
+  /// In it, this message translates to:
+  /// **'Diesel'**
+  String get fuelDiesel;
+
+  /// No description provided for @fuelHybrid.
+  ///
+  /// In it, this message translates to:
+  /// **'Ibrida'**
+  String get fuelHybrid;
+
+  /// No description provided for @fuelPluginHybrid.
+  ///
+  /// In it, this message translates to:
+  /// **'Ibrida plug-in'**
+  String get fuelPluginHybrid;
+
+  /// No description provided for @fuelElectric.
+  ///
+  /// In it, this message translates to:
+  /// **'Elettrica'**
+  String get fuelElectric;
+
+  /// No description provided for @fuelLpg.
+  ///
+  /// In it, this message translates to:
+  /// **'GPL'**
+  String get fuelLpg;
+
+  /// No description provided for @fuelCng.
+  ///
+  /// In it, this message translates to:
+  /// **'Metano'**
+  String get fuelCng;
+
+  /// No description provided for @fuelOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altro'**
+  String get fuelOther;
+
+  /// No description provided for @transmissionManual.
+  ///
+  /// In it, this message translates to:
+  /// **'Manuale'**
+  String get transmissionManual;
+
+  /// No description provided for @transmissionAutomatic.
+  ///
+  /// In it, this message translates to:
+  /// **'Automatico'**
+  String get transmissionAutomatic;
+
+  /// No description provided for @transmissionSemiAutomatic.
+  ///
+  /// In it, this message translates to:
+  /// **'Semiautomatico'**
+  String get transmissionSemiAutomatic;
+
+  /// No description provided for @listingNotFoundTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Annuncio non disponibile'**
+  String get listingNotFoundTitle;
+
+  /// No description provided for @listingNotFoundBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Potrebbe essere stato venduto o rimosso dal venditore.'**
+  String get listingNotFoundBody;
+
+  /// No description provided for @listingBackToFeed.
+  ///
+  /// In it, this message translates to:
+  /// **'Torna al feed'**
+  String get listingBackToFeed;
+
+  /// No description provided for @listingPhotos.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto'**
+  String get listingPhotos;
+
+  /// No description provided for @listingSpecs.
+  ///
+  /// In it, this message translates to:
+  /// **'Caratteristiche'**
+  String get listingSpecs;
+
+  /// No description provided for @specYear.
+  ///
+  /// In it, this message translates to:
+  /// **'Anno'**
+  String get specYear;
+
+  /// No description provided for @specMileage.
+  ///
+  /// In it, this message translates to:
+  /// **'Chilometri'**
+  String get specMileage;
+
+  /// No description provided for @specFuel.
+  ///
+  /// In it, this message translates to:
+  /// **'Alimentazione'**
+  String get specFuel;
+
+  /// No description provided for @specTransmission.
+  ///
+  /// In it, this message translates to:
+  /// **'Cambio'**
+  String get specTransmission;
+
+  /// No description provided for @specPower.
+  ///
+  /// In it, this message translates to:
+  /// **'Potenza'**
+  String get specPower;
+
+  /// No description provided for @specEuroClass.
+  ///
+  /// In it, this message translates to:
+  /// **'Classe ambientale'**
+  String get specEuroClass;
+
+  /// No description provided for @specEuroValue.
+  ///
+  /// In it, this message translates to:
+  /// **'Euro {euro}'**
+  String specEuroValue(int euro);
+
+  /// No description provided for @specColor.
+  ///
+  /// In it, this message translates to:
+  /// **'Colore'**
+  String get specColor;
+
+  /// No description provided for @specOwners.
+  ///
+  /// In it, this message translates to:
+  /// **'Proprietari'**
+  String get specOwners;
+
+  /// No description provided for @specServiceHistory.
+  ///
+  /// In it, this message translates to:
+  /// **'Tagliandi documentati'**
+  String get specServiceHistory;
+
+  /// No description provided for @specWarranty.
+  ///
+  /// In it, this message translates to:
+  /// **'Garanzia'**
+  String get specWarranty;
+
+  /// No description provided for @specWarrantyMonths.
+  ///
+  /// In it, this message translates to:
+  /// **'{months, plural, =1{1 mese} other{{months} mesi}}'**
+  String specWarrantyMonths(int months);
+
+  /// No description provided for @listingDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Descrizione'**
+  String get listingDescription;
+
+  /// No description provided for @listingShowMore.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra tutto'**
+  String get listingShowMore;
+
+  /// No description provided for @listingShowLess.
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra meno'**
+  String get listingShowLess;
+
+  /// No description provided for @costTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Quanto spendi davvero'**
+  String get costTitle;
+
+  /// No description provided for @costPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'Prezzo'**
+  String get costPrice;
+
+  /// No description provided for @costTransfer.
+  ///
+  /// In it, this message translates to:
+  /// **'Passaggio di proprietà (stima)'**
+  String get costTransfer;
+
+  /// No description provided for @costTotal.
+  ///
+  /// In it, this message translates to:
+  /// **'Totale stimato'**
+  String get costTotal;
+
+  /// No description provided for @costNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Stima indicativa: imposta provinciale con la maggiorazione massima più i diritti fissi. Dai concessionari il passaggio può essere già incluso nel prezzo.'**
+  String get costNote;
+
+  /// No description provided for @sellerTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Venditore'**
+  String get sellerTitle;
+
+  /// No description provided for @sellerPrivate.
+  ///
+  /// In it, this message translates to:
+  /// **'Venditore privato'**
+  String get sellerPrivate;
+
+  /// No description provided for @sellerDealer.
+  ///
+  /// In it, this message translates to:
+  /// **'Concessionario'**
+  String get sellerDealer;
+
+  /// No description provided for @sellerVatVerified.
+  ///
+  /// In it, this message translates to:
+  /// **'Partita IVA verificata'**
+  String get sellerVatVerified;
+
+  /// No description provided for @reviewsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Recensioni'**
+  String get reviewsTitle;
+
+  /// No description provided for @reviewsCount.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessuna recensione} =1{1 recensione} other{{count} recensioni}}'**
+  String reviewsCount(int count);
+
+  /// No description provided for @qaTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Domande e risposte'**
+  String get qaTitle;
+
+  /// No description provided for @qaEmpty.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna domanda per ora. Chiedi tu per primo.'**
+  String get qaEmpty;
+
+  /// No description provided for @qaAsk.
+  ///
+  /// In it, this message translates to:
+  /// **'Fai una domanda'**
+  String get qaAsk;
+
+  /// No description provided for @qaPending.
+  ///
+  /// In it, this message translates to:
+  /// **'In attesa di risposta'**
+  String get qaPending;
+
+  /// No description provided for @qaYourQuestion.
+  ///
+  /// In it, this message translates to:
+  /// **'La tua domanda'**
+  String get qaYourQuestion;
+
+  /// No description provided for @qaHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. ha mai avuto incidenti?'**
+  String get qaHint;
+
+  /// No description provided for @qaNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Il venditore può rendere pubblica la risposta per tutti.'**
+  String get qaNote;
+
+  /// No description provided for @qaSend.
+  ///
+  /// In it, this message translates to:
+  /// **'Invia'**
+  String get qaSend;
+
+  /// No description provided for @qaSent.
+  ///
+  /// In it, this message translates to:
+  /// **'Domanda inviata al venditore'**
+  String get qaSent;
+
+  /// No description provided for @qaError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non siamo riusciti a inviare la domanda, riprova.'**
+  String get qaError;
+
+  /// No description provided for @qaLoginTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Accedi per fare una domanda'**
+  String get qaLoginTitle;
+
+  /// No description provided for @qaLoginSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Il venditore riceve la tua domanda e ti risponde qui.'**
+  String get qaLoginSubtitle;
 }
 
 class _AppLocalizationsDelegate
