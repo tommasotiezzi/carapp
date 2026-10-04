@@ -7,6 +7,7 @@ import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/listing_detail.dart';
 import '../data/transfer_cost.dart';
@@ -253,15 +254,11 @@ class ListingSeller extends ConsumerWidget {
           onTap: () => context.push(AppRoutes.sellerPagePath(id: pageId, dealer: dealer != null)),
           child: Row(
             children: [
-              CircleAvatar(
+              UserAvatar(
+                path: dealer?.logoPath ?? listing.sellerAvatarPath,
+                name: name,
                 radius: 26,
-                backgroundColor: dealer == null ? AppColors.placeholder : AppColors.primary,
-                child: dealer == null
-                    ? const Icon(Icons.person_outline, color: AppColors.inkSecondary)
-                    : Text(
-                        Formatters.initials(dealer.displayName),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                      ),
+                dealer: dealer != null,
               ),
               const SizedBox(width: AppSpacing.m),
               Expanded(

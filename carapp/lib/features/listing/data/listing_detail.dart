@@ -94,6 +94,7 @@ class ListingDetail {
         province: province,
         sellerDisplayName: sellerDisplayName,
         sellerAvatarPath: sellerAvatarPath,
+        dealerLogoPath: dealer?.logoPath,
       );
 
   /// "Volkswagen Golf"

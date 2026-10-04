@@ -1,4 +1,6 @@
 import 'package:carapp/core/config/app_config.dart';
+import 'package:carapp/core/geo/capital_picker.dart';
+import 'package:carapp/core/geo/device_location.dart';
 import 'package:carapp/core/geo/distance_label.dart';
 import 'package:carapp/core/geo/italian_capitals.dart';
 import 'package:carapp/core/supabase/supabase_client.dart';
@@ -12,7 +14,12 @@ import 'package:carapp/features/onboarding/data/buyer_preferences.dart';
 import 'package:carapp/features/onboarding/state/onboarding_controller.dart';
 import 'package:carapp/features/search/data/catalog.dart';
 import 'package:carapp/features/search/data/query_parser.dart';
+import 'package:carapp/core/widgets/user_avatar.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:go_router/go_router.dart';
+import 'package:carapp/features/seller/data/nearby_dealers.dart';
 import 'package:carapp/features/seller/data/seller_repository.dart';
+import 'package:carapp/features/seller/ui/nearby_dealers_section.dart';
 import 'package:carapp/features/seller/ui/seller_screen.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -307,5 +314,116 @@ void main() {
       'dealer_id': 'd1',
       'dealer': {'display_name': 'Auto Bianchi'},
     }).sellerPageId, 'd1');
+  });
+
+  group('where am I', () {
+    Widget host(List<Override> overrides, void Function(String?) onPicked) => ProviderScope(
+          overrides: overrides,
+          child: MaterialApp(
+            locale: const Locale('it'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async => onPicked(await showCapitalPicker(context)),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('"Usa la mia posizione" picks the nearest capital', (tester) async {
+      String? picked;
+      await tester.pumpWidget(host([
+        nearestCapitalLocatorProvider.overrideWithValue(() async => ItalianCapitals.nearestTo(43.32, 11.33)),
+      ], (c) => picked = c));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Usa la mia posizione'));
+      await tester.pumpAndSettle();
+      expect(picked, 'SI');
+    });
+
+    testWidgets('permission denied: message, the list still works', (tester) async {
+      String? picked;
+      await tester.pumpWidget(host([
+        nearestCapitalLocatorProvider
+            .overrideWithValue(() async => throw const LocationException(LocationFailure.denied)),
+      ], (c) => picked = c));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Usa la mia posizione'));
+      await tester.pumpAndSettle();
+      expect(find.text('Permesso posizione negato: scegli dalla lista.'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'fire');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Firenze'));
+      await tester.pumpAndSettle();
+      expect(picked, 'FI');
+    });
+  });
+
+  group('dealers near you (Search)', () {
+    Widget host(List<Override> overrides) {
+      final router = GoRouter(routes: [
+        GoRoute(path: '/', builder: (_, _) => const Scaffold(body: SingleChildScrollView(child: NearbyDealersSection()))),
+        GoRoute(path: '/dealers/:id', builder: (_, s) => Text('dealer ${s.pathParameters['id']}')),
+      ]);
+      return ProviderScope(
+        overrides: overrides,
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('it'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      );
+    }
+
+    testWidgets('no capital yet: asks where you are', (tester) async {
+      await tester.pumpWidget(host([nearbyAreaProvider.overrideWithValue(null)]));
+      await tester.pumpAndSettle();
+      expect(find.text('Concessionari vicino a te'), findsOneWidget);
+      expect(find.text('Dicci dove sei per vedere i concessionari in zona.'), findsOneWidget);
+    });
+
+    testWidgets('cards with listings and distance; tap opens the dealer page', (tester) async {
+      await tester.pumpWidget(host([
+        nearbyAreaProvider.overrideWithValue(const NearbyArea('SI', 100)),
+        nearbyDealersProvider.overrideWith((ref) async => const [
+              NearbyDealer(id: 'd1', name: 'Auto Bianchi', activeListings: 4, city: 'Firenze', province: 'FI', verified: true),
+              NearbyDealer(id: 'd2', name: 'Moto Rossi', activeListings: 1, city: 'Siena', province: 'SI'),
+            ]),
+      ]));
+      await tester.pumpAndSettle();
+      expect(find.text('Entro 100 km da Siena'), findsOneWidget);
+      expect(find.text('Auto Bianchi'), findsOneWidget);
+      expect(find.text('4 annunci'), findsOneWidget);
+      expect(find.text('50 km da te'), findsOneWidget);
+      expect(find.text('Nella tua provincia'), findsOneWidget);
+      await tester.tap(find.text('Auto Bianchi'));
+      await tester.pumpAndSettle();
+      expect(find.text('dealer d1'), findsOneWidget);
+    });
+  });
+
+  testWidgets('no picture: initials, no client needed', (tester) async {
+    await tester.pumpWidget(const ProviderScope(
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: UserAvatar(path: null, name: 'Auto Bianchi', dealer: true),
+      ),
+    ));
+    expect(find.text('AB'), findsOneWidget);
   });
 }

@@ -83,5 +83,9 @@
 	<string>Per riprendere il veicolo che vendi.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Per registrare il suono del motore nei video degli annunci.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Per scegliere la tua foto profilo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Per trovare il capoluogo più vicino a te e mostrarti gli annunci in zona.</string>
 </dict>
 </plist>

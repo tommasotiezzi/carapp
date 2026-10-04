@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/data/catalog_repository.dart';
 import '../data/feed_filters.dart';
@@ -121,23 +122,9 @@ class _SideActions extends StatelessWidget {
               alignment: Alignment.bottomCenter,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2C333C),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Text(
-                    Formatters.initials(item.sellerName),
-                    style: const TextStyle(
-                      fontFamily: AppFonts.display,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  child: UserAvatar(path: item.avatarPath, name: item.sellerName, radius: 22, dark: true),
                 ),
                 if (item.isDealer)
                   Positioned(

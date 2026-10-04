@@ -681,5 +681,43 @@
   "sellerSeeAll": "Vedi tutti gli annunci",
   "sellerLoginForContacts": "Accedi per vedere i contatti",
   "sellerPrivateShort": "Privato",
-  "sellerNoReviews": "Ancora nessuna recensione"
+  "sellerNoReviews": "Ancora nessuna recensione",
+  "settingsPhoto": "Foto profilo",
+  "settingsPhotoChange": "La vede chi guarda i tuoi annunci",
+  "settingsPhotoTake": "Scatta una foto",
+  "settingsPhotoPick": "Scegli dalla galleria",
+  "settingsPhotoRemove": "Rimuovi la foto",
+  "settingsPhotoError": "Non siamo riusciti a salvare la foto, riprova.",
+  "settingsDealerName": "Nome del concessionario",
+  "settingsDealerDescription": "Descrizione",
+  "settingsDealerWhere": "Dove si trova",
+  "settingsDealerWebsite": "Sito web",
+  "settingsDealerNote": "Questi dati compaiono sulla pagina del concessionario, insieme ai tuoi annunci.",
+  "settingsDealerOwnerOnly": "Solo il titolare del concessionario può modificarli.",
+  "capitalUseLocation": "Usa la mia posizione",
+  "capitalLocating": "Cerco il capoluogo più vicino…",
+  "capitalLocationOff": "La localizzazione del telefono è spenta: attivala o scegli dalla lista.",
+  "capitalLocationDenied": "Permesso posizione negato: scegli dalla lista.",
+  "capitalLocationError": "Non riusciamo a trovare la tua posizione: scegli dalla lista.",
+  "nearbyDealersTitle": "Concessionari vicino a te",
+  "nearbyDealersWithin": "Entro {km} km da {city}",
+  "@nearbyDealersWithin": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      },
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "nearbyDealersSetPlace": "Dicci dove sei per vedere i concessionari in zona.",
+  "nearbyDealersNone": "Nessun concessionario con annunci entro {km} km.",
+  "@nearbyDealersNone": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -21,9 +21,13 @@ class SellerProfile {
     this.hasPhone = false,
     this.hasWhatsapp = false,
     this.memberSince,
+    this.avatarPath,
   });
 
   final SellerRef ref;
+
+  /// Profile picture (`avatars` bucket): the dealer's or the user's.
+  final String? avatarPath;
 
   /// null for a private seller without a display name.
   final String? name;
@@ -72,6 +76,7 @@ class SellerProfile {
       hasPhone: text('phone') != null,
       hasWhatsapp: text('whatsapp') != null,
       memberSince: DateTime.tryParse((row['created_at'] as String?) ?? ''),
+      avatarPath: text('logo_path'),
     );
   }
 
@@ -85,6 +90,7 @@ class SellerProfile {
         hasPhone: (row['has_phone'] as bool?) ?? false,
         hasWhatsapp: (row['has_whatsapp'] as bool?) ?? false,
         memberSince: DateTime.tryParse((row['member_since'] as String?) ?? ''),
+        avatarPath: row['avatar_path'] as String?,
       );
 }
 
@@ -94,7 +100,7 @@ class SellerRepository {
   final SupabaseClient _client;
 
   static const _dealerColumns =
-      'id, display_name, city, province, phone, whatsapp, website, description, vat_verified_at, created_at';
+      'id, display_name, logo_path, city, province, phone, whatsapp, website, description, vat_verified_at, created_at';
 
   /// null when the seller does not exist or (private) has nothing online.
   Future<SellerProfile?> fetch(SellerRef ref) async {

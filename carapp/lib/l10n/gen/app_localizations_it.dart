@@ -1652,4 +1652,78 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get sellerNoReviews => 'Ancora nessuna recensione';
+
+  @override
+  String get settingsPhoto => 'Foto profilo';
+
+  @override
+  String get settingsPhotoChange => 'La vede chi guarda i tuoi annunci';
+
+  @override
+  String get settingsPhotoTake => 'Scatta una foto';
+
+  @override
+  String get settingsPhotoPick => 'Scegli dalla galleria';
+
+  @override
+  String get settingsPhotoRemove => 'Rimuovi la foto';
+
+  @override
+  String get settingsPhotoError =>
+      'Non siamo riusciti a salvare la foto, riprova.';
+
+  @override
+  String get settingsDealerName => 'Nome del concessionario';
+
+  @override
+  String get settingsDealerDescription => 'Descrizione';
+
+  @override
+  String get settingsDealerWhere => 'Dove si trova';
+
+  @override
+  String get settingsDealerWebsite => 'Sito web';
+
+  @override
+  String get settingsDealerNote =>
+      'Questi dati compaiono sulla pagina del concessionario, insieme ai tuoi annunci.';
+
+  @override
+  String get settingsDealerOwnerOnly =>
+      'Solo il titolare del concessionario può modificarli.';
+
+  @override
+  String get capitalUseLocation => 'Usa la mia posizione';
+
+  @override
+  String get capitalLocating => 'Cerco il capoluogo più vicino…';
+
+  @override
+  String get capitalLocationOff =>
+      'La localizzazione del telefono è spenta: attivala o scegli dalla lista.';
+
+  @override
+  String get capitalLocationDenied =>
+      'Permesso posizione negato: scegli dalla lista.';
+
+  @override
+  String get capitalLocationError =>
+      'Non riusciamo a trovare la tua posizione: scegli dalla lista.';
+
+  @override
+  String get nearbyDealersTitle => 'Concessionari vicino a te';
+
+  @override
+  String nearbyDealersWithin(int km, String city) {
+    return 'Entro $km km da $city';
+  }
+
+  @override
+  String get nearbyDealersSetPlace =>
+      'Dicci dove sei per vedere i concessionari in zona.';
+
+  @override
+  String nearbyDealersNone(int km) {
+    return 'Nessun concessionario con annunci entro $km km.';
+  }
 }

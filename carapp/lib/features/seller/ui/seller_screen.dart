@@ -8,8 +8,8 @@ import '../../../core/config/app_config.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/pill.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/ui/login_sheet.dart';
 import '../../chat/ui/contact_actions.dart' show whatsappDigits;
@@ -287,18 +287,7 @@ class _Header extends ConsumerWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 34,
-                backgroundColor: p.isDealer ? AppColors.primary : AppColors.placeholder,
-                child: Text(
-                  Formatters.initials(name),
-                  style: TextStyle(
-                    color: p.isDealer ? Colors.white : AppColors.inkSecondary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 22,
-                  ),
-                ),
-              ),
+              UserAvatar(path: p.avatarPath, name: name, radius: 34, dealer: p.isDealer),
               const SizedBox(width: AppSpacing.l),
               Expanded(
                 child: Column(

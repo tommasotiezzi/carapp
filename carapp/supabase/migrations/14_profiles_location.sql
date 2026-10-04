@@ -187,7 +187,7 @@ create index if not exists listings_active_province_idx
 
 -- ---------------------------------------------------------------------
 -- Public seller profile: only users who sell as private sellers (an
--- active or sold listing), only these fields. Phone and WhatsApp only if
+-- active or sold listing, not part of a dealer), only these fields. Phone and WhatsApp only if
 -- the user made them public, and only to signed-in users (no scraping);
 -- has_phone / has_whatsapp tell guests there is something behind login.
 -- A view with its owner's rights: `profiles` itself stays private.
@@ -212,7 +212,89 @@ where exists (
    where l.owner_id = p.id
      and l.seller_type = 'private'
      and l.status in ('active', 'sold')
-);
+)
+-- A dealer account is the dealer: it never has a private seller page.
+and not exists (select 1 from public.dealer_members m where m.profile_id = p.id);
 
 revoke all on public.public_profiles from public;
 grant select on public.public_profiles to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Profile pictures: a path in the `avatars` bucket (<user id>/<uuid>.jpg),
+-- never a link to somewhere else. A dealer's picture is its owner's.
+-- ---------------------------------------------------------------------
+
+alter table public.profiles drop constraint if exists profiles_avatar_path_storage;
+alter table public.profiles
+  add constraint profiles_avatar_path_storage check (avatar_path is null or avatar_path !~ '://');
+alter table public.dealers drop constraint if exists dealers_logo_path_storage;
+alter table public.dealers
+  add constraint dealers_logo_path_storage check (logo_path is null or logo_path !~ '://');
+
+-- ---------------------------------------------------------------------
+-- Dealers: the owner edits the public data (name shown, description,
+-- contacts, city, picture), never what VIES verified.
+-- ---------------------------------------------------------------------
+
+create or replace function public.protect_dealer_fields()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if current_user in ('anon', 'authenticated')
+     and (new.vat_number is distinct from old.vat_number
+       or new.vat_verified_at is distinct from old.vat_verified_at
+       or new.vies_payload is distinct from old.vies_payload
+       or new.legal_name is distinct from old.legal_name) then
+    raise exception 'dealer_field_locked' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_dealer_fields on public.dealers;
+create trigger protect_dealer_fields
+  before update on public.dealers
+  for each row execute function public.protect_dealer_fields();
+
+-- The dealer's place follows its province too.
+drop trigger if exists dealers_location_from_province on public.dealers;
+create trigger dealers_location_from_province
+  before insert or update of province on public.dealers
+  for each row execute function public.location_from_province();
+
+-- ---------------------------------------------------------------------
+-- "Concessionari vicino a te" (Search): dealers with active listings in
+-- the given provinces (the app sends the ones in range), most listings
+-- first. A future sponsored slot can be ordered here.
+-- ---------------------------------------------------------------------
+
+create or replace function public.dealers_near(p_provinces text[], p_limit int default 20)
+returns table (
+  id uuid,
+  display_name text,
+  logo_path text,
+  city text,
+  province text,
+  verified boolean,
+  active_listings int
+)
+language sql
+stable
+set search_path = ''
+as $$
+  select d.id, d.display_name, d.logo_path, d.city, d.province,
+         d.vat_verified_at is not null,
+         count(l.id)::int
+    from public.dealers d
+    join public.listings l
+      on l.dealer_id = d.id
+     and l.status = 'active'
+     and l.province = any (p_provinces)
+   group by d.id
+   order by count(l.id) desc, d.display_name
+   limit least(greatest(coalesce(p_limit, 20), 1), 50);
+$$;
+
+grant execute on function public.dealers_near(text[], int) to anon, authenticated;

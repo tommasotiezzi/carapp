@@ -22,6 +22,7 @@ class FeedItem {
     this.province,
     this.sellerDisplayName,
     this.sellerAvatarPath,
+    this.dealerLogoPath,
   });
 
   final String id;
@@ -49,6 +50,10 @@ class FeedItem {
   /// Private sellers: the name on their public profile (null = not set).
   final String? sellerDisplayName;
   final String? sellerAvatarPath;
+  final String? dealerLogoPath;
+
+  /// The seller's picture: the dealer's, or the private seller's.
+  String? get avatarPath => isDealer ? dealerLogoPath : sellerAvatarPath;
 
   bool get isDealer => sellerType == 'dealer';
 
@@ -70,7 +75,7 @@ class FeedItem {
       'id, seller_type, published_at, version, year, mileage_km, price_cents, '
       'fuel_type, power_kw, description, city, province, cover_path, video_path, '
       'owner_id, dealer_id, '
-      'make:makes(name), model:models(name), dealer:dealers(display_name), '
+      'make:makes(name), model:models(name), dealer:dealers(display_name, logo_path), '
       'seller:public_profiles!owner_id(display_name, avatar_path)';
 
   factory FeedItem.fromRow(Map<String, dynamic> row) {
@@ -99,6 +104,7 @@ class FeedItem {
       province: row['province'] as String?,
       sellerDisplayName: nested('seller', 'display_name'),
       sellerAvatarPath: nested('seller', 'avatar_path'),
+      dealerLogoPath: nested('dealer', 'logo_path'),
     );
   }
 }

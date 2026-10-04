@@ -3009,6 +3009,132 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Ancora nessuna recensione'**
   String get sellerNoReviews;
+
+  /// No description provided for @settingsPhoto.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto profilo'**
+  String get settingsPhoto;
+
+  /// No description provided for @settingsPhotoChange.
+  ///
+  /// In it, this message translates to:
+  /// **'La vede chi guarda i tuoi annunci'**
+  String get settingsPhotoChange;
+
+  /// No description provided for @settingsPhotoTake.
+  ///
+  /// In it, this message translates to:
+  /// **'Scatta una foto'**
+  String get settingsPhotoTake;
+
+  /// No description provided for @settingsPhotoPick.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli dalla galleria'**
+  String get settingsPhotoPick;
+
+  /// No description provided for @settingsPhotoRemove.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi la foto'**
+  String get settingsPhotoRemove;
+
+  /// No description provided for @settingsPhotoError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non siamo riusciti a salvare la foto, riprova.'**
+  String get settingsPhotoError;
+
+  /// No description provided for @settingsDealerName.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome del concessionario'**
+  String get settingsDealerName;
+
+  /// No description provided for @settingsDealerDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Descrizione'**
+  String get settingsDealerDescription;
+
+  /// No description provided for @settingsDealerWhere.
+  ///
+  /// In it, this message translates to:
+  /// **'Dove si trova'**
+  String get settingsDealerWhere;
+
+  /// No description provided for @settingsDealerWebsite.
+  ///
+  /// In it, this message translates to:
+  /// **'Sito web'**
+  String get settingsDealerWebsite;
+
+  /// No description provided for @settingsDealerNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Questi dati compaiono sulla pagina del concessionario, insieme ai tuoi annunci.'**
+  String get settingsDealerNote;
+
+  /// No description provided for @settingsDealerOwnerOnly.
+  ///
+  /// In it, this message translates to:
+  /// **'Solo il titolare del concessionario può modificarli.'**
+  String get settingsDealerOwnerOnly;
+
+  /// No description provided for @capitalUseLocation.
+  ///
+  /// In it, this message translates to:
+  /// **'Usa la mia posizione'**
+  String get capitalUseLocation;
+
+  /// No description provided for @capitalLocating.
+  ///
+  /// In it, this message translates to:
+  /// **'Cerco il capoluogo più vicino…'**
+  String get capitalLocating;
+
+  /// No description provided for @capitalLocationOff.
+  ///
+  /// In it, this message translates to:
+  /// **'La localizzazione del telefono è spenta: attivala o scegli dalla lista.'**
+  String get capitalLocationOff;
+
+  /// No description provided for @capitalLocationDenied.
+  ///
+  /// In it, this message translates to:
+  /// **'Permesso posizione negato: scegli dalla lista.'**
+  String get capitalLocationDenied;
+
+  /// No description provided for @capitalLocationError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo a trovare la tua posizione: scegli dalla lista.'**
+  String get capitalLocationError;
+
+  /// No description provided for @nearbyDealersTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Concessionari vicino a te'**
+  String get nearbyDealersTitle;
+
+  /// No description provided for @nearbyDealersWithin.
+  ///
+  /// In it, this message translates to:
+  /// **'Entro {km} km da {city}'**
+  String nearbyDealersWithin(int km, String city);
+
+  /// No description provided for @nearbyDealersSetPlace.
+  ///
+  /// In it, this message translates to:
+  /// **'Dicci dove sei per vedere i concessionari in zona.'**
+  String get nearbyDealersSetPlace;
+
+  /// No description provided for @nearbyDealersNone.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun concessionario con annunci entro {km} km.'**
+  String nearbyDealersNone(int km);
 }
 
 class _AppLocalizationsDelegate

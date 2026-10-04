@@ -7,6 +7,14 @@ class MediaUrl {
 
   static const publicBucket = 'listing-media';
 
+  static const avatarsBucket = 'avatars';
+
+  /// Profile pictures (users and dealers).
+  static String? avatar(SupabaseClient client, String? path) {
+    if (path == null || path.isEmpty) return null;
+    return client.storage.from(avatarsBucket).getPublicUrl(path);
+  }
+
   static String? resolve(SupabaseClient client, String? path) {
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
