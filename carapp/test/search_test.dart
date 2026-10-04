@@ -201,10 +201,16 @@ void main() {
       'and(or(version.ilike.*tetto*,description.ilike.*tetto*),'
       'or(version.ilike.*ab*,description.ilike.*ab*))',
     );
-    expect(logicFilter(const FeedFilters(noviceDriver: true)), 'and(or(category_id.neq.car,power_kw.lte.105))');
+    // Seller's "ok neopatentati" first, the power limit only when unset.
+    // (These exact strings were run against PostgREST on the real schema.)
+    expect(
+      logicFilter(const FeedFilters(noviceDriver: true)),
+      'and(or(category_id.neq.car,attributes->>novice_ok.eq.true,'
+      'and(attributes->>novice_ok.is.null,power_kw.lte.105)))',
+    );
     expect(
       logicFilter(const FeedFilters(noviceDriver: true, categoryId: 'car')),
-      'and(power_kw.lte.105)',
+      'and(or(attributes->>novice_ok.eq.true,and(attributes->>novice_ok.is.null,power_kw.lte.105)))',
     );
   });
 

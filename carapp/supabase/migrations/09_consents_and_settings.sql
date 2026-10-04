@@ -63,7 +63,8 @@ alter table public.profiles
 -- ---------------------------------------------------------------------
 -- Legal documents: URLs (placeholders until the real ones exist) and
 -- versions. Bump a version when its text changes: signed-in users are
--- asked to accept again. Existing URLs are kept.
+-- asked to accept again. Existing URLs are kept; null ones (05_seed.sql
+-- creates them as null) get the placeholders.
 -- ---------------------------------------------------------------------
 
 insert into public.app_config (key, value, is_public)
@@ -84,7 +85,7 @@ on conflict (key) do update
         'privacy_policy_url', 'https://carfeed.app/privacy',
         'support_email', 'supporto@carfeed.app'
       )
-      || public.app_config.value
+      || jsonb_strip_nulls(public.app_config.value)
       || jsonb_build_object('terms_version', '1', 'privacy_version', '1');
 
 update public.app_config

@@ -52,8 +52,10 @@ class FeedRepository {
 /// The conditions PostgREST can only express with `or`, merged into a
 /// single `or=(and(...))` (one `or` parameter per request):
 /// - each free word must appear in version or description;
-/// - novice drivers: cars up to [FeedFilters.noviceMaxPowerKw] kW,
-///   other categories untouched;
+/// - novice drivers: cars the seller marked "ok neopatentati"
+///   (`attributes.novice_ok`, see vehicle_categories.attributes_schema);
+///   when the seller said nothing, cars up to [FeedFilters.noviceMaxPowerKw]
+///   kW; other categories untouched;
 /// - the page cursor: strictly after [after] in (published_at, id) order.
 /// null when there is nothing to add.
 String? logicFilter(FeedFilters f, {FeedItem? after}) {
@@ -61,13 +63,14 @@ String? logicFilter(FeedFilters f, {FeedItem? after}) {
     for (final w in f.textWords.map(_likeSafe).where((w) => w.isNotEmpty))
       'or(version.ilike.*$w*,description.ilike.*$w*)',
     if (f.noviceDriver)
-      f.categoryId == 'car'
-          ? 'power_kw.lte.${FeedFilters.noviceMaxPowerKw}'
-          : 'or(category_id.neq.car,power_kw.lte.${FeedFilters.noviceMaxPowerKw})',
+      f.categoryId == 'car' ? 'or($_noviceCar)' : 'or(category_id.neq.car,$_noviceCar)',
     if (after != null) _cursor(after),
   ];
   return groups.isEmpty ? null : 'and(${groups.join(',')})';
 }
+
+const _noviceCar = 'attributes->>novice_ok.eq.true,'
+    'and(attributes->>novice_ok.is.null,power_kw.lte.${FeedFilters.noviceMaxPowerKw})';
 
 /// Timestamps are quoted: ':' and '.' are reserved in PostgREST trees.
 String _cursor(FeedItem after) {
