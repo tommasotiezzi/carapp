@@ -6,12 +6,12 @@ import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../auth/ui/login_sheet.dart';
 import '../../onboarding/state/onboarding_controller.dart';
 import '../../saved/ui/saved_section.dart';
 
-/// Minimal profile for now: login / logout, "Cosa cerco" and "Salvati".
+/// Profile: login, "Cosa cerco", "Salvati"; the gear opens the settings
+/// (account, notifications, legal, sign out, delete account).
 /// Saved searches arrive with the filters step.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -50,6 +50,11 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                IconButton(
+                  tooltip: t.settingsTitle,
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => context.push(AppRoutes.settings),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -63,11 +68,6 @@ class ProfileScreen extends ConsumerWidget {
             if (user != null) ...[
               const SizedBox(height: AppSpacing.xxl),
               const SavedSection(),
-              const SizedBox(height: AppSpacing.xxl),
-              OutlinedButton(
-                onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                child: Text(t.profileLogout),
-              ),
             ],
           ],
         ),

@@ -616,12 +616,6 @@ abstract class AppLocalizations {
   /// **'Controlla l\'indirizzo email.'**
   String get loginErrorEmail;
 
-  /// No description provided for @loginTerms.
-  ///
-  /// In it, this message translates to:
-  /// **'Continuando accetti i Termini e l\'Informativa privacy.'**
-  String get loginTerms;
-
   /// No description provided for @profileGuestTitle.
   ///
   /// In it, this message translates to:
@@ -1383,6 +1377,366 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Auto fino a {kw} kW, il limite di legge. Il rapporto peso/potenza va verificato: il peso non è tra i dati dell\'annuncio.'**
   String filterNoviceNote(int kw);
+
+  /// No description provided for @legalTerms.
+  ///
+  /// In it, this message translates to:
+  /// **'Termini e condizioni'**
+  String get legalTerms;
+
+  /// No description provided for @legalPrivacy.
+  ///
+  /// In it, this message translates to:
+  /// **'Informativa privacy'**
+  String get legalPrivacy;
+
+  /// No description provided for @legalRead.
+  ///
+  /// In it, this message translates to:
+  /// **'Leggi'**
+  String get legalRead;
+
+  /// No description provided for @legalOpenError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad aprire il documento, riprova.'**
+  String get legalOpenError;
+
+  /// No description provided for @consentTermsAge.
+  ///
+  /// In it, this message translates to:
+  /// **'Ho almeno {age} anni e accetto i Termini e condizioni'**
+  String consentTermsAge(int age);
+
+  /// No description provided for @consentPrivacy.
+  ///
+  /// In it, this message translates to:
+  /// **'Ho letto l\'Informativa privacy'**
+  String get consentPrivacy;
+
+  /// No description provided for @consentMarketing.
+  ///
+  /// In it, this message translates to:
+  /// **'Voglio ricevere email con novità e offerte'**
+  String get consentMarketing;
+
+  /// No description provided for @consentRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Per creare l\'account servono le prime due spunte.'**
+  String get consentRequired;
+
+  /// No description provided for @consentTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Prima di continuare'**
+  String get consentTitle;
+
+  /// No description provided for @consentBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Per usare il tuo account conferma di aver letto Termini e Informativa privacy.'**
+  String get consentBody;
+
+  /// No description provided for @consentUpdatedTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Abbiamo aggiornato i documenti'**
+  String get consentUpdatedTitle;
+
+  /// No description provided for @consentUpdatedBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Termini e Informativa privacy sono cambiati: dai un\'occhiata e conferma per continuare.'**
+  String get consentUpdatedBody;
+
+  /// No description provided for @consentAccept.
+  ///
+  /// In it, this message translates to:
+  /// **'Accetta e continua'**
+  String get consentAccept;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Impostazioni'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsGuest.
+  ///
+  /// In it, this message translates to:
+  /// **'Accedi per gestire account, notifiche ed email.'**
+  String get settingsGuest;
+
+  /// No description provided for @settingsAccount.
+  ///
+  /// In it, this message translates to:
+  /// **'Account'**
+  String get settingsAccount;
+
+  /// No description provided for @settingsEmail.
+  ///
+  /// In it, this message translates to:
+  /// **'Email'**
+  String get settingsEmail;
+
+  /// No description provided for @settingsChangeEmail.
+  ///
+  /// In it, this message translates to:
+  /// **'Cambia email'**
+  String get settingsChangeEmail;
+
+  /// No description provided for @settingsNewEmail.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuova email'**
+  String get settingsNewEmail;
+
+  /// No description provided for @settingsCurrentPassword.
+  ///
+  /// In it, this message translates to:
+  /// **'Password attuale'**
+  String get settingsCurrentPassword;
+
+  /// No description provided for @settingsEmailChanged.
+  ///
+  /// In it, this message translates to:
+  /// **'Email aggiornata'**
+  String get settingsEmailChanged;
+
+  /// No description provided for @settingsEmailConfirm.
+  ///
+  /// In it, this message translates to:
+  /// **'Ti abbiamo mandato un link per confermare la nuova email.'**
+  String get settingsEmailConfirm;
+
+  /// No description provided for @settingsChangePassword.
+  ///
+  /// In it, this message translates to:
+  /// **'Cambia password'**
+  String get settingsChangePassword;
+
+  /// No description provided for @settingsNewPassword.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuova password'**
+  String get settingsNewPassword;
+
+  /// No description provided for @settingsPasswordChanged.
+  ///
+  /// In it, this message translates to:
+  /// **'Password aggiornata'**
+  String get settingsPasswordChanged;
+
+  /// No description provided for @settingsAboutYou.
+  ///
+  /// In it, this message translates to:
+  /// **'Su di te'**
+  String get settingsAboutYou;
+
+  /// No description provided for @settingsAboutYouNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutto facoltativo: puoi lasciarlo vuoto o toglierlo quando vuoi.'**
+  String get settingsAboutYouNote;
+
+  /// No description provided for @settingsDisplayName.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome visualizzato'**
+  String get settingsDisplayName;
+
+  /// No description provided for @settingsBirthDate.
+  ///
+  /// In it, this message translates to:
+  /// **'Data di nascita'**
+  String get settingsBirthDate;
+
+  /// No description provided for @settingsGender.
+  ///
+  /// In it, this message translates to:
+  /// **'Genere'**
+  String get settingsGender;
+
+  /// No description provided for @settingsOptional.
+  ///
+  /// In it, this message translates to:
+  /// **'Facoltativo'**
+  String get settingsOptional;
+
+  /// No description provided for @settingsAdd.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi'**
+  String get settingsAdd;
+
+  /// No description provided for @settingsRemove.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi'**
+  String get settingsRemove;
+
+  /// No description provided for @genderFemale.
+  ///
+  /// In it, this message translates to:
+  /// **'Donna'**
+  String get genderFemale;
+
+  /// No description provided for @genderMale.
+  ///
+  /// In it, this message translates to:
+  /// **'Uomo'**
+  String get genderMale;
+
+  /// No description provided for @genderOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altro'**
+  String get genderOther;
+
+  /// No description provided for @genderUndisclosed.
+  ///
+  /// In it, this message translates to:
+  /// **'Preferisco non dirlo'**
+  String get genderUndisclosed;
+
+  /// No description provided for @settingsNotifications.
+  ///
+  /// In it, this message translates to:
+  /// **'Notifiche'**
+  String get settingsNotifications;
+
+  /// No description provided for @settingsPush.
+  ///
+  /// In it, this message translates to:
+  /// **'Notifiche push'**
+  String get settingsPush;
+
+  /// No description provided for @settingsPushOn.
+  ///
+  /// In it, this message translates to:
+  /// **'Attive su questo telefono'**
+  String get settingsPushOn;
+
+  /// No description provided for @settingsPushSoon.
+  ///
+  /// In it, this message translates to:
+  /// **'In arrivo: le scelte qui sotto sono già salvate.'**
+  String get settingsPushSoon;
+
+  /// No description provided for @settingsForBuyers.
+  ///
+  /// In it, this message translates to:
+  /// **'Quando cerchi'**
+  String get settingsForBuyers;
+
+  /// No description provided for @settingsForSellers.
+  ///
+  /// In it, this message translates to:
+  /// **'Quando vendi'**
+  String get settingsForSellers;
+
+  /// No description provided for @notifNewMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovi messaggi'**
+  String get notifNewMessage;
+
+  /// No description provided for @notifPriceDrop.
+  ///
+  /// In it, this message translates to:
+  /// **'Calo di prezzo dei salvati'**
+  String get notifPriceDrop;
+
+  /// No description provided for @notifListingSold.
+  ///
+  /// In it, this message translates to:
+  /// **'Un annuncio salvato è stato venduto'**
+  String get notifListingSold;
+
+  /// No description provided for @notifSavedSearch.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovi annunci per le ricerche salvate'**
+  String get notifSavedSearch;
+
+  /// No description provided for @notifNewContact.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovi contatti sui tuoi annunci'**
+  String get notifNewContact;
+
+  /// No description provided for @notifListingExpiring.
+  ///
+  /// In it, this message translates to:
+  /// **'Annuncio in scadenza'**
+  String get notifListingExpiring;
+
+  /// No description provided for @settingsEmails.
+  ///
+  /// In it, this message translates to:
+  /// **'Email'**
+  String get settingsEmails;
+
+  /// No description provided for @settingsMarketingNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Al massimo qualche email al mese. Puoi cambiare idea quando vuoi.'**
+  String get settingsMarketingNote;
+
+  /// No description provided for @settingsLegal.
+  ///
+  /// In it, this message translates to:
+  /// **'Documenti e aiuto'**
+  String get settingsLegal;
+
+  /// No description provided for @settingsAcceptedOn.
+  ///
+  /// In it, this message translates to:
+  /// **'Accettati il {date}'**
+  String settingsAcceptedOn(String date);
+
+  /// No description provided for @settingsReadOn.
+  ///
+  /// In it, this message translates to:
+  /// **'Letta il {date}'**
+  String settingsReadOn(String date);
+
+  /// No description provided for @settingsSupport.
+  ///
+  /// In it, this message translates to:
+  /// **'Contatta il supporto'**
+  String get settingsSupport;
+
+  /// No description provided for @settingsDeleteAccount.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina account'**
+  String get settingsDeleteAccount;
+
+  /// No description provided for @settingsDeleteTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare l\'account?'**
+  String get settingsDeleteTitle;
+
+  /// No description provided for @settingsDeleteBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Cancelliamo il profilo, i salvati, le ricerche, i messaggi e i tuoi annunci. Non si può annullare.'**
+  String get settingsDeleteBody;
+
+  /// No description provided for @settingsDeleteCta.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina definitivamente'**
+  String get settingsDeleteCta;
+
+  /// No description provided for @settingsDeleted.
+  ///
+  /// In it, this message translates to:
+  /// **'Account eliminato'**
+  String get settingsDeleted;
 }
 
 class _AppLocalizationsDelegate

@@ -10,6 +10,7 @@ TikTok-style vertical video feed to buy and sell used vehicles (cars incl. vans,
 - **No likes, no public comments.** Save (with price-drop alerts), Share, Contact (in-app chat + optional WhatsApp). Q&A answers can be made public by the seller.
 - **Plates:** no in-app blurring; the capture flow just tells users to cover the plate.
 - **Navbar:** always dark, same on every tab. Feed dark, other screens white/premium, accent blue `#1D4ED8`, system font.
+- **Age and consents:** the app is for **14+** (Italian age of digital consent; AM licence at 14, A1 at 16 are part of the target). Sign up requires two ticks: "Ho almeno 14 anni e accetto i Termini e condizioni" and "Ho letto l'Informativa privacy" (the privacy notice is read, not "accepted"); promotional emails are an optional tick, off by default. Minors buy with a parent's consent (stated in the Termini); the sell flow will ask 18+ or parental consent. Birth date and gender are **never asked in onboarding**: optional in Settings (data minimisation). All to be reviewed with lawyers before launch.
 - **Login:** email + password for now (sign in / create account in the same sheet). Email OTP codes are paused because emails cannot be received yet; bring them back once email delivery works. Google later, Apple required before iOS release if Google is offered.
 - **Dealers:** VAT verified with VIES. Pricing: months 1-3 free; months 4-6 free until 30 total contacts since signup; then €29/month locked (founder price). Manual invoicing, no card at signup. Base / Pro plans configurable from DB. A "contact" = chat with ≥1 buyer message or a WhatsApp click.
 - **Ads:** only sponsored listings (labelled) and coherent partners (financing, insurance). No generic banners.
@@ -40,7 +41,7 @@ flutter run --dart-define-from-file=env.json
 flutter analyze && flutter test   # before every push
 ```
 
-Supabase setup: Auth > Sign In / Providers > Email: keep **"Confirm email" off** while emails cannot be received (otherwise sign up ends on "conferma la tua email" and the account stays unusable). Minimum password length in the app: 8. When OTP codes come back: "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}`.
+Supabase setup: run `supabase/migrations/09_consents_and_settings.sql` in the SQL editor; deploy the `delete-account` Edge Function (Verify JWT on). Auth > Sign In / Providers > Email: keep **"Confirm email" off** while emails cannot be received (otherwise sign up ends on "conferma la tua email" and the account stays unusable). Minimum password length in the app: 8. When OTP codes come back: "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}`.
 
 ## Flutter structure (done)
 
@@ -77,7 +78,12 @@ lib/
                ui (ListingScreen, ListingVideoHeader, photo strip + viewer, sections, Q&A + ask sheet)
     saved/     FavoritesRepository + SavedListing (price drop since save), SavedController (ids, optimistic,
                rolls back on error), toggleSave() (login sheet for guests), SavedSection (profile grid)
-    profile/   ProfileScreen (minimal: login/logout, "Cosa cerco" gated behind signup, "Salvati")
+    legal/     consents (ConsentKind, consentNeeded(), ConsentRepository: user_consents log, pending choices
+               when sign up waits for email confirmation), ConsentChecks (the 3 ticks), ConsentGate (wraps the
+               shell: non-dismissible sheet when a signed-in user lacks the current Termini/Privacy)
+    settings/  AccountRepository (profile extras, email/password change after re-auth, delete account,
+               notification_preferences), SettingsScreen (/settings, gear in the profile), account sheets
+    profile/   ProfileScreen (login, "Cosa cerco" gated behind signup, "Salvati", gear -> settings)
   l10n/app_it.arb (+ gen/)
 test/       query parser, suggestions, recents, chips, logicFilter, transfer cost, feed filters, SavedController;
             widget tests (fake data): listing, Salvati, login, filter sheet, Search
@@ -89,14 +95,15 @@ Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`,
 
 ## Database
 
-Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`.
+Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`, `09_consents_and_settings` (in the repo: `supabase/migrations/`; 01–08 are not in the repo yet).
 
 ### Enums
-`account_type` consumer | dealer_member · `user_intent` buy | sell | browse | dealer · `seller_type` private | dealer · `listing_status` draft | active | sold | expired | removed · `media_kind` video | photo | cover · `fuel_type` petrol | diesel | hybrid | plugin_hybrid | electric | lpg | cng | other · `transmission_type` manual | automatic | semi_automatic · `dealer_role` owner | seller · `subscription_status` trial | conditional_free | active | past_due | canceled · `billing_method` manual_invoice | card · `event_type` impression | view | watch_time | zoom | open_detail | save | unsave | share | contact_chat | contact_whatsapp · `notification_type` new_message | price_drop | listing_sold | saved_search_match | new_contact | listing_expiring · `report_reason` scam | misleading_info | already_sold | inappropriate | other · `report_status` open | reviewed | actioned | dismissed · `platform` ios | android | web
+`account_type` consumer | dealer_member · `user_intent` buy | sell | browse | dealer · `seller_type` private | dealer · `listing_status` draft | active | sold | expired | removed · `media_kind` video | photo | cover · `fuel_type` petrol | diesel | hybrid | plugin_hybrid | electric | lpg | cng | other · `transmission_type` manual | automatic | semi_automatic · `dealer_role` owner | seller · `subscription_status` trial | conditional_free | active | past_due | canceled · `billing_method` manual_invoice | card · `event_type` impression | view | watch_time | zoom | open_detail | save | unsave | share | contact_chat | contact_whatsapp · `notification_type` new_message | price_drop | listing_sold | saved_search_match | new_contact | listing_expiring · `report_reason` scam | misleading_info | already_sold | inappropriate | other · `report_status` open | reviewed | actioned | dismissed · `platform` ios | android | web · `consent_kind` terms | privacy | age_14 | marketing_email · `gender` female | male | other | undisclosed
 
 ### Tables (key columns)
 Column defaults worth knowing: all UUID PKs `gen_random_uuid()`; `created_at`/`updated_at` default `now()`; listings `status` default `draft`, `currency` `EUR`, `attributes` `{}`; profiles `account_type` default `consumer`, `whatsapp_public` false, `locale` `it`; subscriptions `status` default `trial`, `billing_method` `manual_invoice`; saved_searches `notify` true; listing_questions `is_public` false; notification_preferences `enabled` true. `events` and `listing_price_history` use bigint identity PKs.
-- **profiles** id (= auth.users), account_type, intent, display_name, avatar_path, phone, whatsapp_public, city, location (geography), locale, onboarding_completed_at. Row created by trigger `on_auth_user_created`.
+- **profiles** id (= auth.users), account_type, intent, display_name, avatar_path, phone, whatsapp_public, city, location (geography), locale, onboarding_completed_at, birth_date (optional, ≥ 1900; the app allows 14+ only), gender (optional). Row created by trigger `on_auth_user_created`.
+- **user_consents** (09) bigint identity PK, profile_id (CASCADE), kind, granted, document_version, platform, created_at. **Append-only** proof of consent: RLS select/insert own, no update/delete. View **current_consents** (security_invoker): latest row per (profile_id, kind).
 - **buyer_preferences** profile_id PK, category_ids[], make_ids[], price_min/max_cents, year_min, mileage_max_km, fuel_types[], max_distance_km, novice_driver
 - **dealers** legal_name, display_name, vat_number (unique, `IT…`), vat_verified_at, vies_payload, address, city, province, location, phone, whatsapp, website, logo_path, description
 - **dealer_members** (dealer_id, profile_id) PK, role
@@ -216,7 +223,7 @@ listings: partial `where status = 'active'` on (published_at desc), (category_id
 - `avatars` (public): `{auth.uid}/{uuid}.ext`
 
 ### app_config keys
-`config_version` (bump on every change) · `app_versions` {ios/android: {min, latest}} · `legal` {privacy_policy_url, terms_url, support_email} · `feature_flags` {billing_enabled, ai_search_enabled, push_enabled, whatsapp_contact_enabled, reviews_enabled} · `onboarding` {login_nudge_after_listings, second_nudge_after_listings, preferences_nudge_after_listings, show_after_listings (default 4 in app)} · `dealer_trial` {trial_months 3, conditional_free_months 3, contact_threshold_total 30, founder_price_cents 2900} · `contact_definition` · `listing_lifecycle` {confirm_every_days 21, expire_after_days_without_confirm 7} · `feed` {page_size 10, prefetch_next_videos 2, prefetch_seconds 3} · `media` {clip_seconds 5, video_max_height 1920, video_min_height 720, video_bitrate_kbps 4500, video_fps 30, photo_max_long_side 4000} · `transfer_costs` (optional, app defaults if missing) {ipt_base_cents 15081, ipt_base_max_kw 53, ipt_per_kw_cents 351.19, provincial_surcharge_pct 30, fixed_fees_cents 8520}
+`config_version` (bump on every change) · `app_versions` {ios/android: {min, latest}} · `legal` {privacy_policy_url, terms_url, support_email, terms_version, privacy_version} (bump a version when its text changes: signed-in users must accept again; URLs are placeholders until the real documents exist) · `feature_flags` {billing_enabled, ai_search_enabled, push_enabled, whatsapp_contact_enabled, reviews_enabled} · `onboarding` {login_nudge_after_listings, second_nudge_after_listings, preferences_nudge_after_listings, show_after_listings (default 4 in app)} · `dealer_trial` {trial_months 3, conditional_free_months 3, contact_threshold_total 30, founder_price_cents 2900} · `contact_definition` · `listing_lifecycle` {confirm_every_days 21, expire_after_days_without_confirm 7} · `feed` {page_size 10, prefetch_next_videos 2, prefetch_seconds 3} · `media` {clip_seconds 5, video_max_height 1920, video_min_height 720, video_bitrate_kbps 4500, video_fps 30, photo_max_long_side 4000} · `transfer_costs` (optional, app defaults if missing) {ipt_base_cents 15081, ipt_base_max_kw 53, ipt_per_kw_cents 351.19, provincial_surcharge_pct 30, fixed_fees_cents 8520}
 
 ## Edge Functions
 
@@ -238,6 +245,10 @@ Rollback: any failure in steps 6-8 deletes subscriptions, then dealer_members, t
 
 Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a user change their own `account_type`; VAT is trusted from VIES only at signup (no periodic re-check).
 
+### delete-account (`supabase/functions/delete-account/index.ts`)
+
+`POST` with the user's JWT (the app re-authenticates with the password first). Removes the user's files in `listing-drafts` and `avatars` (best effort), then `auth.admin.deleteUser`: the database cascades profile, preferences, favorites, saved searches, consents, the user's listings, chats, messages, reviews, notifications. A dealer whose only owner is deleted stays without members. Errors: 401 `unauthorized`, 500 `server_error`.
+
 ## Database functions
 
 - `handle_new_user()` trigger function on `auth.users` insert → creates `profiles` row (`security definer`, `search_path = ''`, `on conflict do nothing`). Migration `08_auth_profiles.sql` also backfills profiles for pre-existing users.
@@ -245,9 +256,11 @@ Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a use
 
 ## Status
 
-Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters, search + saved searches. Designs for all screens and states exist in the Claude canvas mockup.
+Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters, search + saved searches, consents (sign up + gate), settings. Designs for all screens and states exist in the Claude canvas mockup.
 
 Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered; opened from the feed it receives the feed's `SharedVideo` through go_router `extra` and continues it, no second download — the feed stops driving that player until the page closes; from a link or a grid it creates its own), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contact. Save, Share and Contact show "in arrivo" until their steps. Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
+
+Settings (`/settings`): email change and password change (both after re-entering the current password), display name, optional birth date (date picker ends 14 years ago) and gender, per-type notification switches (`notification_preferences`, missing row = on; buyer and seller groups), push switch shown as "In arrivo" until `push_enabled`, promotional emails (a `marketing_email` consent row), Termini / Privacy (open in the browser, with the acceptance date), support email, sign out, delete account (password + `delete-account`).
 
 Save: bookmark on the feed and on the listing screen; guests get the login sheet, then the listing is saved (never un-saved by that tap). `favorites` upsert with `ignoreDuplicates` keeps the first `price_cents_at_save`. Profile "Salvati": two-column grid newest first (orders by `favorites.created_at`), "Sceso di € X" badge when the price dropped since saving, "Non più disponibile" card when RLS hides the listing (remove from the bookmark). Events `save` / `unsave` tracked. The "Salvati" list is loaded once and then kept in step locally (save adds the card from the listing data already on screen, unsave removes it): no request per tap. Price-drop push alerts come with notifications.
 

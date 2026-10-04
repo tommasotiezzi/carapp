@@ -16,6 +16,7 @@ class AppRoutes {
   static const listing = '/listing/:id';
   static const chat = '/chat/:id';
   static const dealerDashboard = '/dealer';
+  static const settings = '/settings';
 
   /// Short share link: https://<domain>/l/<id> -> /listing/<id>
   static const shareShort = '/l/:id';

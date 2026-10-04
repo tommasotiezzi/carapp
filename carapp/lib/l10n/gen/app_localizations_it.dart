@@ -298,10 +298,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get loginErrorEmail => 'Controlla l\'indirizzo email.';
 
   @override
-  String get loginTerms =>
-      'Continuando accetti i Termini e l\'Informativa privacy.';
-
-  @override
   String get profileGuestTitle => 'Ciao!';
 
   @override
@@ -745,4 +741,198 @@ class AppLocalizationsIt extends AppLocalizations {
   String filterNoviceNote(int kw) {
     return 'Auto fino a $kw kW, il limite di legge. Il rapporto peso/potenza va verificato: il peso non è tra i dati dell\'annuncio.';
   }
+
+  @override
+  String get legalTerms => 'Termini e condizioni';
+
+  @override
+  String get legalPrivacy => 'Informativa privacy';
+
+  @override
+  String get legalRead => 'Leggi';
+
+  @override
+  String get legalOpenError => 'Non riusciamo ad aprire il documento, riprova.';
+
+  @override
+  String consentTermsAge(int age) {
+    return 'Ho almeno $age anni e accetto i Termini e condizioni';
+  }
+
+  @override
+  String get consentPrivacy => 'Ho letto l\'Informativa privacy';
+
+  @override
+  String get consentMarketing => 'Voglio ricevere email con novità e offerte';
+
+  @override
+  String get consentRequired =>
+      'Per creare l\'account servono le prime due spunte.';
+
+  @override
+  String get consentTitle => 'Prima di continuare';
+
+  @override
+  String get consentBody =>
+      'Per usare il tuo account conferma di aver letto Termini e Informativa privacy.';
+
+  @override
+  String get consentUpdatedTitle => 'Abbiamo aggiornato i documenti';
+
+  @override
+  String get consentUpdatedBody =>
+      'Termini e Informativa privacy sono cambiati: dai un\'occhiata e conferma per continuare.';
+
+  @override
+  String get consentAccept => 'Accetta e continua';
+
+  @override
+  String get settingsTitle => 'Impostazioni';
+
+  @override
+  String get settingsGuest => 'Accedi per gestire account, notifiche ed email.';
+
+  @override
+  String get settingsAccount => 'Account';
+
+  @override
+  String get settingsEmail => 'Email';
+
+  @override
+  String get settingsChangeEmail => 'Cambia email';
+
+  @override
+  String get settingsNewEmail => 'Nuova email';
+
+  @override
+  String get settingsCurrentPassword => 'Password attuale';
+
+  @override
+  String get settingsEmailChanged => 'Email aggiornata';
+
+  @override
+  String get settingsEmailConfirm =>
+      'Ti abbiamo mandato un link per confermare la nuova email.';
+
+  @override
+  String get settingsChangePassword => 'Cambia password';
+
+  @override
+  String get settingsNewPassword => 'Nuova password';
+
+  @override
+  String get settingsPasswordChanged => 'Password aggiornata';
+
+  @override
+  String get settingsAboutYou => 'Su di te';
+
+  @override
+  String get settingsAboutYouNote =>
+      'Tutto facoltativo: puoi lasciarlo vuoto o toglierlo quando vuoi.';
+
+  @override
+  String get settingsDisplayName => 'Nome visualizzato';
+
+  @override
+  String get settingsBirthDate => 'Data di nascita';
+
+  @override
+  String get settingsGender => 'Genere';
+
+  @override
+  String get settingsOptional => 'Facoltativo';
+
+  @override
+  String get settingsAdd => 'Aggiungi';
+
+  @override
+  String get settingsRemove => 'Rimuovi';
+
+  @override
+  String get genderFemale => 'Donna';
+
+  @override
+  String get genderMale => 'Uomo';
+
+  @override
+  String get genderOther => 'Altro';
+
+  @override
+  String get genderUndisclosed => 'Preferisco non dirlo';
+
+  @override
+  String get settingsNotifications => 'Notifiche';
+
+  @override
+  String get settingsPush => 'Notifiche push';
+
+  @override
+  String get settingsPushOn => 'Attive su questo telefono';
+
+  @override
+  String get settingsPushSoon =>
+      'In arrivo: le scelte qui sotto sono già salvate.';
+
+  @override
+  String get settingsForBuyers => 'Quando cerchi';
+
+  @override
+  String get settingsForSellers => 'Quando vendi';
+
+  @override
+  String get notifNewMessage => 'Nuovi messaggi';
+
+  @override
+  String get notifPriceDrop => 'Calo di prezzo dei salvati';
+
+  @override
+  String get notifListingSold => 'Un annuncio salvato è stato venduto';
+
+  @override
+  String get notifSavedSearch => 'Nuovi annunci per le ricerche salvate';
+
+  @override
+  String get notifNewContact => 'Nuovi contatti sui tuoi annunci';
+
+  @override
+  String get notifListingExpiring => 'Annuncio in scadenza';
+
+  @override
+  String get settingsEmails => 'Email';
+
+  @override
+  String get settingsMarketingNote =>
+      'Al massimo qualche email al mese. Puoi cambiare idea quando vuoi.';
+
+  @override
+  String get settingsLegal => 'Documenti e aiuto';
+
+  @override
+  String settingsAcceptedOn(String date) {
+    return 'Accettati il $date';
+  }
+
+  @override
+  String settingsReadOn(String date) {
+    return 'Letta il $date';
+  }
+
+  @override
+  String get settingsSupport => 'Contatta il supporto';
+
+  @override
+  String get settingsDeleteAccount => 'Elimina account';
+
+  @override
+  String get settingsDeleteTitle => 'Eliminare l\'account?';
+
+  @override
+  String get settingsDeleteBody =>
+      'Cancelliamo il profilo, i salvati, le ricerche, i messaggi e i tuoi annunci. Non si può annullare.';
+
+  @override
+  String get settingsDeleteCta => 'Elimina definitivamente';
+
+  @override
+  String get settingsDeleted => 'Account eliminato';
 }
