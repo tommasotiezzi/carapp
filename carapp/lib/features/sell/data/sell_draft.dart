@@ -31,6 +31,8 @@ class Shot {
         'taken_at': takenAt?.toIso8601String(),
       };
 
+  Shot copyWithStep(String id) => Shot(stepId: id, kind: kind, file: file, thumb: thumb, takenAt: takenAt);
+
   factory Shot.fromJson(Map<String, dynamic> json) => Shot(
         stepId: json['step_id'] as String,
         kind: ShotKind.values.byName(json['kind'] as String),
@@ -226,6 +228,7 @@ class SellDraft {
     required this.categoryId,
     required this.createdAt,
     this.shots = const {},
+    this.extras = const [],
     this.details = SellDetails.empty,
     this.video,
     this.cover,
@@ -240,6 +243,13 @@ class SellDraft {
 
   /// By step id.
   final Map<String, Shot> shots;
+
+  /// "Foto aggiuntive": optional photos for the carousel besides the
+  /// steps (interior details, tyres, service book...), in order.
+  final List<Shot> extras;
+
+  static const maxExtras = 10;
+  static const extraStep = 'extra';
   final SellDetails details;
 
   /// The edited video and its cover, in the draft folder (once made).
@@ -254,17 +264,25 @@ class SellDraft {
   /// Remote file name -> [mediaKey] it was uploaded from.
   final Map<String, String> uploaded;
 
-  /// Changes whenever a shot is added, retaken or removed.
-  String get mediaKey => (shots.values.map((s) => '${s.stepId}:${s.file}').toList()..sort()).join('|');
+  /// What the video is made of: changes when a clip is added, retaken or
+  /// removed (photos do not change the video).
+  String get mediaKey => (shots.values
+          .where((s) => s.kind == ShotKind.video)
+          .map((s) => '${s.stepId}:${s.file}')
+          .toList()
+        ..sort())
+      .join('|');
 
   List<Shot> videosIn(List<CaptureStep> steps) => [
         for (final step in steps)
           if (shots[step.id]?.kind == ShotKind.video) shots[step.id]!,
       ];
 
+  /// The carousel: step photos in step order, then the extra photos.
   List<Shot> photosIn(List<CaptureStep> steps) => [
         for (final step in steps)
           if (shots[step.id]?.kind == ShotKind.photo) shots[step.id]!,
+        ...extras,
       ];
 
   /// Required steps still without a shot.
@@ -276,12 +294,31 @@ class SellDraft {
   bool readyIn(List<CaptureStep> steps) =>
       missingIn(steps).isEmpty && videosIn(steps).isNotEmpty;
 
+  /// Steps renamed in the catalog (migration 15: 'front_three_quarter'
+  /// became 'front'): a draft started before keeps its shot.
+  static const renamedSteps = {'front_three_quarter': 'front'};
+
+  SellDraft withRenamedSteps(List<CaptureStep> steps) {
+    final ids = {for (final s in steps) s.id};
+    final moves = {
+      for (final e in renamedSteps.entries)
+        if (shots.containsKey(e.key) && !ids.contains(e.key) && ids.contains(e.value) && !shots.containsKey(e.value))
+          e.key: e.value,
+    };
+    if (moves.isEmpty) return this;
+    return copyWith(shots: {
+      for (final s in shots.values)
+        moves[s.stepId] ?? s.stepId: moves.containsKey(s.stepId) ? s.copyWithStep(moves[s.stepId]!) : s,
+    });
+  }
+
   bool get videoUpToDate => video != null && cover != null && renderedFrom == mediaKey;
 
   static const _unset = Object();
 
   SellDraft copyWith({
     Map<String, Shot>? shots,
+    List<Shot>? extras,
     SellDetails? details,
     Object? video = _unset,
     Object? cover = _unset,
@@ -294,6 +331,7 @@ class SellDraft {
         categoryId: categoryId,
         createdAt: createdAt,
         shots: shots ?? this.shots,
+        extras: extras ?? this.extras,
         details: details ?? this.details,
         video: identical(video, _unset) ? this.video : video as String?,
         cover: identical(cover, _unset) ? this.cover : cover as String?,
@@ -308,6 +346,7 @@ class SellDraft {
         'category_id': categoryId,
         'created_at': createdAt.toIso8601String(),
         'shots': [for (final s in shots.values) s.toJson()],
+        'extras': [for (final s in extras) s.toJson()],
         'details': details.toJson(),
         'video': video,
         'cover': cover,
@@ -325,6 +364,7 @@ class SellDraft {
       categoryId: json['category_id'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       shots: {for (final s in shots) s.stepId: s},
+      extras: ((json['extras'] as List?) ?? const []).cast<Map<String, dynamic>>().map(Shot.fromJson).toList(),
       details: SellDetails.fromJson(Map<String, dynamic>.from((json['details'] as Map?) ?? const {})),
       video: json['video'] as String?,
       cover: json['cover'] as String?,

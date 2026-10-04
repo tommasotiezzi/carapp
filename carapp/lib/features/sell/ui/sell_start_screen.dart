@@ -58,7 +58,10 @@ class _SellStartScreenState extends ConsumerState<SellStartScreen> {
         title: Text(t.sellRestartTitle),
         content: Text(t.sellRestartBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(MaterialLocalizations.of(context).cancelButtonLabel)),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
           TextButton(onPressed: () => Navigator.pop(context, true), child: Text(t.sellRestart)),
         ],
       ),
@@ -132,10 +135,7 @@ class _SellStartScreenState extends ConsumerState<SellStartScreen> {
                       children: [
                         Text(t.sellBeforeTitle, style: text.titleSmall),
                         const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          _category == 'motorcycle' ? t.sellBeforeMoto : t.sellBeforeCar,
-                          style: text.bodyMedium,
-                        ),
+                        Text(_category == 'motorcycle' ? t.sellBeforeMoto : t.sellBeforeCar, style: text.bodyMedium),
                       ],
                     ),
                   ),
@@ -160,20 +160,22 @@ class _SellStartScreenState extends ConsumerState<SellStartScreen> {
                           ),
                           const SizedBox(height: AppSpacing.s),
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              TextButton(
-                                onPressed: _busy ? null : _restart,
-                                child: Text(t.sellRestart),
-                              ),
-                              const Spacer(),
-                              FilledButton.tonal(
-                                onPressed: _busy
-                                    ? null
-                                    : () {
-                                        setState(() => _category = saved.categoryId);
-                                        _begin(fresh: false);
-                                      },
-                                child: Text(t.sellResume),
+                              TextButton(onPressed: _busy ? null : _restart, child: Text(t.sellRestart)),
+                              Flexible(
+                                child: FilledButton.tonal(
+                                  onPressed: _busy
+                                      ? null
+                                      : () {
+                                          setState(() => _category = saved.categoryId);
+                                          _begin(fresh: false);
+                                        },
+                                  // Not the theme's full-width minimum: it
+                                  // cannot fit in a Row.
+                                  style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                                  child: Text(t.sellResume, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                ),
                               ),
                             ],
                           ),
@@ -194,8 +196,8 @@ class _SellStartScreenState extends ConsumerState<SellStartScreen> {
                     onPressed: _busy
                         ? null
                         : saved != null && saved.categoryId != _category
-                            ? _restart
-                            : () => _begin(fresh: false),
+                        ? _restart
+                        : () => _begin(fresh: false),
                     child: _busy
                         ? const SizedBox.square(
                             dimension: 20,

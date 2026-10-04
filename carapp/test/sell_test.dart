@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:carapp/core/config/app_config.dart';
 import 'package:carapp/core/storage/preferences.dart';
 import 'package:carapp/core/supabase/supabase_client.dart';
+import 'package:carapp/core/theme/app_theme.dart';
 import 'package:carapp/features/listing/data/listing_detail.dart';
 import 'package:carapp/features/listing/state/listing_providers.dart';
 import 'package:carapp/features/onboarding/data/catalog_repository.dart';
@@ -140,7 +141,7 @@ void main() {
     test('json round trip, missing steps, ready, media key', () {
       var d = SellDraft(id: 'd1', categoryId: 'car', createdAt: DateTime(2026, 10, 4));
       expect(d.missingIn(_carSteps).map((s) => s.id),
-          ['front_three_quarter', 'right_side', 'left_side', 'rear', 'interior_dashboard']);
+          ['front', 'right_side', 'left_side', 'rear', 'interior_dashboard']);
       expect(d.readyIn(_carSteps), isFalse);
 
       final shots = {
@@ -150,7 +151,7 @@ void main() {
       d = d.copyWith(shots: shots, details: _complete);
       expect(d.readyIn(_carSteps), isTrue);
       expect(d.videosIn(_carSteps).map((s) => s.stepId),
-          ['front_three_quarter', 'right_side', 'left_side', 'interior_dashboard']);
+          ['front', 'right_side', 'left_side', 'interior_dashboard']);
       expect(d.photosIn(_carSteps).single.stepId, 'rear');
 
       final key = d.mediaKey;
@@ -187,7 +188,7 @@ void main() {
 
     test('step defaults match the database seed', () {
       expect(CaptureStep.defaultsFor('motorcycle').where((s) => s.required).length, 4);
-      expect(_carSteps.first.silhouette, 'car_front_3q');
+      expect(_carSteps.first.silhouette, 'car_front');
       expect(_carSteps.every((s) => s.silhouette == null || Silhouette.known.contains(s.silhouette)), isTrue);
       final parsed = CaptureStep.listFromJson(jsonDecode(
           '[{"id":"rear","kind":"video","seconds":5,"silhouette":"car_rear","plate_tip":true,"required":true}]'));
@@ -250,19 +251,19 @@ void main() {
       await ctrl().start('car');
       final id = st().draft!.id;
       final raw = await cameraFile('front.mp4');
-      await ctrl().addShot('front_three_quarter', ShotKind.video, raw);
+      await ctrl().addShot('front', ShotKind.video, raw);
 
-      final shot = st().draft!.shots['front_three_quarter']!;
+      final shot = st().draft!.shots['front']!;
       final dir = await media.draftDir(id);
       expect(File(raw).existsSync(), isFalse);
       expect(File('${dir.path}/${shot.file}').existsSync(), isTrue);
       expect(File('${dir.path}/${shot.thumb}').existsSync(), isTrue);
-      expect(ctrl().savedDraft()!.shots.keys, ['front_three_quarter']);
+      expect(ctrl().savedDraft()!.shots.keys, ['front']);
 
       // Retake: the old files go.
-      await ctrl().addShot('front_three_quarter', ShotKind.photo, await cameraFile('front.jpg'));
+      await ctrl().addShot('front', ShotKind.photo, await cameraFile('front.jpg'));
       expect(File('${dir.path}/${shot.file}').existsSync(), isFalse);
-      expect(st().draft!.shots['front_three_quarter']!.kind, ShotKind.photo);
+      expect(st().draft!.shots['front']!.kind, ShotKind.photo);
     });
 
     test('resume the saved draft; another category asks for a new one', () async {
@@ -286,7 +287,7 @@ void main() {
       await ctrl().prepareMedia();
 
       expect(media.renders.single.map((f) => f.split('-').first),
-          ['front_three_quarter', 'right_side', 'left_side', 'interior_dashboard']);
+          ['front', 'right_side', 'left_side', 'interior_dashboard']);
       expect(repo.uploads, ['video.mp4', 'cover.jpg', 'photo-01-rear.jpg']);
       expect(st().phase, MediaPhase.ready);
       expect(st().progress, 1);
@@ -312,6 +313,54 @@ void main() {
       expect(repo.uploads.sublist(3), ['video.mp4', 'cover.jpg']);
       expect(repo.removed, ['photo-01-rear.jpg']);
       expect(st().draft!.uploaded.keys, unorderedEquals(['video.mp4', 'cover.jpg']));
+    });
+
+    test('extra photos: copied, in the carousel after the steps, no new video, removable, max 10', () async {
+      await ctrl().start('car');
+      await shootAll();
+      await ctrl().prepareMedia();
+
+      final picked = [for (var i = 0; i < 2; i++) await cameraFile('gallery-$i.jpg')];
+      expect(await ctrl().addExtraPhotos(picked), 2);
+      expect(File(picked.first).existsSync(), isTrue, reason: 'gallery files are copied, not moved');
+      final extras = st().draft!.extras;
+      expect(extras.map((e) => e.stepId), ['extra', 'extra']);
+      expect(File('${media.root.path}/${st().draft!.id}/${extras.first.file}').existsSync(), isTrue);
+
+      await ctrl().prepareMedia();
+      expect(media.renders, hasLength(1), reason: 'photos do not change the video');
+      expect(repo.uploads.sublist(3), ['photo-02-extra.jpg', 'photo-03-extra.jpg']);
+
+      // Retaking the rear photo: still no new video.
+      await ctrl().addShot('rear', ShotKind.photo, await cameraFile('rear2.jpg'));
+      await ctrl().prepareMedia();
+      expect(media.renders, hasLength(1));
+
+      await ctrl().removeExtraPhoto(extras.first.file);
+      await ctrl().prepareMedia();
+      expect(st().draft!.extras.single.file, extras.last.file);
+      expect(repo.removed, ['photo-03-extra.jpg']);
+      expect(st().draft!.uploaded.keys, unorderedEquals(['video.mp4', 'cover.jpg', 'photo-01-rear.jpg', 'photo-02-extra.jpg']));
+
+      // Survives a restart of the app.
+      expect(ctrl().savedDraft()!.extras.single.file, extras.last.file);
+
+      final many = [for (var i = 0; i < 12; i++) await cameraFile('many-$i.jpg')];
+      expect(await ctrl().addExtraPhotos(many), SellDraft.maxExtras - 1);
+      expect(st().draft!.extras, hasLength(SellDraft.maxExtras));
+      expect(await ctrl().addExtraPhotos([many.first]), 0);
+    });
+
+    test('a draft from before migration 15 keeps its front shot', () async {
+      final old = SellDraft(id: 'd1', categoryId: 'car', createdAt: DateTime(2026), shots: const {
+        'front_three_quarter': Shot(stepId: 'front_three_quarter', kind: ShotKind.video, file: 'f.mp4'),
+      });
+      await prefs.setString(PrefKeys.sellDraft, jsonEncode(old.toJson()));
+      await ctrl().start('car');
+      expect(st().draft!.shots.keys, ['front']);
+      expect(st().draft!.shots['front']!.file, 'f.mp4');
+      // A catalog still on the old step leaves it alone.
+      expect(old.withRenamedSteps(const [CaptureStep(id: 'front_three_quarter')]).shots.keys, ['front_three_quarter']);
     });
 
     test('a retake while the video is being made restarts it', () async {
@@ -440,6 +489,8 @@ void main() {
           ...more,
         ],
         child: MaterialApp.router(
+          // The app's theme: full-width buttons must not break rows.
+          theme: AppTheme.light(),
           routerConfig: router,
           locale: const Locale('it'),
           supportedLocales: AppLocalizations.supportedLocales,
@@ -528,6 +579,42 @@ void main() {
       expect(find.text('capture step=left_side&single=1'), findsOneWidget);
     });
 
+    testWidgets('shots: extra photos from the gallery', (tester) async {
+      tester.view.physicalSize = const Size(430, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final picked = File('${tmp.path}/gallery.jpg')..writeAsStringSync('jpg');
+      final asked = <(bool, int)>[];
+      late ProviderContainer container;
+      await tester.pumpWidget(app(
+        Consumer(builder: (context, ref, _) {
+          container = ProviderScope.containerOf(context);
+          return const ShotsScreen();
+        }),
+        more: [
+          extraPhotoPickerProvider.overrideWithValue(({required camera, required limit, required maxSide}) async {
+            asked.add((camera, limit));
+            return [picked.path];
+          }),
+        ],
+      ));
+      await tester.runAsync(() => container.read(sellControllerProvider.notifier).start('car'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Foto aggiuntive'), findsOneWidget);
+      await tester.tap(find.text('Aggiungi'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Scegli dalla galleria'));
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      expect(asked, [(false, SellDraft.maxExtras)]);
+      expect(container.read(sellControllerProvider).draft!.extras, hasLength(1));
+    });
+
     testWidgets('details: validation and publish', (tester) async {
       tester.view.physicalSize = const Size(430, 2400);
       tester.view.devicePixelRatio = 1;
@@ -566,6 +653,8 @@ void main() {
       await tester.pumpWidget(UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          // The app's theme: full-width buttons must not break rows.
+          theme: AppTheme.light(),
           routerConfig: router,
           locale: const Locale('it'),
           supportedLocales: AppLocalizations.supportedLocales,

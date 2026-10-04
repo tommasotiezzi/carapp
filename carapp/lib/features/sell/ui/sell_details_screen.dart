@@ -769,13 +769,20 @@ class _PickerField extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
+        // Label always on top: with an empty value it would otherwise sit
+        // on "Scegli" (two texts in the same spot).
         decoration: InputDecoration(
           labelText: label,
           errorText: error,
+          floatingLabelBehavior: FloatingLabelBehavior.always,
           suffixIcon: const Icon(Icons.expand_more),
         ),
-        isEmpty: value == null,
-        child: Text(value ?? t.detailsChoose, maxLines: 1, overflow: TextOverflow.ellipsis),
+        child: Text(
+          value ?? t.detailsChoose,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: value == null ? const TextStyle(color: AppColors.inkMuted) : null,
+        ),
       ),
     );
   }

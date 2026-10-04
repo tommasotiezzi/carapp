@@ -1164,6 +1164,10 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get captureAlignFront =>
+      'Mettiti davanti all\'auto e centrala nella sagoma, a circa 4 metri';
+
+  @override
   String get captureAlignCar => 'Allinea l\'auto alla sagoma, a circa 4 metri';
 
   @override
@@ -1201,6 +1205,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get captureSaveError => 'Ripresa non salvata, riprova.';
+
+  @override
+  String get sellStepFront => 'Frontale';
 
   @override
   String get sellStepFront3q => 'Fronte 3/4';
@@ -1259,6 +1266,32 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get shotsEngineOn => 'motore acceso';
+
+  @override
+  String get extraPhotosTitle => 'Foto aggiuntive';
+
+  @override
+  String extraPhotosHint(int max) {
+    return 'Facoltative, fino a $max: dettagli, gomme, libretto dei tagliandi. Finiscono nel carosello dell\'annuncio.';
+  }
+
+  @override
+  String get extraPhotosAdd => 'Aggiungi';
+
+  @override
+  String get extraPhotosCamera => 'Scatta una foto';
+
+  @override
+  String get extraPhotosGallery => 'Scegli dalla galleria';
+
+  @override
+  String extraPhotosLimit(int max) {
+    return 'Al massimo $max foto aggiuntive';
+  }
+
+  @override
+  String get extraPhotosError =>
+      'Non riusciamo ad aggiungere la foto. Riprova.';
 
   @override
   String get shotsDefectsTip =>

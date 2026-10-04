@@ -9,7 +9,7 @@ class CaptureStep {
     this.required = true,
   });
 
-  /// e.g. 'front_three_quarter', also the ARB key suffix of its label.
+  /// e.g. 'front', also the ARB key suffix of its label.
   final String id;
   final int seconds;
 
@@ -37,7 +37,7 @@ class CaptureStep {
       .map(CaptureStep.fromJson)
       .toList();
 
-  /// Same as the seed in 05_seed.sql: used when the catalog cannot be
+  /// Same as the database (05_seed.sql, first car step from 15): used when the catalog cannot be
   /// read (offline at the first launch), so capture can still start.
   static List<CaptureStep> defaultsFor(String categoryId) => categoryId == 'motorcycle'
       ? const [
@@ -50,7 +50,7 @@ class CaptureStep {
           CaptureStep(id: 'defects', required: false),
         ]
       : const [
-          CaptureStep(id: 'front_three_quarter', silhouette: 'car_front_3q', plateTip: true),
+          CaptureStep(id: 'front', silhouette: 'car_front', plateTip: true),
           CaptureStep(id: 'right_side', silhouette: 'car_side_r'),
           CaptureStep(id: 'left_side', silhouette: 'car_side_l'),
           CaptureStep(id: 'rear', silhouette: 'car_rear', plateTip: true),

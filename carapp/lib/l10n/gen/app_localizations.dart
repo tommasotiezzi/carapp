@@ -2122,6 +2122,12 @@ abstract class AppLocalizations {
   /// **'Registrazione · {seconds} s'**
   String captureRecording(int seconds);
 
+  /// No description provided for @captureAlignFront.
+  ///
+  /// In it, this message translates to:
+  /// **'Mettiti davanti all\'auto e centrala nella sagoma, a circa 4 metri'**
+  String get captureAlignFront;
+
   /// No description provided for @captureAlignCar.
   ///
   /// In it, this message translates to:
@@ -2193,6 +2199,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Ripresa non salvata, riprova.'**
   String get captureSaveError;
+
+  /// No description provided for @sellStepFront.
+  ///
+  /// In it, this message translates to:
+  /// **'Frontale'**
+  String get sellStepFront;
 
   /// No description provided for @sellStepFront3q.
   ///
@@ -2301,6 +2313,48 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'motore acceso'**
   String get shotsEngineOn;
+
+  /// No description provided for @extraPhotosTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Foto aggiuntive'**
+  String get extraPhotosTitle;
+
+  /// No description provided for @extraPhotosHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Facoltative, fino a {max}: dettagli, gomme, libretto dei tagliandi. Finiscono nel carosello dell\'annuncio.'**
+  String extraPhotosHint(int max);
+
+  /// No description provided for @extraPhotosAdd.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi'**
+  String get extraPhotosAdd;
+
+  /// No description provided for @extraPhotosCamera.
+  ///
+  /// In it, this message translates to:
+  /// **'Scatta una foto'**
+  String get extraPhotosCamera;
+
+  /// No description provided for @extraPhotosGallery.
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli dalla galleria'**
+  String get extraPhotosGallery;
+
+  /// No description provided for @extraPhotosLimit.
+  ///
+  /// In it, this message translates to:
+  /// **'Al massimo {max} foto aggiuntive'**
+  String extraPhotosLimit(int max);
+
+  /// No description provided for @extraPhotosError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad aggiungere la foto. Riprova.'**
+  String get extraPhotosError;
 
   /// No description provided for @shotsDefectsTip.
   ///

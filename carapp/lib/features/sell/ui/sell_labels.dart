@@ -4,7 +4,8 @@ import '../data/capture_step.dart';
 /// Italian labels for the capture steps and the category fields.
 extension SellLabels on AppLocalizations {
   String stepLabel(String stepId) => switch (stepId) {
-        'front_three_quarter' => sellStepFront3q,
+        'front' => sellStepFront,
+        'front_three_quarter' => sellStepFront3q, // drafts from before 15
         'right_side' => sellStepRightSide,
         'left_side' => sellStepLeftSide,
         'rear' => sellStepRear,
@@ -19,6 +20,7 @@ extension SellLabels on AppLocalizations {
 
   /// The line under the step title on the camera.
   String stepInstruction(CaptureStep step, String categoryId) {
+    if (step.id == 'front') return captureAlignFront;
     if (step.silhouette != null) {
       return categoryId == 'motorcycle' ? captureAlignMoto : captureAlignCar;
     }

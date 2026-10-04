@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/capture_step.dart';
 import '../data/sell_draft.dart';
+import '../data/sell_media.dart';
 import '../state/sell_controller.dart';
 import 'capture_screen.dart' show ShotImage;
 import 'sell_labels.dart';
@@ -86,6 +88,8 @@ class ShotsScreen extends ConsumerWidget {
               ),
             ),
           ],
+          const SizedBox(height: AppSpacing.xl),
+          _ExtraPhotos(draft: draft),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -114,6 +118,136 @@ class ShotsScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "Foto aggiuntive": optional photos for the carousel (camera or
+/// gallery), besides the steps. Tap a photo to remove it.
+class _ExtraPhotos extends ConsumerWidget {
+  const _ExtraPhotos({required this.draft});
+
+  final SellDraft draft;
+
+  static const _size = 76.0;
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(sellControllerProvider.notifier);
+    final pick = ref.read(extraPhotoPickerProvider);
+    final maxSide = (ref.read(appConfigProvider).value ?? AppConfig.empty).mediaValue('photo_max_long_side', 2560);
+    final room = SellDraft.maxExtras - draft.extras.length;
+
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(t.extraPhotosCamera),
+              onTap: () => Navigator.pop(context, 'camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(t.extraPhotosGallery),
+              onTap: () => Navigator.pop(context, 'gallery'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    try {
+      final paths = await pick(camera: source == 'camera', limit: room, maxSide: maxSide);
+      if (paths.isEmpty) return;
+      final added = await controller.addExtraPhotos(paths);
+      if (added < paths.length) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(t.extraPhotosLimit(SellDraft.maxExtras))));
+      }
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(t.extraPhotosError)));
+    }
+  }
+
+  Future<void> _remove(BuildContext context, WidgetRef ref, Shot shot) async {
+    final t = AppLocalizations.of(context);
+    final controller = ref.read(sellControllerProvider.notifier);
+    final remove = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListTile(
+          leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+          title: Text(t.shotsDelete, style: const TextStyle(color: AppColors.danger)),
+          onTap: () => Navigator.pop(context, true),
+        ),
+      ),
+    );
+    if (remove == true) await controller.removeExtraPhoto(shot.file);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    final extras = draft.extras;
+    final full = extras.length >= SellDraft.maxExtras;
+
+    return Column(
+      key: const ValueKey('extra-photos'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(t.extraPhotosTitle, style: text.titleMedium),
+        const SizedBox(height: 2),
+        Text(t.extraPhotosHint(SellDraft.maxExtras), style: text.bodySmall),
+        const SizedBox(height: AppSpacing.m),
+        Wrap(
+          spacing: AppSpacing.s,
+          runSpacing: AppSpacing.s,
+          children: [
+            for (final shot in extras)
+              InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.s),
+                onTap: () => _remove(context, ref, shot),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.s),
+                  child: Container(
+                    width: _size,
+                    height: _size,
+                    color: AppColors.placeholder,
+                    child: ShotImage(draftId: draft.id, file: shot.file, width: _size),
+                  ),
+                ),
+              ),
+            if (!full)
+              InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.s),
+                onTap: () => _add(context, ref),
+                child: CustomPaint(
+                  painter: _DashedBorder(radius: AppRadius.s),
+                  child: SizedBox(
+                    width: _size,
+                    height: _size,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_a_photo_outlined, color: AppColors.inkSecondary),
+                        const SizedBox(height: 4),
+                        Text(t.extraPhotosAdd, style: text.labelSmall),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -269,6 +403,10 @@ class _StepTile extends StatelessWidget {
 }
 
 class _DashedBorder extends CustomPainter {
+  _DashedBorder({this.radius = AppRadius.m});
+
+  final double radius;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -276,7 +414,7 @@ class _DashedBorder extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
     final path = Path()
-      ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(AppRadius.m)));
+      ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)));
     for (final metric in path.computeMetrics()) {
       var d = 0.0;
       while (d < metric.length) {
@@ -287,5 +425,5 @@ class _DashedBorder extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DashedBorder oldDelegate) => false;
+  bool shouldRepaint(_DashedBorder oldDelegate) => oldDelegate.radius != radius;
 }

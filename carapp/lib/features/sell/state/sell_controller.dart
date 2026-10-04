@@ -86,11 +86,12 @@ class SellController extends Notifier<SellState> {
   Future<void> start(String categoryId, {bool fresh = false}) async {
     final saved = savedDraft();
     if (saved != null && (fresh || saved.categoryId != categoryId)) await discard();
-    final draft = (!fresh && saved?.categoryId == categoryId)
+    var draft = (!fresh && saved?.categoryId == categoryId)
         ? saved!
         : SellDraft(id: _uuid.v4(), categoryId: categoryId, createdAt: DateTime.now());
     final steps = await _repo.captureSteps(categoryId);
     if (!ref.mounted) return;
+    draft = draft.withRenamedSteps(steps);
     state = SellState(draft: draft, steps: steps);
     await _save(draft);
   }
@@ -160,6 +161,38 @@ class SellController extends Notifier<SellState> {
     if (draft == null || shot == null) return;
     _set(draft.copyWith(shots: {...draft.shots}..remove(stepId)));
     await _deleteFiles(await _media.draftDir(draft.id), [shot.file, shot.thumb]);
+    _restartIfRunning();
+  }
+
+  /// Adds "Foto aggiuntive" (camera or gallery files, copied into the
+  /// draft folder) up to [SellDraft.maxExtras]. Returns how many were
+  /// added.
+  Future<int> addExtraPhotos(List<String> paths) async {
+    final draft = state.draft;
+    if (draft == null) return 0;
+    final room = SellDraft.maxExtras - draft.extras.length;
+    if (room <= 0) return 0;
+    final dir = await _media.draftDir(draft.id);
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final added = <Shot>[];
+    for (final (i, path) in paths.take(room).indexed) {
+      final file = '${SellDraft.extraStep}-$stamp-$i.jpg';
+      // Gallery files belong to the gallery: copy, never move.
+      await File(path).copy('${dir.path}/$file');
+      added.add(Shot(stepId: SellDraft.extraStep, kind: ShotKind.photo, file: file, takenAt: DateTime.now()));
+    }
+    if (!ref.mounted) return added.length;
+    final current = state.draft ?? draft;
+    _set(current.copyWith(extras: [...current.extras, ...added]));
+    _restartIfRunning();
+    return added.length;
+  }
+
+  Future<void> removeExtraPhoto(String file) async {
+    final draft = state.draft;
+    if (draft == null || !draft.extras.any((s) => s.file == file)) return;
+    _set(draft.copyWith(extras: [...draft.extras]..removeWhere((s) => s.file == file)));
+    await _deleteFiles(await _media.draftDir(draft.id), [file]);
     _restartIfRunning();
   }
 
