@@ -10,7 +10,7 @@ TikTok-style vertical video feed to buy and sell used vehicles (cars incl. vans,
 - **No likes, no public comments.** Save (with price-drop alerts), Share, Contact (in-app chat + optional WhatsApp). Q&A answers can be made public by the seller.
 - **Plates:** no in-app blurring; the capture flow just tells users to cover the plate.
 - **Navbar:** always dark, same on every tab. Feed dark, other screens white/premium, accent blue `#1D4ED8`, system font.
-- **Login:** email OTP code only for now (Google later, Apple required before iOS release if Google is offered).
+- **Login:** email + password for now (sign in / create account in the same sheet). Email OTP codes are paused because emails cannot be received yet; bring them back once email delivery works. Google later, Apple required before iOS release if Google is offered.
 - **Dealers:** VAT verified with VIES. Pricing: months 1-3 free; months 4-6 free until 30 total contacts since signup; then €29/month locked (founder price). Manual invoicing, no card at signup. Base / Pro plans configurable from DB. A "contact" = chat with ≥1 buyer message or a WhatsApp click.
 - **Ads:** only sponsored listings (labelled) and coherent partners (financing, insurance). No generic banners.
 
@@ -39,7 +39,7 @@ flutter run --dart-define-from-file=env.json
 flutter analyze && flutter test   # before every push
 ```
 
-Supabase setup: Auth > Emails > "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}` (6-digit code login).
+Supabase setup: Auth > Sign In / Providers > Email: keep **"Confirm email" off** while emails cannot be received (otherwise sign up ends on "conferma la tua email" and the account stays unusable). Minimum password length in the app: 8. When OTP codes come back: "Magic Link" and "Confirm signup" templates must contain `{{ .Token }}`.
 
 ## Flutter structure (done)
 
@@ -61,7 +61,8 @@ lib/
     widgets/pill.dart, placeholder_screen.dart
   features/
     feed/      data (FeedItem, FeedRepository), state (FeedController), ui (FeedScreen, FeedVideoView, FeedOverlay)
-    auth/      AuthRepository (email OTP), login_sheet.dart (reusable bottom sheet)
+    auth/      AuthRepository (email + password, Supabase error codes -> AuthFailure), login_sheet.dart
+               (reusable bottom sheet: sign in / create account, confirm-email step if Supabase requires it)
     onboarding/ BuyerPreferences, makesProvider, OnboardingController (local first, synced on login),
                IntentScreen, PreferencesScreen (also edit mode from profile), DealerSignupScreen, exitOnboarding()
     dealer/    DealerRepository (calls dealer-signup edge function)
@@ -72,7 +73,7 @@ lib/
                rolls back on error), toggleSave() (login sheet for guests), SavedSection (profile grid)
     profile/   ProfileScreen (minimal: login/logout, "Cosa cerco" gated behind signup, "Salvati")
   l10n/app_it.arb (+ gen/)
-test/       transfer cost rules, listing screen and Salvati widget tests (fake data), SavedController
+test/       transfer cost rules, listing screen / Salvati / login sheet widget tests (fake data), SavedController
 ```
 
 Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
@@ -100,7 +101,7 @@ Column defaults worth knowing: all UUID PKs `gen_random_uuid()`; `created_at`/`u
 - **listing_media** listing_id, kind, capture_step, storage_path, width, height, duration_ms, size_bytes, sort_order
 - **listing_price_history** listing_id, price_cents, changed_at
 - **listing_questions** listing_id, asker_id, question, answer, answered_at, is_public
-- **favorites** (profile_id, listing_id) PK, price_cents_at_save
+- **favorites** (profile_id, listing_id) PK, price_cents_at_save, created_at
 - **saved_searches** profile_id, name, filters jsonb, notify, last_notified_at
 - **conversations** listing_id, buyer_id, seller_id, dealer_id, last_message_at, buyer/seller_last_read_at; unique (listing_id, buyer_id)
 - **messages** conversation_id, sender_id, body (1-2000)
@@ -237,7 +238,7 @@ Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a use
 
 ## Status
 
-Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email OTP login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save. Designs for all screens and states exist in the Claude canvas mockup.
+Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save. Designs for all screens and states exist in the Claude canvas mockup.
 
 Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contact. Save, Share and Contact show "in arrivo" until their steps. Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
 

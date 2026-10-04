@@ -31,70 +31,84 @@ class _LoginSheet extends ConsumerStatefulWidget {
 
 class _LoginSheetState extends ConsumerState<_LoginSheet> {
   final _emailCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
-  bool _codeSent = false;
+  final _passwordCtrl = TextEditingController();
+  bool _signUp = false;
+  bool _showPassword = false;
   bool _busy = false;
   String? _error;
+
+  /// Shown instead of the form when Supabase asks to confirm the email.
+  bool _confirmEmailSent = false;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
-    _codeCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _sendCode() async {
+  String _message(AppLocalizations t, AuthFailure f) => switch (f) {
+        AuthFailure.invalidCredentials => t.loginErrorCredentials,
+        AuthFailure.emailTaken => t.loginErrorExists,
+        AuthFailure.weakPassword => t.loginErrorWeak,
+        AuthFailure.emailNotConfirmed => t.loginErrorNotConfirmed,
+        AuthFailure.rateLimited => t.loginErrorRateLimit,
+        AuthFailure.generic => t.loginErrorGeneric,
+      };
+
+  Future<void> _submit() async {
     final t = AppLocalizations.of(context);
     final email = _emailCtrl.text;
+    final password = _passwordCtrl.text;
+
     if (!AuthRepository.isValidEmail(email)) {
       setState(() => _error = t.loginErrorEmail);
       return;
     }
+    if (password.isEmpty ||
+        (_signUp && password.length < AuthRepository.minPasswordLength)) {
+      setState(() => _error = t.loginErrorPassword(AuthRepository.minPasswordLength));
+      return;
+    }
+
     setState(() {
       _busy = true;
       _error = null;
     });
+    final auth = ref.read(authRepositoryProvider);
     try {
-      await ref.read(authRepositoryProvider).sendCode(email);
-      if (!mounted) return;
-      setState(() => _codeSent = true);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = t.loginErrorSend);
+      if (_signUp) {
+        final result = await auth.signUp(email: email, password: password);
+        if (result == SignUpResult.confirmEmail) {
+          if (mounted) setState(() => _confirmEmailSent = true);
+          return;
+        }
+      } else {
+        await auth.signIn(email: email, password: password);
+      }
+      TextInput.finishAutofillContext();
+      // Push what the user chose in onboarding to their account.
+      await ref.read(onboardingControllerProvider.notifier).syncIfLoggedIn();
+      if (mounted) Navigator.of(context).pop(true);
+    } on AuthFailureException catch (e) {
+      if (mounted) setState(() => _error = _message(t, e.failure));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _verify() async {
-    final t = AppLocalizations.of(context);
-    final code = _codeCtrl.text.trim();
-    if (code.length < 6) {
-      setState(() => _error = t.loginErrorCode);
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await ref.read(authRepositoryProvider).verifyCode(email: _emailCtrl.text, code: code);
-      // Push what the user chose in onboarding to their new account.
-      await ref.read(onboardingControllerProvider.notifier).syncIfLoggedIn();
-      if (!mounted) return;
-      Navigator.of(context).pop(true);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = t.loginErrorCode);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
+  void _switchMode() => setState(() {
+        _signUp = !_signUp;
+        _error = null;
+      });
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+
+    final title = _signUp ? t.loginSignUpTitle : (widget.title ?? t.loginTitle);
+    final subtitle = widget.subtitle ?? t.loginSubtitle;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -102,92 +116,93 @@ class _LoginSheetState extends ConsumerState<_LoginSheet> {
         right: AppSpacing.xl,
         bottom: MediaQuery.viewInsetsOf(context).bottom + AppSpacing.xl,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            _codeSent ? t.loginCodeTitle : (widget.title ?? t.loginTitle),
-            style: text.headlineSmall,
-          ),
-          const SizedBox(height: AppSpacing.s),
-          Text(
-            _codeSent
-                ? t.loginCodeSubtitle(_emailCtrl.text.trim())
-                : (widget.subtitle ?? t.loginSubtitle),
-            style: text.bodyMedium?.copyWith(fontSize: 15),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          if (!_codeSent)
-            TextField(
-              controller: _emailCtrl,
-              autofocus: true,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _busy ? null : _sendCode(),
-              decoration: InputDecoration(labelText: t.loginEmailLabel),
-            )
-          else
-            TextField(
-              controller: _codeCtrl,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              autofillHints: const [AutofillHints.oneTimeCode],
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(8),
-              ],
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _busy ? null : _verify(),
-              style: const TextStyle(fontSize: 22, letterSpacing: 6, fontWeight: FontWeight.w700),
-              decoration: InputDecoration(labelText: t.loginCodeLabel),
-            ),
-          if (_error != null) ...[
-            const SizedBox(height: AppSpacing.s),
-            Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
-          ],
-          const SizedBox(height: AppSpacing.l),
-          FilledButton(
-            onPressed: _busy ? null : (_codeSent ? _verify : _sendCode),
-            child: _busy
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                  )
-                : Text(_codeSent ? t.loginVerify : t.loginSendCode),
-          ),
-          if (_codeSent)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: _confirmEmailSent
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () => setState(() {
-                            _codeSent = false;
-                            _codeCtrl.clear();
-                            _error = null;
-                          }),
-                  child: Text(t.loginChangeEmail),
+                Text(t.loginConfirmTitle, style: text.headlineSmall),
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  t.loginConfirmBody(_emailCtrl.text.trim()),
+                  style: text.bodyMedium?.copyWith(fontSize: 15),
                 ),
-                TextButton(
-                  onPressed: _busy ? null : _sendCode,
-                  child: Text(t.loginResend),
+                const SizedBox(height: AppSpacing.xl),
+                FilledButton(
+                  onPressed: () => setState(() {
+                    _confirmEmailSent = false;
+                    _signUp = false;
+                  }),
+                  child: Text(t.loginSignIn),
                 ),
               ],
             )
-          else ...[
-            const SizedBox(height: AppSpacing.m),
-            Text(
-              t.loginTerms,
-              textAlign: TextAlign.center,
-              style: text.bodySmall,
+          : AutofillGroup(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(title, style: text.headlineSmall),
+                  const SizedBox(height: AppSpacing.s),
+                  Text(subtitle, style: text.bodyMedium?.copyWith(fontSize: 15)),
+                  const SizedBox(height: AppSpacing.xl),
+                  TextField(
+                    controller: _emailCtrl,
+                    autofocus: true,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    autofillHints: const [AutofillHints.email],
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(labelText: t.loginEmailLabel),
+                  ),
+                  const SizedBox(height: AppSpacing.m),
+                  TextField(
+                    controller: _passwordCtrl,
+                    obscureText: !_showPassword,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    autofillHints: [
+                      _signUp ? AutofillHints.newPassword : AutofillHints.password,
+                    ],
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _busy ? null : _submit(),
+                    decoration: InputDecoration(
+                      labelText: t.loginPasswordLabel,
+                      helperText: _signUp
+                          ? t.loginPasswordHint(AuthRepository.minPasswordLength)
+                          : null,
+                      suffixIcon: IconButton(
+                        tooltip: _showPassword ? t.loginHidePassword : t.loginShowPassword,
+                        icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _showPassword = !_showPassword),
+                      ),
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: AppSpacing.s),
+                    Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                  ],
+                  const SizedBox(height: AppSpacing.l),
+                  FilledButton(
+                    onPressed: _busy ? null : _submit,
+                    child: _busy
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                          )
+                        : Text(_signUp ? t.loginSignUp : t.loginSignIn),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  TextButton(
+                    onPressed: _busy ? null : _switchMode,
+                    child: Text(_signUp ? t.loginToSignIn : t.loginToSignUp),
+                  ),
+                  if (_signUp)
+                    Text(t.loginTerms, textAlign: TextAlign.center, style: text.bodySmall),
+                ],
+              ),
             ),
-          ],
-        ],
-      ),
     );
   }
 }

@@ -231,37 +231,71 @@ class AppLocalizationsIt extends AppLocalizations {
   String get loginEmailLabel => 'La tua email';
 
   @override
-  String get loginSendCode => 'Mandami il codice';
+  String get loginPasswordLabel => 'Password';
 
   @override
-  String get loginCodeTitle => 'Controlla la tua email';
-
-  @override
-  String loginCodeSubtitle(String email) {
-    return 'Abbiamo mandato un codice a $email';
+  String loginPasswordHint(int min) {
+    return 'Almeno $min caratteri';
   }
 
   @override
-  String get loginCodeLabel => 'Codice';
+  String get loginShowPassword => 'Mostra password';
 
   @override
-  String get loginVerify => 'Accedi';
+  String get loginHidePassword => 'Nascondi password';
 
   @override
-  String get loginResend => 'Rimanda il codice';
+  String get loginSignIn => 'Accedi';
 
   @override
-  String get loginChangeEmail => 'Cambia email';
+  String get loginSignUp => 'Crea account';
+
+  @override
+  String get loginSignUpTitle => 'Crea il tuo account';
+
+  @override
+  String get loginToSignUp => 'Non hai un account? Registrati';
+
+  @override
+  String get loginToSignIn => 'Hai già un account? Accedi';
+
+  @override
+  String get loginConfirmTitle => 'Conferma la tua email';
+
+  @override
+  String loginConfirmBody(String email) {
+    return 'Ti abbiamo mandato un link a $email. Aprilo per attivare l\'account, poi accedi.';
+  }
+
+  @override
+  String loginErrorPassword(int min) {
+    return 'La password deve avere almeno $min caratteri.';
+  }
+
+  @override
+  String get loginErrorCredentials => 'Email o password non corretti.';
+
+  @override
+  String get loginErrorExists =>
+      'Esiste già un account con questa email: accedi.';
+
+  @override
+  String get loginErrorWeak =>
+      'Password troppo debole, scegline una più lunga.';
+
+  @override
+  String get loginErrorNotConfirmed =>
+      'Prima conferma l\'email che ti abbiamo mandato.';
+
+  @override
+  String get loginErrorRateLimit =>
+      'Troppi tentativi, riprova tra qualche minuto.';
+
+  @override
+  String get loginErrorGeneric => 'Qualcosa è andato storto, riprova.';
 
   @override
   String get loginErrorEmail => 'Controlla l\'indirizzo email.';
-
-  @override
-  String get loginErrorCode => 'Codice non valido o scaduto.';
-
-  @override
-  String get loginErrorSend =>
-      'Non siamo riusciti a inviare il codice, riprova tra poco.';
 
   @override
   String get loginTerms =>
