@@ -13,6 +13,7 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/state/onboarding_controller.dart';
 import '../../saved/state/saved_controller.dart';
 import '../../saved/ui/save_action.dart';
+import '../../share/share_listing.dart';
 import '../data/feed_filters.dart';
 import '../data/feed_item.dart';
 import '../state/feed_controller.dart';
@@ -283,12 +284,6 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     });
   }
 
-  void _comingSoon(String what) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).comingSoon(what))));
-  }
-
   @override
   Widget build(BuildContext context) {
     return PageView.builder(
@@ -332,7 +327,18 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
                         item: item,
                       ),
                     ),
-                    onShare: () => _interact(() => _comingSoon('Condividi')),
+                    onShare: () => _interact(() => shareListing(
+                          context,
+                          ref,
+                          listingId: item.id,
+                          summary: listingShareSummary(
+                            makeName: item.makeName,
+                            modelName: item.modelName,
+                            year: item.year,
+                            priceCents: item.priceCents,
+                            city: item.city,
+                          ),
+                        )),
                     onContact: () => _interact(() => _openDetail(item)),
                     onOpenFilters: (section) =>
                         _interact(() => showFilterSheet(context, only: section)),

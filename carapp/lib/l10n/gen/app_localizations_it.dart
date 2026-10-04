@@ -1055,4 +1055,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String whatsappPrefill(String title, String app) {
     return 'Ciao! Ti scrivo per $title visto su $app.';
   }
+
+  @override
+  String shareText(String summary, String app, String link) {
+    return '$summary\nGuarda l\'annuncio su $app: $link';
+  }
+
+  @override
+  String get shareError => 'Non riusciamo ad aprire la condivisione.';
 }

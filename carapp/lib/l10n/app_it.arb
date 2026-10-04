@@ -359,5 +359,8 @@
   "whatsappNoNumber": "Il venditore non ha un numero WhatsApp: scrivigli in chat.",
   "whatsappError": "Non riusciamo ad aprire WhatsApp.",
   "whatsappPrefill": "Ciao! Ti scrivo per {title} visto su {app}.",
-  "@whatsappPrefill": {"placeholders": {"title": {"type": "String"}, "app": {"type": "String"}}}
+  "@whatsappPrefill": {"placeholders": {"title": {"type": "String"}, "app": {"type": "String"}}},
+  "shareText": "{summary}\nGuarda l'annuncio su {app}: {link}",
+  "@shareText": {"placeholders": {"summary": {"type": "String"}, "app": {"type": "String"}, "link": {"type": "String"}}},
+  "shareError": "Non riusciamo ad aprire la condivisione."
 }
