@@ -57,6 +57,15 @@ class AppConfig {
   String? latestAppVersion(String platform) =>
       (_section('app_versions')[platform] as Map?)?['latest'] as String?;
 
+  /// Base URL of the share site (`site/`), e.g. https://carfeed.pages.dev,
+  /// without trailing slash. null until the site is online.
+  String? get shareBaseUrl {
+    final raw = _section('share')['base_url'];
+    final url = raw is String ? raw.trim() : '';
+    if (!url.startsWith('https://')) return null;
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+  }
+
   String? legalUrl(String name) => _section('legal')[name] as String?;
 
   /// Version of a legal document ('terms_version', 'privacy_version'):

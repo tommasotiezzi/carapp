@@ -1953,6 +1953,18 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Ciao! Ti scrivo per {title} visto su {app}.'**
   String whatsappPrefill(String title, String app);
+
+  /// No description provided for @shareText.
+  ///
+  /// In it, this message translates to:
+  /// **'{summary}\nGuarda l\'annuncio su {app}: {link}'**
+  String shareText(String summary, String app, String link);
+
+  /// No description provided for @shareError.
+  ///
+  /// In it, this message translates to:
+  /// **'Non riusciamo ad aprire la condivisione.'**
+  String get shareError;
 }
 
 class _AppLocalizationsDelegate

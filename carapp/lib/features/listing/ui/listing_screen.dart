@@ -13,6 +13,7 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../chat/ui/contact_actions.dart';
 import '../../saved/state/saved_controller.dart';
 import '../../saved/ui/save_action.dart';
+import '../../share/share_listing.dart';
 import '../data/listing_detail.dart';
 import '../state/listing_providers.dart';
 import 'listing_photos.dart';
@@ -88,12 +89,6 @@ class _ListingBodyState extends State<_ListingBody> {
     _scroll.dispose();
     _videoVisible.dispose();
     super.dispose();
-  }
-
-  void _comingSoon(String what) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).comingSoon(what))));
   }
 
   @override
@@ -212,10 +207,24 @@ class _ListingBodyState extends State<_ListingBody> {
                     },
                   ),
                   const SizedBox(width: AppSpacing.s),
-                  _RoundButton(
-                    icon: Icons.ios_share,
-                    tooltip: t.commonShare,
-                    onTap: () => _comingSoon(t.commonShare),
+                  Consumer(
+                    // Its own context: the iPad share popover points here.
+                    builder: (context, ref, _) => _RoundButton(
+                      icon: Icons.ios_share,
+                      tooltip: t.commonShare,
+                      onTap: () => shareListing(
+                        context,
+                        ref,
+                        listingId: l.id,
+                        summary: listingShareSummary(
+                          makeName: l.makeName,
+                          modelName: l.modelName,
+                          year: l.year,
+                          priceCents: l.priceCents,
+                          city: l.city,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
