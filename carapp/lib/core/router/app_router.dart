@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/feed/ui/feed_screen.dart';
+import '../../features/legal/ui/consent_gate.dart';
 import '../../features/listing/ui/listing_screen.dart';
 import '../../features/onboarding/ui/dealer_signup_screen.dart';
 import '../../features/onboarding/ui/intent_screen.dart';
 import '../../features/onboarding/ui/preferences_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/search/ui/search_screen.dart';
+import '../../features/settings/ui/settings_screen.dart';
 import '../media/shared_video.dart';
 import '../widgets/placeholder_screen.dart';
 import 'main_shell.dart';
@@ -35,7 +37,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       // ---- Bottom navigation (state kept per tab) ----
       StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => MainShell(shell: shell),
+        builder: (context, state, shell) => ConsentGate(child: MainShell(shell: shell)),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(
@@ -109,6 +111,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => PlaceholderScreen(
           title: 'Chat ${state.pathParameters['id']}',
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const SettingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.dealerDashboard,

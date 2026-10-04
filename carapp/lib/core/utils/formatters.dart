@@ -14,6 +14,9 @@ class Formatters {
   /// 78400 -> "78.400 km"
   static String km(int? km) => km == null ? '' : '${_number.format(km)} km';
 
+  /// "1 ott 2026" (day, short month, year) in the app's locale.
+  static String date(DateTime d) => DateFormat.yMMMd('it').format(d);
+
   /// kW -> CV, rounded
   static String horsepower(int? kw) =>
       kw == null ? '' : '${(kw * 1.35962).round()} CV';

@@ -58,6 +58,10 @@ class AppConfig {
       (_section('app_versions')[platform] as Map?)?['latest'] as String?;
 
   String? legalUrl(String name) => _section('legal')[name] as String?;
+
+  /// Version of a legal document ('terms_version', 'privacy_version'):
+  /// bumped when its text changes, so users accept again.
+  String? legalVersion(String name) => _section('legal')[name]?.toString();
 }
 
 class AppConfigRepository {

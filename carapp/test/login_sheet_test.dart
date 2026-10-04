@@ -2,6 +2,7 @@ import 'package:carapp/core/storage/preferences.dart';
 import 'package:carapp/core/supabase/supabase_client.dart';
 import 'package:carapp/features/auth/data/auth_repository.dart';
 import 'package:carapp/features/auth/ui/login_sheet.dart';
+import 'package:carapp/features/legal/data/consents.dart';
 import 'package:carapp/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -29,13 +30,30 @@ class _FakeAuth extends Fake implements AuthRepository {
   }
 }
 
+class _FakeConsents extends Fake implements ConsentRepository {
+  final calls = <String>[];
+
+  @override
+  Future<void> record(ConsentChoices choices, LegalVersions versions) async =>
+      calls.add('record marketing=${choices.marketingEmail}');
+
+  @override
+  Future<void> keepPending(String email, ConsentChoices choices, LegalVersions versions) async =>
+      calls.add('pending $email');
+
+  @override
+  Future<void> flushPending() async => calls.add('flush');
+}
+
 void main() {
   late _FakeAuth auth;
+  late _FakeConsents consents;
   late SharedPreferences prefs;
   bool? result;
 
   setUp(() async {
     auth = _FakeAuth();
+    consents = _FakeConsents();
     result = null;
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
@@ -45,6 +63,7 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(auth),
+        consentRepositoryProvider.overrideWithValue(consents),
         sharedPreferencesProvider.overrideWithValue(prefs),
         supabaseProvider.overrideWithValue(SupabaseClient(
           'https://test.supabase.co',
@@ -75,6 +94,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> acceptRequired(WidgetTester tester) async {
+    await tester.tap(find.text('Ho almeno 14 anni e accetto i Termini e condizioni'));
+    await tester.tap(find.text("Ho letto l'Informativa privacy"));
+    await tester.pump();
+  }
+
   Future<void> fill(WidgetTester tester, String email, String password) async {
     await tester.enterText(find.byType(TextField).at(0), email);
     await tester.enterText(find.byType(TextField).at(1), password);
@@ -87,6 +112,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(auth.calls, ['signIn  Mario@Example.com ']);
+    expect(consents.calls, ['flush'], reason: 'choices kept at sign up are recorded now');
     expect(result, isTrue);
   });
 
@@ -100,6 +126,12 @@ void main() {
     await tester.tap(find.text('Non hai un account? Registrati'));
     await tester.pump();
     await fill(tester, 'mario@example.com', 'short');
+    expect(
+      tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Crea account')).onPressed,
+      isNull,
+      reason: 'Termini + age and Privacy must be ticked first',
+    );
+    await acceptRequired(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Crea account'));
     await tester.pump();
     expect(find.text('La password deve avere almeno 8 caratteri.'), findsOneWidget);
@@ -123,11 +155,26 @@ void main() {
     await tester.tap(find.text('Non hai un account? Registrati'));
     await tester.pump();
     await fill(tester, 'mario@example.com', 'long-enough');
+    await acceptRequired(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Crea account'));
     await tester.pumpAndSettle();
 
     expect(auth.calls, ['signUp mario@example.com']);
+    expect(consents.calls, ['pending mario@example.com'], reason: 'no session yet: kept on the phone');
     expect(find.text('Conferma la tua email'), findsOneWidget);
+  });
+
+  testWidgets('sign up records the consents (promo emails off by default)', (tester) async {
+    await open(tester);
+    await tester.tap(find.text('Non hai un account? Registrati'));
+    await tester.pump();
+    await fill(tester, 'mario@example.com', 'long-enough');
+    await acceptRequired(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Crea account'));
+    await tester.pumpAndSettle();
+
+    expect(consents.calls, ['record marketing=false']);
+    expect(result, isTrue);
   });
 
   test('maps Supabase error codes', () {
