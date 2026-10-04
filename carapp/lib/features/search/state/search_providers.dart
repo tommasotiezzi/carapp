@@ -22,7 +22,7 @@ class SavedSearchesController extends AsyncNotifier<List<SavedSearch>> {
   }) async {
     final created = await _repo.create(name: name, filters: filters, notify: notify);
     if (!ref.mounted) return;
-    final list = [...await future, created]..sort((a, b) => a.name.compareTo(b.name));
+    final list = [created, ...await future]; // newest first, like the server
     state = AsyncData(list);
   }
 

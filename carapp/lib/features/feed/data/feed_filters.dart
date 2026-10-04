@@ -36,7 +36,8 @@ class FeedFilters {
   final Set<String> fuelTypes; // `fuel_type` values
   final String? transmission; // `transmission_type` value
 
-  /// Cars a novice driver may drive: see [noviceMaxPowerKw].
+  /// Cars a novice driver may drive: marked by the seller
+  /// (`attributes.novice_ok`), otherwise up to [noviceMaxPowerKw].
   final bool noviceDriver;
 
   /// Two-letter province code (`listings.province`), e.g. 'MI'.
@@ -50,7 +51,7 @@ class FeedFilters {
 
   /// Italian rule for the first 3 years of a B licence: max 105 kW
   /// (and 75 kW/t, which we cannot check: listings have no weight).
-  /// Applied to cars only.
+  /// Used only when the seller did not set `novice_ok`. Cars only.
   static const noviceMaxPowerKw = 105;
 
   static const yearOptions = [2010, 2015, 2018, 2020, 2022];

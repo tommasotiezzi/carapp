@@ -23,7 +23,7 @@ class SavedSearch {
 
   factory SavedSearch.fromRow(Map<String, dynamic> row) => SavedSearch(
         id: row['id'] as String,
-        name: row['name'] as String,
+        name: (row['name'] as String?) ?? '', // nullable in the table
         filters: FeedFilters.fromJson(
           Map<String, dynamic>.from((row['filters'] as Map?) ?? const {}),
         ),
@@ -42,9 +42,12 @@ class SavedSearchRepository {
 
   static const maxNameLength = 60;
 
-  /// Alphabetical: the table has no documented creation timestamp.
+  /// Newest first.
   Future<List<SavedSearch>> fetchAll() async {
-    final rows = await _client.from('saved_searches').select(SavedSearch.selectColumns).order('name');
+    final rows = await _client
+        .from('saved_searches')
+        .select(SavedSearch.selectColumns)
+        .order('created_at', ascending: false);
     return rows.map(SavedSearch.fromRow).toList();
   }
 
