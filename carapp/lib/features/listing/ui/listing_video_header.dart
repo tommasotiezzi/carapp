@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/analytics/event_tracker.dart';
 import '../../../core/media/media_url.dart';
+import '../../../core/media/shared_video.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../feed/ui/feed_video_view.dart';
 import '../data/listing_detail.dart';
@@ -18,9 +19,14 @@ class ListingVideoHeader extends ConsumerStatefulWidget {
     required this.listing,
     required this.height,
     required this.visible,
+    this.lent,
   });
 
   final ListingDetail listing;
+
+  /// The feed's player for this video, when opened from the feed:
+  /// used as is (no second download), continuing from where it was.
+  final SharedVideo? lent;
   final double height;
 
   /// false once the user scrolled the video out of view.
@@ -32,7 +38,8 @@ class ListingVideoHeader extends ConsumerStatefulWidget {
 
 class _ListingVideoHeaderState extends ConsumerState<ListingVideoHeader>
     with WidgetsBindingObserver {
-  VideoPlayerController? _player;
+  SharedVideo? _video;
+  VideoPlayerController? get _player => _video?.controller;
   bool _routeVisible = true;
   bool _appActive = true;
   bool _pausedByUser = false;
@@ -47,18 +54,14 @@ class _ListingVideoHeaderState extends ConsumerState<ListingVideoHeader>
 
     final url = MediaUrl.resolve(ref.read(supabaseProvider), widget.listing.videoPath);
     if (url == null) return;
-    final player = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-    );
-    _player = player;
-    player
-      ..setLooping(true)
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() {});
-        _updatePlayback();
-      }).catchError((_) {});
+    final lent = widget.lent;
+    final video = lent != null && lent.url == url && !lent.isDisposed ? lent.retain() : SharedVideo(url);
+    _video = video;
+    video.initialize().then((_) {
+      if (!mounted) return;
+      setState(() {});
+      _updatePlayback();
+    }).catchError((_) {});
   }
 
   @override
@@ -76,7 +79,7 @@ class _ListingVideoHeaderState extends ConsumerState<ListingVideoHeader>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.visible.removeListener(_updatePlayback);
-    _player?.dispose();
+    _video?.release();
     super.dispose();
   }
 

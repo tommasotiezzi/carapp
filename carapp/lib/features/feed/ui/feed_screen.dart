@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:video_player/video_player.dart';
 
 import '../../../core/analytics/event_tracker.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/media/media_url.dart';
+import '../../../core/media/shared_video.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
@@ -80,7 +80,11 @@ class _FeedPager extends ConsumerStatefulWidget {
 class _FeedPagerState extends ConsumerState<_FeedPager>
     with WidgetsBindingObserver {
   final _pageController = PageController();
-  final _players = <int, VideoPlayerController>{};
+  final _players = <int, SharedVideo>{};
+
+  /// Lent to the listing page: the feed neither plays nor pauses it
+  /// until the page closes (the listing drives it meanwhile).
+  SharedVideo? _lent;
   int _current = 0;
   int _viewedThisSession = 0;
   bool _onboardingOpen = false;
@@ -139,7 +143,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     WidgetsBinding.instance.removeObserver(this);
     _trackWatchTime(_current);
     for (final p in _players.values) {
-      p.dispose();
+      p.release();
     }
     _pageController.dispose();
     super.dispose();
@@ -154,8 +158,8 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
   /// Plays or pauses the current video according to [_canPlay].
   void _updatePlayback() {
     final p = _players[_current];
-    if (p == null || !p.value.isInitialized) return;
-    _canPlay ? p.play() : p.pause();
+    if (p == null || p == _lent || !p.controller.value.isInitialized) return;
+    _canPlay ? p.controller.play() : p.controller.pause();
   }
 
   void _togglePause() {
@@ -176,7 +180,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
         .toSet();
 
     for (final i in _players.keys.where((i) => !keep.contains(i)).toList()) {
-      _players.remove(i)?.dispose();
+      _players.remove(i)?.release();
     }
 
     for (final i in keep) {
@@ -185,25 +189,21 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
       final url = _videoUrl(i);
       if (url == null) continue;
 
-      final player = VideoPlayerController.networkUrl(
-        Uri.parse(url),
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-      );
+      final player = SharedVideo(url);
       _players[i] = player;
-      player
-        ..setLooping(true)
-        ..initialize().then((_) {
-          if (!mounted || !_players.containsValue(player)) return;
-          if (i == _current && _canPlay) player.play();
-          setState(() {});
-        }).catchError((_) {});
+      player.initialize().then((_) {
+        if (!mounted || !_players.containsValue(player)) return;
+        if (i == _current) _updatePlayback();
+        setState(() {});
+      }).catchError((_) {});
     }
 
-    for (final entry in _players.entries) {
-      if (entry.key == _current) {
-        if (entry.value.value.isInitialized && _canPlay) entry.value.play();
+    for (final MapEntry(key: i, value: p) in _players.entries) {
+      if (p == _lent) continue;
+      if (i == _current) {
+        _updatePlayback();
       } else {
-        entry.value
+        p.controller
           ..pause()
           ..seekTo(Duration.zero);
       }
@@ -237,7 +237,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
   bool _maybeShowOnboarding() {
     if (_onboardingOpen || ref.read(onboardingControllerProvider).done) return false;
     _onboardingOpen = true;
-    _players[_current]?.pause();
+    _players[_current]?.controller.pause();
     context.push(AppRoutes.onboarding).then((_) {
       _onboardingOpen = false;
       if (mounted) _updatePlayback();
@@ -268,10 +268,17 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
         );
   }
 
+  /// Opens the listing and lends it the video already loaded, so it
+  /// continues there instead of downloading again.
   void _openDetail(FeedItem item) {
-    _players[_current]?.pause();
-    ref.read(eventTrackerProvider).track(AnalyticsEvent.openDetail, listingId: item.id);
-    context.push(AppRoutes.listingPath(item.id)).then((_) {
+    final url = MediaUrl.resolve(ref.read(supabaseProvider), item.videoPath);
+    final video = _players.values.where((p) => p.url == url && !p.isDisposed).firstOrNull;
+    final lent = video?.retain(); // our hold while the page is open
+    _lent = lent;
+    _tracker.track(AnalyticsEvent.openDetail, listingId: item.id);
+    context.push(AppRoutes.listingPath(item.id), extra: lent).then((_) {
+      lent?.release();
+      if (_lent == lent) _lent = null;
       if (mounted) _updatePlayback();
     });
   }
@@ -301,7 +308,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
             children: [
               FeedVideoView(
                 key: ValueKey(item.id),
-                controller: _players[i],
+                controller: _players[i]?.controller,
                 coverUrl: _coverUrl(i),
                 pausedByUser: i == _current && _pausedByUser,
                 onTogglePause: _togglePause,
@@ -317,7 +324,13 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
                     saved: ref.watch(isSavedProvider(item.id)),
                     onOpenDetail: () => _openDetail(item),
                     onSave: () => _interact(
-                      () => toggleSave(context, ref, listingId: item.id, priceCents: item.priceCents),
+                      () => toggleSave(
+                        context,
+                        ref,
+                        listingId: item.id,
+                        priceCents: item.priceCents,
+                        item: item,
+                      ),
                     ),
                     onShare: () => _interact(() => _comingSoon('Condividi')),
                     onContact: () => _interact(() => _openDetail(item)),

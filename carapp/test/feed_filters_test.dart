@@ -32,9 +32,9 @@ class _FakeFeedRepo extends Fake implements FeedRepository {
 }
 
 const _makes = [
-  Make(id: 'vw', name: 'Volkswagen', isPopular: true),
-  Make(id: 'fiat', name: 'Fiat', isPopular: true),
-  Make(id: 'lancia', name: 'Lancia', isPopular: false),
+  Make(id: 'vw', name: 'Volkswagen', categoryId: 'car', isPopular: true),
+  Make(id: 'fiat', name: 'Fiat', categoryId: 'car', isPopular: true),
+  Make(id: 'lancia', name: 'Lancia', categoryId: 'car'),
 ];
 
 Future<SharedPreferences> _prefs([Map<String, Object> values = const {}]) async {

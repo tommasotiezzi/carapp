@@ -9,6 +9,7 @@ import '../../features/onboarding/ui/intent_screen.dart';
 import '../../features/onboarding/ui/preferences_screen.dart';
 import '../../features/profile/ui/profile_screen.dart';
 import '../../features/search/ui/search_screen.dart';
+import '../media/shared_video.dart';
 import '../widgets/placeholder_screen.dart';
 import 'main_shell.dart';
 import 'routes.dart';
@@ -91,7 +92,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.listing,
         parentNavigatorKey: _rootKey,
-        builder: (_, state) => ListingScreen(id: state.pathParameters['id']!),
+        builder: (_, state) => ListingScreen(
+          id: state.pathParameters['id']!,
+          // Set when opened from the feed: the video already loaded there.
+          lentVideo: state.extra is SharedVideo ? state.extra as SharedVideo : null,
+        ),
       ),
       GoRoute(
         path: AppRoutes.shareShort,
