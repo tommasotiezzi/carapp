@@ -935,4 +935,124 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get settingsDeleted => 'Account eliminato';
+
+  @override
+  String get inboxTitle => 'Messaggi';
+
+  @override
+  String get inboxGuestTitle => 'I tuoi messaggi';
+
+  @override
+  String get inboxGuestBody =>
+      'Accedi per scrivere ai venditori e ritrovare qui tutte le chat.';
+
+  @override
+  String get inboxEmptyTitle => 'Nessun messaggio';
+
+  @override
+  String get inboxEmptyBody =>
+      'Quando scrivi a un venditore, la chat appare qui.';
+
+  @override
+  String get inboxExplore => 'Esplora annunci';
+
+  @override
+  String get inboxYourListing => 'Il tuo annuncio';
+
+  @override
+  String inboxYou(String text) {
+    return 'Tu: $text';
+  }
+
+  @override
+  String get chatPrivateSeller => 'Venditore privato';
+
+  @override
+  String get chatBuyer => 'Acquirente';
+
+  @override
+  String get chatToday => 'Oggi';
+
+  @override
+  String get chatYesterday => 'Ieri';
+
+  @override
+  String get chatNotFoundTitle => 'Chat non disponibile';
+
+  @override
+  String get chatNotFoundBody => 'Questa chat non esiste più.';
+
+  @override
+  String get chatInputHint => 'Scrivi un messaggio';
+
+  @override
+  String get chatSend => 'Invia';
+
+  @override
+  String get chatSending => 'Invio…';
+
+  @override
+  String get chatFailed => 'Non inviato · tocca per riprovare';
+
+  @override
+  String get chatDelete => 'Elimina';
+
+  @override
+  String chatNewTitle(String name) {
+    return 'Scrivi a $name';
+  }
+
+  @override
+  String get chatNewBody =>
+      'Fai la tua domanda: la risposta arriva qui e in Inbox.';
+
+  @override
+  String get chatSafetyTip =>
+      'Non pagare anticipi o caparre prima di aver visto il veicolo di persona.';
+
+  @override
+  String get chatQuickAvailable => 'È ancora disponibile?';
+
+  @override
+  String get chatQuickVisit => 'Posso vederlo dal vivo?';
+
+  @override
+  String get chatQuickPrice => 'Il prezzo è trattabile?';
+
+  @override
+  String get chatQuickTradeIn => 'Accetti permute?';
+
+  @override
+  String get chatListingSold => 'Venduto';
+
+  @override
+  String get chatListingUnavailable => 'Non più disponibile';
+
+  @override
+  String get chatSendError => 'Messaggio non inviato, riprova.';
+
+  @override
+  String get contactListingUnavailable =>
+      'Questo annuncio non è più disponibile.';
+
+  @override
+  String get contactOwnListing => 'È un tuo annuncio.';
+
+  @override
+  String get contactError => 'Non riusciamo ad aprire la chat, riprova.';
+
+  @override
+  String get whatsappLabel => 'WhatsApp';
+
+  @override
+  String get whatsappNoNumber =>
+      'Il venditore non ha un numero WhatsApp: scrivigli in chat.';
+
+  @override
+  String get whatsappError => 'Non riusciamo ad aprire WhatsApp.';
+
+  @override
+  String whatsappPrefill(String title, String app) {
+    return 'Ciao! Ti scrivo per $title visto su $app.';
+  }
 }

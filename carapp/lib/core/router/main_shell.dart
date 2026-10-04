@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/chat/state/inbox_controller.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../theme/tokens.dart';
 import 'routes.dart';
 
 /// Bottom navigation: Home, Cerca, Vendi (opens a full-screen flow), Inbox, Profilo.
 /// Always dark, on every tab, like TikTok.
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
@@ -28,8 +30,10 @@ class MainShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
+    // Also keeps the Inbox loaded and live for signed-in users.
+    final unread = ref.watch(unreadChatsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.feedBackground,
@@ -38,6 +42,7 @@ class MainShell extends StatelessWidget {
         selectedSlot: _slotFor(shell.currentIndex),
         onTap: (slot) => _onTap(context, slot),
         labels: [t.navHome, t.navSearch, t.navSell, t.navInbox, t.navProfile],
+        inboxBadge: unread,
       ),
     );
   }
@@ -48,11 +53,15 @@ class _BottomBar extends StatelessWidget {
     required this.selectedSlot,
     required this.onTap,
     required this.labels,
+    this.inboxBadge = 0,
   });
 
   final int selectedSlot;
   final ValueChanged<int> onTap;
   final List<String> labels;
+
+  /// Chats with unread messages, on the Inbox icon.
+  final int inboxBadge;
 
   static const _icons = [
     Icons.home_outlined,
@@ -111,10 +120,15 @@ class _BottomBar extends StatelessWidget {
                             child: const Icon(Icons.add, size: 20, color: AppColors.ink),
                           )
                         else
-                          Icon(
-                            selected ? _activeIcons[slot] : _icons[slot],
-                            size: 24,
-                            color: color,
+                          Badge(
+                            isLabelVisible: slot == 3 && inboxBadge > 0,
+                            label: Text(inboxBadge > 9 ? '9+' : '$inboxBadge'),
+                            backgroundColor: AppColors.primary,
+                            child: Icon(
+                              selected ? _activeIcons[slot] : _icons[slot],
+                              size: 24,
+                              color: color,
+                            ),
                           ),
                         const SizedBox(height: 3),
                         Text(

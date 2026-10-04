@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/media/shared_video.dart';
 import '../../../core/router/routes.dart';
+import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../../chat/ui/contact_actions.dart';
 import '../../saved/state/saved_controller.dart';
 import '../../saved/ui/save_action.dart';
 import '../data/listing_detail.dart';
@@ -220,10 +223,7 @@ class _ListingBodyState extends State<_ListingBody> {
           ),
         ],
       ),
-      bottomNavigationBar: _ContactBar(
-        priceCents: l.priceCents,
-        onContact: () => _comingSoon(t.commonContact),
-      ),
+      bottomNavigationBar: _ContactBar(listing: l),
     );
   }
 }
@@ -247,16 +247,20 @@ class _RoundButton extends StatelessWidget {
       );
 }
 
-/// Sticky bottom bar: price always visible, Contact always one tap away.
-class _ContactBar extends StatelessWidget {
-  const _ContactBar({required this.priceCents, required this.onContact});
+/// Sticky bottom bar: price always visible, Contact always one tap away,
+/// WhatsApp next to it when the seller turned it on (and the
+/// `whatsapp_contact_enabled` flag is on). The seller sees neither.
+class _ContactBar extends ConsumerWidget {
+  const _ContactBar({required this.listing});
 
-  final int? priceCents;
-  final VoidCallback onContact;
+  final ListingDetail listing;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
+    final config = ref.watch(appConfigProvider).value ?? AppConfig.empty;
+    final own = ref.watch(currentUserIdProvider) == listing.ownerId;
+    final whatsapp = listing.whatsappEnabled && config.flag('whatsapp_contact_enabled');
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -269,15 +273,32 @@ class _ContactBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.m, AppSpacing.page, AppSpacing.m),
           child: Row(
             children: [
-              Text(Formatters.price(priceCents), style: Theme.of(context).textTheme.titleLarge),
+              Text(Formatters.price(listing.priceCents), style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(width: AppSpacing.l),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: onContact,
-                  icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                  label: Text(t.commonContact),
+              if (own)
+                Expanded(
+                  child: Text(
+                    t.inboxYourListing,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                )
+              else ...[
+                if (whatsapp) ...[
+                  OutlinedButton(
+                    onPressed: () => openWhatsapp(context, ref, listing),
+                    child: Text(t.whatsappLabel),
+                  ),
+                  const SizedBox(width: AppSpacing.s),
+                ],
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => contactSeller(context, ref, listing),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                    label: Text(t.commonContact),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

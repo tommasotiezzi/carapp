@@ -83,19 +83,23 @@ lib/
                shell: non-dismissible sheet when a signed-in user lacks the current Termini/Privacy)
     settings/  AccountRepository (profile extras, email/password change after re-auth, delete account,
                notification_preferences), SettingsScreen (/settings, gear in the profile), account sheets
+    chat/      data (ConversationSummary, ChatMessage, ChatRepository: RPCs + Realtime streams), state (InboxController:
+               live Inbox + unread badge; ChatController: one chat, optimistic send, catch-up after reconnect),
+               ui (InboxScreen, ChatScreen for /chat/:id and /chat/new/:listingId, contactSeller() / openWhatsapp())
     profile/   ProfileScreen (login, "Cosa cerco" gated behind signup, "Salvati", gear -> settings)
   l10n/app_it.arb (+ gen/)
 test/       query parser, suggestions, recents, chips, logicFilter, transfer cost, feed filters, SavedController;
-            widget tests (fake data): listing, Salvati, login, filter sheet, Search
+            widget tests (fake data): listing, Salvati, login, filter sheet, Search, Inbox, chat (new chat, contact bar);
+            chat logic with a fake repository (optimistic send, Realtime echo, retry, catch-up, Inbox refresh)
 ```
 
 Feed and listing video play only when visible: `TickerMode.valuesOf(context).enabled` is false on inactive tabs and under full-screen routes; app lifecycle and user pause are combined in one `_updatePlayback()`.
 
-Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`, `/onboarding/preferences[?edit=1]`, `/onboarding/dealer`, `/sell`, `/listing/:id`, `/chat/:id`, `/dealer`; share link `/l/:id` -> `/listing/:id`. Deep links: custom scheme `carfeed://app/<path>` (see SETUP.md); https links once a domain exists.
+Routes: tabs `/feed /search /inbox /profile` (shell); full screen `/onboarding`, `/onboarding/preferences[?edit=1]`, `/onboarding/dealer`, `/sell`, `/listing/:id`, `/chat/:id`, `/chat/new/:listingId`, `/dealer`; share link `/l/:id` -> `/listing/:id`. Deep links: custom scheme `carfeed://app/<path>` (see SETUP.md); https links once a domain exists.
 
 ## Database
 
-Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`, `09_consents_and_settings`, `10_lock_profile_account_type`. All in `supabase/migrations/`; run new ones in the SQL editor. The whole chain 01→10 has been run on Postgres 16 + PostGIS with a stand-in for Supabase's `auth`/`storage` schemas, and the app's queries replayed through PostgREST 12 (anon and authenticated).
+Migrations in order: `01_enums`, `02_tables`, `03_indexes`, `04_rls`, `05_seed`, `06_contact_threshold_total`, `07_dev_seed` (dev only, needs auth user `dev@carfeed.test`), `08_auth_profiles`, `09_consents_and_settings`, `10_lock_profile_account_type`, `11_chat`. All in `supabase/migrations/`; run new ones in the SQL editor. The whole chain 01→11 has been run on Postgres 16 + PostGIS with a stand-in for Supabase's `auth`/`storage` schemas, and the app's queries replayed through PostgREST 12 (anon and authenticated).
 
 ### Enums
 `account_type` consumer | dealer_member · `user_intent` buy | sell | browse | dealer · `seller_type` private | dealer · `listing_status` draft | active | sold | expired | removed · `media_kind` video | photo | cover · `fuel_type` petrol | diesel | hybrid | plugin_hybrid | electric | lpg | cng | other · `transmission_type` manual | automatic | semi_automatic · `dealer_role` owner | seller · `subscription_status` trial | conditional_free | active | past_due | canceled · `billing_method` manual_invoice | card · `event_type` impression | view | watch_time | zoom | open_detail | save | unsave | share | contact_chat | contact_whatsapp · `notification_type` new_message | price_drop | listing_sold | saved_search_match | new_contact | listing_expiring · `report_reason` scam | misleading_info | already_sold | inappropriate | other · `report_status` open | reviewed | actioned | dismissed · `platform` ios | android | web · `consent_kind` terms | privacy | age_14 | marketing_email · `gender` female | male | other | undisclosed
@@ -187,7 +191,7 @@ RLS on every table. Active listings, media, price history, dealers, reviews, cat
 
 | Table | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
-| profiles | own; or a chat partner (exists visible conversation with them) | own id | own | — |
+| profiles | own only (chat partners get the name through `my_conversations()`, never the row: phone, birth date, gender stay private) | own id | own (not `account_type`) | — |
 | buyer_preferences | own | own | own | own |
 | dealers | anon + auth, all | — (edge function) | members with role owner | — |
 | dealer_members | own rows only (avoids recursion) | — | — | — |
@@ -200,7 +204,7 @@ RLS on every table. Active listings, media, price history, dealers, reviews, cat
 | listing_price_history | if parent listing visible | — (trigger later) | — | — |
 | listing_questions | public answered, or asker, or listing owner/member | asker = self, no answer, not public | listing owner/member | — |
 | favorites, saved_searches, notification_preferences | own | own | own | own |
-| conversations | buyer, seller, or member of dealer | buyer = self, listing active, seller = listing owner, not own listing, dealer_id matches | participants (read markers) | — |
+| conversations | buyer, seller, or member of dealer | — (`start_conversation()`) | — (`mark_conversation_read()`, trigger on messages) | — |
 | messages | if conversation visible | sender = self and conversation visible | — | — |
 | reviews | anon + auth, all | author = self and own conversation with that dealer | own | own |
 | reports | — | reporter = self, status open | — | — |
@@ -211,7 +215,7 @@ RLS on every table. Active listings, media, price history, dealers, reviews, cat
 
 Storage policies: `listing-drafts` select/insert/update/delete only when first folder = `auth.uid()`; `avatars` insert/update/delete same rule (public read); `listing-media` no client write policy (public read via bucket flag).
 
-Known loose spots to tighten with SQL functions: listings UPDATE lets the seller change `status`, `published_at`, `sponsored_until`, `expires_at`; conversations UPDATE allows any column for participants. (profiles `account_type` is locked by the trigger `protect_account_type` from migration 10: only server-side roles can change it.)
+Known loose spots to tighten with SQL functions: listings UPDATE lets the seller change `status`, `published_at`, `sponsored_until`, `expires_at`. (conversations are written only by functions since migration 11; profiles `account_type` is locked by the trigger `protect_account_type` from migration 10: only server-side roles can change it.)
 
 ### Indexes
 
@@ -243,7 +247,7 @@ Flow (sequential, no Promise.all):
 
 Rollback: any failure in steps 6-8 deletes subscriptions, then dealer_members, then the dealer, **explicitly** (does not rely on CASCADE). Because the profile update is last, a failure never leaves the profile as `dealer_member` without a dealer; if step 8 itself fails the profile is unchanged. Returns 500 `server_error`. Not wrapped in a DB transaction: if atomicity becomes critical, move steps 5-8 into a `security definer` SQL function called via RPC.
 
-Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a user change their own `account_type`; VAT is trusted from VIES only at signup (no periodic re-check).
+Known gap: VAT is trusted from VIES only at signup (no periodic re-check).
 
 ### delete-account (`supabase/functions/delete-account/index.ts`)
 
@@ -252,13 +256,21 @@ Known gaps (to fix with the functions pass): `profiles` UPDATE policy lets a use
 ## Database functions
 
 - `handle_new_user()` trigger function on `auth.users` insert → creates `profiles` row (`security definer`, `search_path = ''`, `on conflict do nothing`). Migration `08_auth_profiles.sql` also backfills profiles for pre-existing users.
-- No other SQL functions yet. Planned: feed RPC (returns listings + seller display info, since profiles are not readable by others), dealer entitlements, publish listing (moves media from `listing-drafts` to `listing-media`), get-or-create conversation, seller contact for WhatsApp, price-history trigger, nightly stats aggregation, listing expiry.
+- `protect_account_type()` trigger (migration 10): `account_type` changes only from server-side roles.
+- Chat (migration 11, all `security definer`, `search_path = ''`, callable by `authenticated` only):
+  - `start_conversation(p_listing_id, p_body) → uuid`: the first "Contatta" message. Listing must be active and not the user's (owner or dealer member); creates the conversation (`on conflict` reuses it) and inserts the message in one call, so a seller never sees an empty chat. A new chat writes one `contact_chat` event (= one contact). Errors by message: `not_authenticated` / `own_listing` (42501, HTTP 403), `listing_unavailable` / `empty_message` (P0001, HTTP 400).
+  - `mark_conversation_read(p_conversation_id)`: sets `buyer_last_read_at` or `seller_last_read_at` for the caller's side.
+  - `my_conversations(p_conversation_id?, p_before?, p_limit = 30)`: Inbox rows, newest activity first: id, listing_id, is_buyer, buyer_id, other_name (dealer name, else the other profile's display_name), other_is_dealer, listing title / cover / price / status, last message body + `last_message_mine`, last_message_at, `activity_at` (page cursor), `unread` (last message after the caller's read marker). One id = one row (chat header, Realtime refresh). Filter written for the conversations indexes.
+  - `seller_whatsapp(p_listing_id) → text | null`: the number only for an active listing with `whatsapp_enabled`; dealer → `dealers.whatsapp`, private → `profiles.phone` when `whatsapp_public`. Each answer with a number writes a `contact_whatsapp` event (dashboards count distinct users).
+  - Trigger `messages_touch_conversation` (after insert on messages): sets `last_message_at` and the sender side's read marker.
+- Realtime publication `supabase_realtime`: `messages`, `conversations` (Realtime applies RLS: each user only receives their own chats).
+- Planned: feed RPC (returns listings + seller display info, since profiles are not readable by others), dealer entitlements, publish listing (moves media from `listing-drafts` to `listing-media`), price-history trigger, nightly stats aggregation (contacts = conversations + distinct `contact_whatsapp` users), listing expiry, push on new message.
 
 ## Status
 
-Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters, search + saved searches, consents (sign up + gate), settings. Designs for all screens and states exist in the Claude canvas mockup.
+Done: schema, RLS, seed, core app (config, theme, router, deep-link routes, analytics), feed (real data, video players, zoom, overlay, loading/empty/error), email + password login sheet, onboarding (intent, preferences, dealer signup via VIES), minimal profile, listing detail, save, feed filters, search + saved searches, consents (sign up + gate), settings, contact (chat + Inbox + WhatsApp). Designs for all screens and states exist in the Claude canvas mockup.
 
-Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered; opened from the feed it receives the feed's `SharedVideo` through go_router `extra` and continues it, no second download — the feed stops driving that player until the page closes; from a link or a grid it creates its own), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contact. Save, Share and Contact show "in arrivo" until their steps. Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
+Listing detail (`/listing/:id`): video header (same tap/zoom as the feed, pauses when scrolled away or covered; opened from the feed it receives the feed's `SharedVideo` through go_router `extra` and continues it, no second download — the feed stops driving that player until the page closes; from a link or a grid it creates its own), title/version/price/facts/location, total cost (price + ownership transfer estimate, cars only: IPT fixed ≤ 53 kW or per kW above, +30% provincial surcharge, + 85.20 fixed fees; motorcycles not estimated until their IPT rules are confirmed), photo strip + full-screen viewer, specs grid, collapsible description, seller (dealer with VAT-verified badge and reviews when `reviews_enabled`; private sellers anonymous), Q&A (public answered + own pending; ask = login sheet then insert), sticky price + Contatta (+ WhatsApp when on). Share shows "in arrivo" until its step. Unavailable listing (sold/removed, hidden by RLS) shows a dedicated state; back falls back to the feed when opened from a link.
 
 Settings (`/settings`): email change and password change (both after re-entering the current password), display name, optional birth date (date picker ends 14 years ago) and gender, per-type notification switches (`notification_preferences`, missing row = on; buyer and seller groups), push switch shown as "In arrivo" until `push_enabled`, promotional emails (a `marketing_email` consent row), Termini / Privacy (open in the browser, with the acceptance date), support email, sign out, delete account (password + `delete-account`).
 
@@ -268,10 +280,11 @@ Feed filters: `FeedFilters` (category, price min/max, makes, models, year min/ma
 
 Search tab (`/search`): a search box understood locally by `QueryParser` (catalog of every make and model loaded once per session, paginated past PostgREST's 1000-row cap; makes come from `allMakesProvider`, the single makes request of the session, also behind `makesProvider(category)` used by onboarding and the filter sheet). **No request while typing**: suggestions (`suggest()`) are computed in memory on each keystroke; the query is applied on submit or after a 400 ms pause (waits for the catalog if it is still loading). Parsing: province capitals → `province`; makes (aliases: vw, alfa, mercedes) and models, longest word sequence first, bare numbers ("500", "2008") or 1–2 letter names only next to their make; 4 digits 1950–this year = year ("dal" = min, "fino al" = max, alone = exact); "8000", "8k", "8mila", "sotto 10mila" = max price ("da", "sopra", "oltre", "tra" = min); "100k km" / "100.000 km" = max km; auto/moto, automatica/manuale, neopatentato, fuel synonyms (benzina, gasolio, gpl, metano, ibrida, plug-in, elettrica). Unknown words are searched in version/description **only if nothing structured was recognized**, otherwise ignored and shown as "Parole non usate". What was understood shows as removable chips (+ "Filtri" opens the sheet); changing filters elsewhere clears the box. Before typing: recent searches (phone only, last 10, also for guests), saved searches, popular brands. Results = the feed's own list as a grid (tap opens the listing; "Carica altri"); "Guarda nel feed" switches tab on the same results. Zero results → "Prova senza «last chip»" or "Salva ricerca e avvisami". Saved searches only for signed-in users (login sheet for guests), named with `describeFilters()`, newest first (`created_at`); `name` is nullable in the table; bell for `notify` only when `feature_flags.push_enabled`.
 
+Contact: "Contatta" on the listing (guests sign in first; the seller sees "Il tuo annuncio" instead). An existing chat about that listing is found in the loaded Inbox (else one lookup) and opened; otherwise `/chat/new/:listingId` shows the seller, a safety tip (no deposits before seeing the vehicle) and quick replies; the first message calls `start_conversation()` and the same screen continues as that chat. Chat: latest 40 messages, older pages on scroll, new ones through Realtime (channel per chat, filtered on `conversation_id`); send is optimistic ("Invio…", "Non inviato · tocca per riprovare" with retry / delete), the Realtime echo of an own message never duplicates it; read marker set on open and on incoming messages (at most every 2 s); after a reconnect only messages newer than the last one are fetched. Inbox tab (`/inbox`): one `my_conversations()` call per login (first page, more on scroll), then Realtime on `conversations` says which chat changed and only that row is fetched again (changes coalesced over 300 ms); unread dot and bold rows, "Tu: …" for own last message, "Il tuo annuncio" for seller-side chats, "Venduto" when the listing is gone; the tab icon shows the number of unread chats. Both wait for the Realtime subscription (max 3 s) before the first load, so nothing falls between. WhatsApp: shown next to Contatta when the listing has `whatsapp_enabled` and `feature_flags.whatsapp_contact_enabled`; signed-in users only, `seller_whatsapp()` gives the number, opens `wa.me/<digits>` with a first message ("Ciao! Ti scrivo per … visto su …"); Italian numbers without prefix get +39. No push yet (needs FCM/APNs).
+
 ## Next (in order)
 
-1. **Contact**: conversations + messages with Realtime, Inbox, WhatsApp button (needs a security-definer function to expose seller contact).
-2. **Share**: listing link + web fallback page.
-3. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
+1. **Share**: listing link + web fallback page.
+2. **Polish**: login nudges, price vs market badge, feed function returning private seller names (profiles are not readable by others).
 
 Later: sell flow (guided capture with silhouettes, on-device encoding, drafts bucket → publish function), dealer dashboard (reads `listing_stats_daily`), nightly stats aggregation, listing expiry job, notifications + push (FCM/APNs, `device_tokens`), AI search (Claude via Edge Function, filters only from DB data), Google/Apple login.

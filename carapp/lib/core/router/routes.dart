@@ -15,6 +15,7 @@ class AppRoutes {
   static const sell = '/sell';
   static const listing = '/listing/:id';
   static const chat = '/chat/:id';
+  static const newChat = '/chat/new/:listingId';
   static const dealerDashboard = '/dealer';
   static const settings = '/settings';
 
@@ -23,6 +24,7 @@ class AppRoutes {
 
   static String listingPath(String id) => '/listing/$id';
   static String chatPath(String id) => '/chat/$id';
+  static String newChatPath(String listingId) => '/chat/new/$listingId';
 
   /// Reachable without completing onboarding (a shared link must open
   /// straight on the listing, even on first launch).
