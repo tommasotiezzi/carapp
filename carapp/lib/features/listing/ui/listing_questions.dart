@@ -146,11 +146,12 @@ class _AskSheetState extends ConsumerState<_AskSheet> {
       _busy = true;
       _error = null;
     });
+    // Read before awaiting: the sheet may be dismissed meanwhile.
+    final repo = ref.read(listingRepositoryProvider);
+    final container = ProviderScope.containerOf(context, listen: false);
     try {
-      await ref
-          .read(listingRepositoryProvider)
-          .askQuestion(listingId: widget.listingId, question: _ctrl.text);
-      ref.invalidate(listingQuestionsProvider(widget.listingId));
+      await repo.askQuestion(listingId: widget.listingId, question: _ctrl.text);
+      container.invalidate(listingQuestionsProvider(widget.listingId));
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted) setState(() => _error = t.qaError);

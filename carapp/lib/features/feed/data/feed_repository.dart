@@ -6,7 +6,9 @@ import 'feed_filters.dart';
 import 'feed_item.dart';
 
 /// Reads active listings, newest first, one page at a time.
-/// Cursor pagination on published_at: no offsets, no counting.
+/// Cursor pagination on (published_at, id): no offsets, no counting, and
+/// no listing skipped when several share the same published_at (seeds,
+/// bulk imports).
 /// Filters map 1:1 to `listings` columns (all indexed for active rows).
 class FeedRepository {
   FeedRepository(this._client);
@@ -14,7 +16,7 @@ class FeedRepository {
   final SupabaseClient _client;
 
   Future<List<FeedItem>> fetchPage({
-    DateTime? before,
+    FeedItem? after,
     int pageSize = 10,
     FeedFilters filters = FeedFilters.empty,
   }) async {
@@ -35,15 +37,12 @@ class FeedRepository {
     if (f.fuelTypes.isNotEmpty) query = query.inFilter('fuel_type', f.fuelTypes.toList());
     if (f.transmission != null) query = query.eq('transmission', f.transmission!);
     if (f.province != null) query = query.eq('province', f.province!);
-    final logic = logicFilter(f);
+    final logic = logicFilter(f, after: after);
     if (logic != null) query = query.or(logic);
-
-    if (before != null) {
-      query = query.lt('published_at', before.toUtc().toIso8601String());
-    }
 
     final rows = await query
         .order('published_at', ascending: false)
+        .order('id', ascending: false)
         .limit(pageSize);
 
     return rows.map(FeedItem.fromRow).toList();
@@ -54,9 +53,10 @@ class FeedRepository {
 /// single `or=(and(...))` (one `or` parameter per request):
 /// - each free word must appear in version or description;
 /// - novice drivers: cars up to [FeedFilters.noviceMaxPowerKw] kW,
-///   other categories untouched.
+///   other categories untouched;
+/// - the page cursor: strictly after [after] in (published_at, id) order.
 /// null when there is nothing to add.
-String? logicFilter(FeedFilters f) {
+String? logicFilter(FeedFilters f, {FeedItem? after}) {
   final groups = <String>[
     for (final w in f.textWords.map(_likeSafe).where((w) => w.isNotEmpty))
       'or(version.ilike.*$w*,description.ilike.*$w*)',
@@ -64,8 +64,15 @@ String? logicFilter(FeedFilters f) {
       f.categoryId == 'car'
           ? 'power_kw.lte.${FeedFilters.noviceMaxPowerKw}'
           : 'or(category_id.neq.car,power_kw.lte.${FeedFilters.noviceMaxPowerKw})',
+    if (after != null) _cursor(after),
   ];
   return groups.isEmpty ? null : 'and(${groups.join(',')})';
+}
+
+/// Timestamps are quoted: ':' and '.' are reserved in PostgREST trees.
+String _cursor(FeedItem after) {
+  final ts = '"${after.publishedAt.toUtc().toIso8601String()}"';
+  return 'or(published_at.lt.$ts,and(published_at.eq.$ts,id.lt.${after.id}))';
 }
 
 /// Letters and digits only: commas, dots, parentheses or wildcards would

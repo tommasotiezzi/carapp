@@ -21,6 +21,7 @@ class SavedSearchesController extends AsyncNotifier<List<SavedSearch>> {
     required bool notify,
   }) async {
     final created = await _repo.create(name: name, filters: filters, notify: notify);
+    if (!ref.mounted) return;
     final list = [...await future, created]..sort((a, b) => a.name.compareTo(b.name));
     state = AsyncData(list);
   }
@@ -41,7 +42,7 @@ class SavedSearchesController extends AsyncNotifier<List<SavedSearch>> {
     try {
       await write();
     } catch (_) {
-      state = AsyncData(before);
+      if (ref.mounted) state = AsyncData(before);
       rethrow;
     }
   }

@@ -53,6 +53,16 @@ class Catalog {
 
   // ---- normalized indexes, built on first use ----
 
+  /// (make, normalized name), for prefix search on every keystroke.
+  late final List<(CatalogMake, String)> normalizedMakes = [
+    for (final m in makes) (m, normalize(m.name)),
+  ];
+
+  /// (model, normalized name).
+  late final List<(CatalogModel, String)> normalizedModels = [
+    for (final m in models) (m, normalize(m.name)),
+  ];
+
   /// normalized name or alias -> makes ("honda" exists for cars and motorcycles).
   late final Map<String, List<CatalogMake>> makesByKey = () {
     final map = <String, List<CatalogMake>>{};

@@ -42,7 +42,7 @@ class FeedScreen extends ConsumerWidget {
           onAction: refresh,
         ),
         data: (state) => state.items.isNotEmpty
-            ? _FeedPager(items: state.items)
+            ? _FeedPager(key: ValueKey(state.generation), items: state.items)
             : filtered
                 // Nothing matches: offer a way out instead of a dead end.
                 ? _FeedMessage(
@@ -69,7 +69,7 @@ class FeedScreen extends ConsumerWidget {
 /// (previous, current, next): the next one is already buffering
 /// when the user swipes.
 class _FeedPager extends ConsumerStatefulWidget {
-  const _FeedPager({required this.items});
+  const _FeedPager({super.key, required this.items});
 
   final List<FeedItem> items;
 
@@ -88,6 +88,10 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
 
   /// Index whose `view` was tracked; watch time is only sent for it.
   int? _viewTracked;
+
+  /// Kept in a field: `ref` cannot be used in dispose(), where the last
+  /// watch time is sent (Riverpod 3).
+  late final EventTracker _tracker = ref.read(eventTrackerProvider);
   bool _dependenciesReady = false;
 
   // The current video plays only when all three allow it.
@@ -101,6 +105,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _tracker; // read now, while `ref` is usable
     // Players and the first `view` wait for didChangeDependencies: the
     // pager can be (re)built while hidden, e.g. when Search changes the
     // shared filters, and must not download videos or count views then.
@@ -250,13 +255,13 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
     if (i >= widget.items.length) return;
     _viewTracked = i;
     _shownAt = DateTime.now();
-    ref.read(eventTrackerProvider).track(AnalyticsEvent.view, listingId: widget.items[i].id);
+    _tracker.track(AnalyticsEvent.view, listingId: widget.items[i].id);
   }
 
   void _trackWatchTime(int i) {
     if (i >= widget.items.length || _viewTracked != i) return;
     final ms = DateTime.now().difference(_shownAt).inMilliseconds;
-    ref.read(eventTrackerProvider).track(
+    _tracker.track(
           AnalyticsEvent.watchTime,
           listingId: widget.items[i].id,
           value: ms,

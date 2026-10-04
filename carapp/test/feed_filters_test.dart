@@ -22,7 +22,7 @@ class _FakeFeedRepo extends Fake implements FeedRepository {
 
   @override
   Future<List<FeedItem>> fetchPage({
-    DateTime? before,
+    FeedItem? after,
     int pageSize = 10,
     FeedFilters filters = FeedFilters.empty,
   }) async {

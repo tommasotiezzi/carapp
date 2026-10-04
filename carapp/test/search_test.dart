@@ -67,7 +67,7 @@ class _FakeFeedRepo extends Fake implements FeedRepository {
   /// Results only when there is no fuel filter (to test the zero state).
   @override
   Future<List<FeedItem>> fetchPage({
-    DateTime? before,
+    FeedItem? after,
     int pageSize = 10,
     FeedFilters filters = FeedFilters.empty,
   }) async {

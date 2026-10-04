@@ -34,9 +34,11 @@ class SavedController extends AsyncNotifier<Set<String>> {
         await repo.unsave(listingId);
       }
     } catch (_) {
-      state = AsyncData(before);
+      if (ref.mounted) state = AsyncData(before);
       rethrow;
     }
+    // Logged out while saving: the ids were reloaded, nothing to update.
+    if (!ref.mounted) return;
 
     ref.read(eventTrackerProvider).track(
           saved ? AnalyticsEvent.save : AnalyticsEvent.unsave,
@@ -50,7 +52,8 @@ final savedControllerProvider =
     AsyncNotifierProvider<SavedController, Set<String>>(SavedController.new);
 
 /// true when [listingId] is saved (false while loading or for guests).
-final isSavedProvider = Provider.family<bool, String>(
+/// Auto-disposed: one per listing on screen, not one per listing ever seen.
+final isSavedProvider = Provider.autoDispose.family<bool, String>(
   (ref, listingId) =>
       ref.watch(savedControllerProvider.select((s) => s.value?.contains(listingId) ?? false)),
 );
