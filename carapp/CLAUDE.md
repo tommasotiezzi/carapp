@@ -33,7 +33,7 @@ TikTok-style vertical video feed to buy and sell used vehicles (cars incl. vans,
 - No unnecessary requests: config cached and re-fetched only when `config_version` changes; feed uses cursor pagination; analytics sent in batches.
 - Every schema change = a new numbered migration file with only the change.
 - Riverpod 3: never use `ref` in `dispose()` or after an `await` in a widget (it throws once the widget is unmounted). Read what you need (notifier, repository, tracker, container) into a local or a field first. In notifiers, check `ref.mounted` after every `await` before touching `state`.
-- Bundle ID currently Flutter default; set `com.tommasotiezzi.carfeed` before configuring Google OAuth / publishing.
+- App ID `com.tommasotiezzi.carfeed` on iOS (bundle identifier) and Android (`applicationId` and `namespace`, `MainActivity` in `com/tommasotiezzi/carfeed`). Changing it again means a new app for the stores and for Google / Apple sign-in.
 
 ## Run
 
