@@ -37,8 +37,19 @@ class AppRoutes {
   static String editMediaPath(String id) => '/listing/$id/media';
 
   /// The camera of "Foto e video" (same parameters as [sellCapturePath]).
-  static String editMediaCapturePath(String id, {String? step, bool photos = false, bool single = false}) {
-    final query = {'step': ?step, if (photos) 'photos': '1', if (single) 'single': '1'};
+  static String editMediaCapturePath(
+    String id, {
+    String? step,
+    bool photos = false,
+    bool single = false,
+    int? quarter,
+  }) {
+    final query = {
+      'step': ?step,
+      if (photos) 'photos': '1',
+      if (single) 'single': '1',
+      if (quarter != null) 'quarter': '$quarter',
+    };
     return Uri(path: '/listing/$id/media/capture', queryParameters: query.isEmpty ? null : query).toString();
   }
   static String chatPath(String id) => '/chat/$id';
@@ -47,8 +58,13 @@ class AppRoutes {
   /// step and come back to the summary.
   /// Video steps, or with [photos] the guided carousel photos ([step] =
   /// the slot to start from).
-  static String sellCapturePath({String? step, bool photos = false, bool single = false}) {
-    final query = {'step': ?step, if (photos) 'photos': '1', if (single) 'single': '1'};
+  static String sellCapturePath({String? step, bool photos = false, bool single = false, int? quarter}) {
+    final query = {
+      'step': ?step,
+      if (photos) 'photos': '1',
+      if (single) 'single': '1',
+      if (quarter != null) 'quarter': '$quarter',
+    };
     return Uri(path: sellCapture, queryParameters: query.isEmpty ? null : query).toString();
   }
   static String sellDonePath(String listingId) => '/sell/done/$listingId';

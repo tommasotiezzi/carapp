@@ -7,10 +7,13 @@ class CaptureStep {
     this.plateTip = false,
     this.hint,
     this.required = true,
+    this.guide,
   });
 
-  /// e.g. 'front', also the ARB key suffix of its label.
+  /// e.g. 'walkaround', also the ARB key suffix of its label.
   final String id;
+
+  /// Clip length; for the walk-around, the longest it may last.
   final int seconds;
 
   /// Outline drawn over the camera ('car_side_l', ...); null = none.
@@ -23,6 +26,14 @@ class CaptureStep {
   final String? hint;
   final bool required;
 
+  /// 'walkaround': one continuous video around the vehicle, guided by
+  /// the phone's rotation (stops by itself after 360°).
+  final String? guide;
+
+  bool get isWalkaround => guide == walkaroundGuide;
+
+  static const walkaroundGuide = 'walkaround';
+
   factory CaptureStep.fromJson(Map<String, dynamic> json) => CaptureStep(
         id: json['id'] as String,
         seconds: (json['seconds'] as num?)?.toInt() ?? 5,
@@ -30,6 +41,7 @@ class CaptureStep {
         plateTip: (json['plate_tip'] as bool?) ?? false,
         hint: json['hint'] as String?,
         required: (json['required'] as bool?) ?? true,
+        guide: json['guide'] as String?,
       );
 
   static List<CaptureStep> listFromJson(Object? json) => ((json as List?) ?? const [])
@@ -37,7 +49,7 @@ class CaptureStep {
       .map(CaptureStep.fromJson)
       .toList();
 
-  /// Same as the database (05_seed.sql, first car step from 15): used when the catalog cannot be
+  /// Same as the database (05_seed.sql; car steps from 18): used when the catalog cannot be
   /// read (offline at the first launch), so capture can still start.
   static List<CaptureStep> defaultsFor(String categoryId) => categoryId == 'motorcycle'
       ? const [
@@ -50,11 +62,15 @@ class CaptureStep {
           CaptureStep(id: 'defects', required: false),
         ]
       : const [
-          CaptureStep(id: 'front', silhouette: 'car_front', plateTip: true),
-          CaptureStep(id: 'right_side', silhouette: 'car_side_r'),
-          CaptureStep(id: 'left_side', silhouette: 'car_side_l'),
-          CaptureStep(id: 'rear', silhouette: 'car_rear', plateTip: true),
-          CaptureStep(id: 'interior_dashboard', hint: 'engine_running_show_km'),
+          CaptureStep(
+            id: 'walkaround',
+            seconds: 90,
+            guide: walkaroundGuide,
+            silhouette: 'car_front',
+            plateTip: true,
+          ),
+          CaptureStep(id: 'interior_front', seconds: 8, hint: 'engine_running_show_km'),
+          CaptureStep(id: 'interior_rear'),
           CaptureStep(id: 'engine_bay', required: false),
           CaptureStep(id: 'defects', required: false),
         ];

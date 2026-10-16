@@ -41,6 +41,7 @@ class FakeSellMedia implements SellMedia {
 
   final Directory root;
   final renders = <List<String>>[];
+  final renderParts = <List<ClipPart>>[];
   Completer<void>? renderGate;
   bool failRender = false;
 
@@ -64,18 +65,21 @@ class FakeSellMedia implements SellMedia {
   @override
   Future<int> renderVideo({
     required String taskId,
-    required List<String> clips,
+    required List<ClipPart> clips,
     required String out,
     required int bitrate,
     required void Function(double progress) onProgress,
   }) async {
-    renders.add([for (final c in clips) c.split('/').last]);
+    renders.add([for (final c in clips) c.file.split('/').last]);
+    renderParts.add([for (final c in clips) ClipPart(c.file.split('/').last, startMs: c.startMs, endMs: c.endMs)]);
     onProgress(0.5);
     if (renderGate != null) await renderGate!.future;
     if (failRender) throw Exception('encoder');
-    File(out).writeAsStringSync(clips.join(','));
+    File(out).writeAsStringSync(clips.map((c) => c.file).join(','));
     onProgress(1);
-    return clips.length * 5000 - (clips.length - 1) * 600;
+    // Whole clips count 5 s; cut ones their length.
+    final total = clips.fold<int>(0, (sum, c) => sum + (c.startMs == null ? 5000 : c.endMs! - c.startMs!));
+    return total - (clips.length - 1) * 600;
   }
 
   @override
@@ -171,8 +175,7 @@ void main() {
   group('SellDraft', () {
     test('json round trip, missing steps, ready, media key', () {
       var d = SellDraft(id: 'd1', categoryId: 'car', createdAt: DateTime(2026, 10, 4));
-      expect(d.missingIn(_carSteps).map((s) => s.id),
-          ['front', 'right_side', 'left_side', 'rear', 'interior_dashboard']);
+      expect(d.missingIn(_carSteps).map((s) => s.id), ['walkaround', 'interior_front', 'interior_rear']);
       expect(d.readyIn(_carSteps), isFalse);
 
       final shots = {
@@ -189,8 +192,7 @@ void main() {
         ],
       );
       expect(d.readyIn(_carSteps), isTrue);
-      expect(d.videosIn(_carSteps).map((s) => s.stepId),
-          ['front', 'right_side', 'left_side', 'rear', 'interior_dashboard']);
+      expect(d.videosIn(_carSteps).map((s) => s.stepId), ['walkaround', 'interior_front', 'interior_rear']);
       // Slots in slot order, then the others.
       expect(d.carousel(PhotoSlot.defaultsFor('car')).map((p) => p.file), ['f.jpg', 't.jpg', 'x.jpg']);
 
@@ -201,28 +203,86 @@ void main() {
       expect(back.details.attributes['novice_ok'], isTrue);
       expect(back.photos.map((p) => p.stepId), ['extra', 'trunk', 'front_three_quarter']);
 
-      final retaken = d.copyWith(shots: {...d.shots, 'rear': const Shot(stepId: 'rear', kind: ShotKind.video, file: 'r2.mp4')});
+      final retaken = d.copyWith(shots: {
+        ...d.shots,
+        'interior_rear': const Shot(stepId: 'interior_rear', kind: ShotKind.video, file: 'r2.mp4'),
+      });
       expect(retaken.mediaKey, isNot(key));
       expect(d.copyWith(photos: const []).mediaKey, key, reason: 'photos do not change the video');
     });
 
-    test('a step is never a photo: an old photo step goes to the carousel and is to film again', () {
+    test('old drafts: renamed steps keep their clip, removed ones go, photo steps go to the carousel', () {
       final old = SellDraft(id: 'd', categoryId: 'car', createdAt: DateTime(2026), shots: const {
-        'front_three_quarter': Shot(stepId: 'front_three_quarter', kind: ShotKind.video, file: 'f.mp4'),
+        'interior_dashboard': Shot(stepId: 'interior_dashboard', kind: ShotKind.video, file: 'i.mp4'),
+        'front': Shot(stepId: 'front', kind: ShotKind.video, file: 'f.mp4'), // the 4 sides before the walk-around
         'rear': Shot(stepId: 'rear', kind: ShotKind.photo, file: 'r.jpg'),
         'left_side': Shot(stepId: 'left_side', kind: ShotKind.photo, file: 'l.jpg'),
       });
       final d = old.normalized(_carSteps, PhotoSlot.defaultsFor('car'));
-      expect(d.shots.keys, ['front']);
-      expect(d.shots['front']!.file, 'f.mp4');
+      expect(d.shots.keys, ['interior_front']);
+      expect(d.shots['interior_front']!.file, 'i.mp4');
       expect(d.photoFor('rear')!.file, 'r.jpg');
       expect(d.extraPhotos.single.file, 'l.jpg');
-      expect(d.missingIn(_carSteps).map((s) => s.id), ['right_side', 'left_side', 'rear', 'interior_dashboard']);
-      // A catalog still on the old step leaves the clip alone.
+      expect(d.missingIn(_carSteps).map((s) => s.id), ['walkaround', 'interior_rear']);
+      // Already in step: the same draft.
       final same = SellDraft(id: 'd', categoryId: 'car', createdAt: DateTime(2026), shots: const {
-        'front_three_quarter': Shot(stepId: 'front_three_quarter', kind: ShotKind.video, file: 'f.mp4'),
+        'walkaround': Shot(stepId: 'walkaround', kind: ShotKind.video, file: 'w.mp4'),
+        'walkaround#2': Shot(stepId: 'walkaround#2', kind: ShotKind.video, file: 'q.mp4'),
       });
-      expect(identical(same.normalized(const [CaptureStep(id: 'front_three_quarter')], const []), same), isTrue);
+      expect(identical(same.normalized(_carSteps, const []), same), isTrue);
+    });
+
+    test('walk-around: quarters shot again replace their part of the walk', () {
+      const walk = Shot(
+        stepId: 'walkaround',
+        kind: ShotKind.video,
+        file: 'w.mp4',
+        markers: [0, 9000, 18000, 27000, 36000],
+        clockwise: true,
+      );
+      var d = SellDraft(id: 'd', categoryId: 'car', createdAt: DateTime(2026), shots: const {
+        'walkaround': walk,
+        'interior_front': Shot(stepId: 'interior_front', kind: ShotKind.video, file: 'i.mp4'),
+      });
+      expect(d.clipsIn(_carSteps), const [ClipPart('w.mp4'), ClipPart('i.mp4')]);
+
+      d = d.copyWith(shots: {
+        ...d.shots,
+        SellDraft.quarterKey('walkaround', 2): const Shot(stepId: 'walkaround#2', kind: ShotKind.video, file: 'q2.mp4'),
+      });
+      expect(d.clipsIn(_carSteps), const [
+        ClipPart('w.mp4', startMs: 0, endMs: 9000),
+        ClipPart('q2.mp4'),
+        ClipPart('w.mp4', startMs: 18000, endMs: 36000), // quarters 3 and 4 stay one piece
+        ClipPart('i.mp4'),
+      ]);
+      final key = d.mediaKey;
+
+      d = d.copyWith(shots: {
+        ...d.shots,
+        SellDraft.quarterKey('walkaround', 4): const Shot(stepId: 'walkaround#4', kind: ShotKind.video, file: 'q4.mp4'),
+        SellDraft.quarterKey('walkaround', 1): const Shot(stepId: 'walkaround#1', kind: ShotKind.video, file: 'q1.mp4'),
+      });
+      expect(d.mediaKey, isNot(key), reason: 'a quarter changes the video');
+      expect(d.clipsIn(_carSteps).map((c) => (c.file, c.startMs, c.endMs)), [
+        ('q1.mp4', null, null),
+        ('q2.mp4', null, null),
+        ('w.mp4', 18000, 27000),
+        ('q4.mp4', null, null),
+        ('i.mp4', null, null),
+      ]);
+
+      // A walk stopped early has no quarters: always whole.
+      final short = d.copyWith(shots: {
+        ...d.shots,
+        'walkaround': const Shot(stepId: 'walkaround', kind: ShotKind.video, file: 'w2.mp4'),
+      });
+      expect(short.clipsIn(_carSteps).first, const ClipPart('w2.mp4'));
+
+      final back = SellDraft.fromJson(jsonDecode(jsonEncode(d.toJson())) as Map<String, dynamic>);
+      expect(back.shots['walkaround']!.markers, [0, 9000, 18000, 27000, 36000]);
+      expect(back.shots['walkaround']!.clockwise, isTrue);
+      expect(back.clipsIn(_carSteps), d.clipsIn(_carSteps));
     });
 
     test('details: required fields and the listing row', () {
@@ -322,11 +382,11 @@ void main() {
     test('resume the saved draft; another category asks for a new one', () async {
       await ctrl().start('car');
       final id = st().draft!.id;
-      await ctrl().addClip('rear', await cameraFile('rear.mp4'));
+      await ctrl().addClip('interior_rear', await cameraFile('rear.mp4'));
 
       await ctrl().start('car');
       expect(st().draft!.id, id);
-      expect(st().draft!.shots, contains('rear'));
+      expect(st().draft!.shots, contains('interior_rear'));
       expect(st().slots.first.id, 'front_three_quarter');
 
       await ctrl().start('motorcycle');
@@ -340,12 +400,11 @@ void main() {
       await shootAll();
       await ctrl().prepareMedia();
 
-      expect(media.renders.single.map((f) => f.split('-').first),
-          ['front', 'right_side', 'left_side', 'rear', 'interior_dashboard']);
+      expect(media.renders.single.map((f) => f.split('-').first), ['walkaround', 'interior_front', 'interior_rear']);
       expect(repo.uploads, ['video.mp4', 'cover.jpg', 'photo-01-rear.jpg']);
       expect(st().phase, MediaPhase.ready);
       expect(st().progress, 1);
-      expect(st().draft!.videoDurationMs, 5 * 5000 - 4 * 600);
+      expect(st().draft!.videoDurationMs, 3 * 5000 - 2 * 600);
 
       // Again: nothing to do.
       await ctrl().prepareMedia();
@@ -364,7 +423,7 @@ void main() {
       await ctrl().prepareMedia();
 
       expect(media.renders, hasLength(2));
-      expect(media.renders.last, hasLength(6));
+      expect(media.renders.last, hasLength(4));
       expect(repo.uploads.sublist(3), ['video.mp4', 'cover.jpg']);
       expect(repo.removed, ['photo-01-rear.jpg']);
       expect(st().draft!.uploaded.keys, unorderedEquals(['video.mp4', 'cover.jpg']));
@@ -415,14 +474,47 @@ void main() {
       expect(await ctrl().addExtraPhotos([many.first]), 0);
     });
 
-    test('a draft from before migration 15 keeps its front shot', () async {
+    test('a draft from before migration 18 keeps its interiors clip, the sides go', () async {
       final old = SellDraft(id: 'd1', categoryId: 'car', createdAt: DateTime(2026), shots: const {
-        'front_three_quarter': Shot(stepId: 'front_three_quarter', kind: ShotKind.video, file: 'f.mp4'),
+        'interior_dashboard': Shot(stepId: 'interior_dashboard', kind: ShotKind.video, file: 'i.mp4'),
+        'right_side': Shot(stepId: 'right_side', kind: ShotKind.video, file: 'r.mp4'),
       });
       await prefs.setString(PrefKeys.sellDraft, jsonEncode(old.toJson()));
       await ctrl().start('car');
-      expect(st().draft!.shots.keys, ['front']);
-      expect(st().draft!.shots['front']!.file, 'f.mp4');
+      expect(st().draft!.shots.keys, ['interior_front']);
+      expect(st().draft!.shots['interior_front']!.file, 'i.mp4');
+    });
+
+    test('walk-around: markers kept; a quarter shot again joins the render; a new walk drops it', () async {
+      await ctrl().start('car');
+      await ctrl().addClip('walkaround', await cameraFile('w.mp4'), markers: [0, 8000, 16000, 24000, 32000], clockwise: false);
+      await ctrl().addClip('interior_front', await cameraFile('i.mp4'));
+      await ctrl().addClip('interior_rear', await cameraFile('r.mp4'));
+      expect(st().draft!.shots['walkaround']!.markers, [0, 8000, 16000, 24000, 32000]);
+      expect(st().draft!.shots['walkaround']!.clockwise, isFalse);
+
+      await ctrl().addClip(SellDraft.quarterKey('walkaround', 3), await cameraFile('q3.mp4'));
+      final quarterFile = st().draft!.quarterShot('walkaround', 3)!.file;
+      expect(quarterFile, isNot(contains('#')), reason: 'plain file names');
+      await ctrl().prepareMedia();
+      expect(media.renderParts.single.map((c) => (c.file.split('-').first, c.startMs, c.endMs)), [
+        ('walkaround', 0, 16000),
+        ('walkaround', null, null), // the quarter: walkaround-q3-<stamp>.mp4
+        ('walkaround', 24000, 32000),
+        ('interior_front', null, null),
+        ('interior_rear', null, null),
+      ]);
+      expect(media.renderParts.single[1].file, startsWith('walkaround-q3-'));
+
+      // A whole new walk: the old quarter goes, files too.
+      await ctrl().addClip('walkaround', await cameraFile('w2.mp4'), markers: [0, 1, 2, 3, 4], clockwise: true);
+      expect(st().draft!.quarterShot('walkaround', 3), isNull);
+      expect(File('${media.root.path}/${st().draft!.id}/$quarterFile').existsSync(), isFalse);
+
+      // Back to the original quarter.
+      await ctrl().addClip(SellDraft.quarterKey('walkaround', 1), await cameraFile('q1.mp4'));
+      await ctrl().removeShot(SellDraft.quarterKey('walkaround', 1));
+      expect(st().draft!.clipsIn(st().steps).first.startMs, isNull);
     });
 
     group('edit media of an online listing', () {
@@ -492,7 +584,7 @@ void main() {
         expect(repo.uploads, ['video.mp4', 'cover.jpg']);
         final sent = repo.edits.single;
         expect(sent.video, isTrue);
-        expect(sent.durationMs, 5 * 5000 - 4 * 600);
+        expect(sent.durationMs, 3 * 5000 - 2 * 600);
         expect(sent.photos.map((p) => p['media_id']), ['m1', 'm3', 'm2', 'm4']);
       });
 
@@ -546,7 +638,7 @@ void main() {
       await run;
 
       expect(media.renders, hasLength(2));
-      expect(media.renders.last, hasLength(6));
+      expect(media.renders.last, hasLength(4));
       expect(st().draft!.renderedFrom, st().draft!.mediaKey);
       expect(repo.uploads.where((u) => u == 'video.mp4'), hasLength(1));
     });
@@ -579,7 +671,7 @@ void main() {
       expect(repo.saved.single.$2, 'dealer-1');
       expect(repo.saved.single.$1.details.priceCents, 1490000);
       expect(repo.uploads, contains('video.mp4'));
-      expect(repo.published.single, (id, 5 * 5000 - 4 * 600));
+      expect(repo.published.single, (id, 3 * 5000 - 2 * 600));
       expect(prefs.getString(PrefKeys.sellDraft), isNull);
       expect(Directory('${media.root.path}/$id').existsSync(), isFalse);
       expect(st().draft, isNull);
@@ -715,7 +807,7 @@ void main() {
       ));
       await tester.runAsync(() async {
         await container.read(sellControllerProvider.notifier).start('car');
-        for (final s in _carSteps.where((s) => s.required && s.id != 'left_side')) {
+        for (final s in _carSteps.where((s) => s.required && s.id != 'interior_rear')) {
           final f = File('${tmp.path}/${s.id}.mp4')..writeAsStringSync('x');
           await container.read(sellControllerProvider.notifier).addClip(s.id, f.path);
         }
@@ -723,29 +815,83 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Le tue riprese'), findsOneWidget);
-      expect(find.textContaining('4 di 7 completate'), findsOneWidget);
+      expect(find.textContaining('2 di 5 completate'), findsOneWidget);
       expect(find.text('Da fare'), findsOneWidget);
-      expect(find.text('Mancano: Lato sinistro'), findsOneWidget);
+      expect(find.text('Mancano: Interni posteriori'), findsOneWidget);
       expect(find.text('Facoltativo · aumenta la fiducia'), findsOneWidget);
       expect(find.textContaining('motore acceso'), findsOneWidget);
       final create = find.widgetWithText(FilledButton, 'Crea il video');
       expect(tester.widget<FilledButton>(create).onPressed, isNull);
 
       await tester.runAsync(() async {
-        final f = File('${tmp.path}/left.mp4')..writeAsStringSync('x');
-        await container.read(sellControllerProvider.notifier).addClip('left_side', f.path);
+        final f = File('${tmp.path}/rear.mp4')..writeAsStringSync('x');
+        await container.read(sellControllerProvider.notifier).addClip('interior_rear', f.path);
       });
       await tester.pumpAndSettle();
-      expect(find.text('Mancano: Lato sinistro'), findsNothing);
+      expect(find.text('Mancano: Interni posteriori'), findsNothing);
       expect(tester.widget<FilledButton>(create).onPressed, isNotNull);
 
-      await tester.tap(find.text('Lato sinistro'));
+      await tester.tap(find.text('Interni posteriori'));
       await tester.pumpAndSettle();
       expect(find.text('Rifai'), findsOneWidget);
       expect(find.text('Elimina'), findsNothing); // required step
       await tester.tap(find.text('Rifai'));
       await tester.pumpAndSettle();
-      expect(find.text('capture step=left_side&single=1'), findsOneWidget);
+      expect(find.text('capture step=interior_rear&single=1'), findsOneWidget);
+    });
+
+    testWidgets('shots: the walk-around tile, redo one quarter or back to the original', (tester) async {
+      tester.view.physicalSize = const Size(430, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      late ProviderContainer container;
+      await tester.pumpWidget(app(
+        Consumer(builder: (context, ref, _) {
+          container = ProviderScope.containerOf(context);
+          return const ShotsScreen();
+        }),
+      ));
+      await tester.runAsync(() async {
+        final c = container.read(sellControllerProvider.notifier);
+        await c.start('car');
+        final w = File('${tmp.path}/w.mp4')..writeAsStringSync('x');
+        await c.addClip('walkaround', w.path, markers: [0, 8000, 16000, 24000, 32000], clockwise: true);
+        final q = File('${tmp.path}/q.mp4')..writeAsStringSync('x');
+        await c.addClip(SellDraft.quarterKey('walkaround', 2), q.path);
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.text('Giro a 360°'), findsOneWidget);
+      expect(find.text('Video · 32 s · giro completo · 1 tratto rifatto'), findsOneWidget);
+      expect(find.textContaining('1 di 5 completate'), findsOneWidget);
+
+      await tester.tap(find.text('Giro a 360°'));
+      await tester.pumpAndSettle();
+      expect(find.text('Rifai tutto il giro'), findsOneWidget);
+      await tester.tap(find.text('Rifai un tratto'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dal muso al fianco destro'), findsOneWidget);
+      expect(find.text('Dal fianco destro al posteriore'), findsOneWidget);
+      expect(find.text('Rifatto'), findsOneWidget);
+
+      // Quarter 2 back to the original walk.
+      await tester.runAsync(() async {
+        await tester.tap(find.text("Usa l'originale"));
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+      expect(container.read(sellControllerProvider).draft!.quarterShot('walkaround', 2), isNull);
+      expect(find.text('Video · 32 s · giro completo'), findsOneWidget);
+
+      // Quarter 3 again: its camera.
+      await tester.tap(find.text('Giro a 360°'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rifai un tratto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dal posteriore al fianco sinistro'));
+      await tester.pumpAndSettle();
+      expect(find.text('capture step=walkaround&single=1&quarter=3'), findsOneWidget);
     });
 
     testWidgets('shots: guided photos, a slot from the gallery, other photos', (tester) async {

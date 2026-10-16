@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+import 'sell_draft.dart';
+
 /// Files and video work on the phone for the sell flow. Behind an
 /// interface so tests run without the native editor.
 abstract class SellMedia {
@@ -23,11 +25,12 @@ abstract class SellMedia {
     Duration at = const Duration(milliseconds: 800),
   });
 
-  /// Joins [clips] in order with a short cross-dissolve into one MP4 at
-  /// [out]. Returns its duration in ms. [onProgress] gets 0..1.
+  /// Joins [clips] (full paths, whole or cut) in order with a short
+  /// cross-dissolve into one MP4 at [out]. Returns its duration in ms.
+  /// [onProgress] gets 0..1.
   Future<int> renderVideo({
     required String taskId,
-    required List<String> clips,
+    required List<ClipPart> clips,
     required String out,
     required int bitrate,
     required void Function(double progress) onProgress,
@@ -83,11 +86,12 @@ class NativeSellMedia implements SellMedia {
   @override
   Future<int> renderVideo({
     required String taskId,
-    required List<String> clips,
+    required List<ClipPart> clips,
     required String out,
     required int bitrate,
     required void Function(double progress) onProgress,
   }) async {
+    Duration? ms(int? v) => v == null ? null : Duration(milliseconds: v);
     final progress = _editor.progressStreamById(taskId).listen((p) => onProgress(p.progress));
     try {
       await _editor.renderVideoToFile(
@@ -97,7 +101,9 @@ class NativeSellMedia implements SellMedia {
           videoSegments: [
             for (var i = 0; i < clips.length; i++)
               VideoSegment(
-                video: EditorVideo.file(File(clips[i])),
+                video: EditorVideo.file(File(clips[i].file)),
+                startTime: ms(clips[i].startMs),
+                endTime: ms(clips[i].endMs),
                 // Ignored on the last clip.
                 transition: transition,
               ),

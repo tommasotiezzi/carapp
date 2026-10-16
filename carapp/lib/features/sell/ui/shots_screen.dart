@@ -15,7 +15,7 @@ import 'capture_screen.dart' show ShotImage, ShotThumb;
 import 'sell_labels.dart';
 
 /// Opens the camera of the session (new listing or "Foto e video").
-typedef CapturePath = String Function({String? step, bool photos, bool single});
+typedef CapturePath = String Function({String? step, bool photos, bool single, int? quarter});
 
 /// `/sell/shots` (screen 3): every step with its shot, tap to retake or
 /// to add a missing one. "Crea il video" starts the video in the
@@ -48,11 +48,51 @@ class ShotsScreen extends ConsumerWidget {
             ? t.shotsNeedVideo
             : null;
 
-    String capturePath({String? step, bool photos = false, bool single = false}) => editing
-        ? AppRoutes.editMediaCapturePath(draft.id, step: step, photos: photos, single: single)
-        : AppRoutes.sellCapturePath(step: step, photos: photos, single: single);
+    String capturePath({String? step, bool photos = false, bool single = false, int? quarter}) => editing
+        ? AppRoutes.editMediaCapturePath(draft.id, step: step, photos: photos, single: single, quarter: quarter)
+        : AppRoutes.sellCapturePath(step: step, photos: photos, single: single, quarter: quarter);
 
     void capture(CaptureStep step) => context.push(capturePath(step: step.id, single: true));
+
+    /// Walk-around: which quarter to shoot again (or back to the original).
+    Future<void> redoPart(CaptureStep step) async {
+      final shot = draft.shots[step.id]!;
+      final clockwise = shot.clockwise ?? true;
+      final choice = await showModalBottomSheet<(int, bool)>(
+        context: context,
+        builder: (sheet) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(t.walkRedoPartTitle, style: Theme.of(sheet).textTheme.titleSmall),
+                subtitle: Text(t.walkRedoPartBody),
+              ),
+              for (var q = 1; q <= 4; q++)
+                ListTile(
+                  leading: CircleAvatar(radius: 14, child: Text('$q')),
+                  title: Text(t.walkQuarterLabel(q, clockwise: clockwise)),
+                  subtitle: draft.quarterShot(step.id, q) == null ? null : Text(t.walkPartRedone),
+                  trailing: draft.quarterShot(step.id, q) == null
+                      ? const Icon(Icons.videocam_outlined)
+                      : TextButton(
+                          onPressed: () => Navigator.pop(sheet, (q, false)),
+                          child: Text(t.walkPartUseOriginal),
+                        ),
+                  onTap: () => Navigator.pop(sheet, (q, true)),
+                ),
+            ],
+          ),
+        ),
+      );
+      if (choice == null || !context.mounted) return;
+      final (q, redo) = choice;
+      if (redo) {
+        context.push(capturePath(step: step.id, single: true, quarter: q));
+      } else {
+        await ref.read(p.notifier).removeShot(SellDraft.quarterKey(step.id, q));
+      }
+    }
 
     final steps = [
       for (final step in s.steps) ...[
@@ -62,6 +102,8 @@ class ShotsScreen extends ConsumerWidget {
           draftId: draft.id,
           onCapture: () => capture(step),
           onRetake: () => capture(step),
+          onRedoPart: step.isWalkaround && (draft.shots[step.id]?.hasQuarters ?? false) ? () => redoPart(step) : null,
+          partsRedone: [for (var q = 1; q <= 4; q++) if (draft.quarterShot(step.id, q) != null) q].length,
           onDelete: step.required ? null : () => ref.read(p.notifier).removeShot(step.id),
         ),
         const SizedBox(height: AppSpacing.s),
@@ -553,6 +595,8 @@ class _StepTile extends StatelessWidget {
     required this.onCapture,
     required this.onRetake,
     this.onDelete,
+    this.onRedoPart,
+    this.partsRedone = 0,
   });
 
   final CaptureStep step;
@@ -561,6 +605,10 @@ class _StepTile extends StatelessWidget {
   final VoidCallback onCapture;
   final VoidCallback onRetake;
   final VoidCallback? onDelete;
+
+  /// Walk-around with its quarters known: shoot one quarter again.
+  final VoidCallback? onRedoPart;
+  final int partsRedone;
 
   Future<void> _actions(BuildContext context) async {
     final t = AppLocalizations.of(context);
@@ -572,9 +620,15 @@ class _StepTile extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
-              title: Text(t.shotsRetake),
+              title: Text(step.isWalkaround ? t.walkRedoAll : t.shotsRetake),
               onTap: () => Navigator.pop(context, 'retake'),
             ),
+            if (onRedoPart != null)
+              ListTile(
+                leading: const Icon(Icons.timelapse_outlined),
+                title: Text(t.walkRedoPart),
+                onTap: () => Navigator.pop(context, 'part'),
+              ),
             if (onDelete != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: AppColors.danger),
@@ -586,6 +640,7 @@ class _StepTile extends StatelessWidget {
       ),
     );
     if (choice == 'retake') onRetake();
+    if (choice == 'part') onRedoPart?.call();
     if (choice == 'delete') onDelete?.call();
   }
 
@@ -639,10 +694,15 @@ class _StepTile extends StatelessWidget {
 
     final subtitle = s == null
         ? t.shotsTodo
-        : [
-            t.shotsVideo(step.seconds),
-            if (engineOn) t.shotsEngineOn,
-          ].join(' · ');
+        : step.isWalkaround
+            ? [
+                if (s.hasQuarters) t.shotsWalkDone((s.markers!.last / 1000).round()) else t.shotsWalkPartial,
+                if (partsRedone > 0) t.shotsWalkParts(partsRedone),
+              ].join(' · ')
+            : [
+                t.shotsVideo(step.seconds),
+                if (engineOn) t.shotsEngineOn,
+              ].join(' · ');
     final preview = s?.thumb;
 
     return Material(

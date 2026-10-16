@@ -9,6 +9,7 @@ import '../../../core/media/shared_video.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/media/playback_speed.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/state/onboarding_controller.dart';
 import '../../saved/state/saved_controller.dart';
@@ -160,7 +161,12 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
   void _updatePlayback() {
     final p = _players[_current];
     if (p == null || p == _lent || !p.controller.value.isInitialized) return;
-    _canPlay ? p.controller.play() : p.controller.pause();
+    if (_canPlay) {
+      p.controller.setPlaybackSpeed(ref.read(playbackSpeedProvider));
+      p.controller.play();
+    } else {
+      p.controller.pause();
+    }
   }
 
   void _togglePause() {
@@ -286,6 +292,7 @@ class _FeedPagerState extends ConsumerState<_FeedPager>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(playbackSpeedProvider, (_, _) => _updatePlayback());
     return PageView.builder(
       controller: _pageController,
       scrollDirection: Axis.vertical,

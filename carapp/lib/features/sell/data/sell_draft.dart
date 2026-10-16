@@ -13,6 +13,8 @@ class Shot {
     this.takenAt,
     this.mediaId,
     this.remotePath,
+    this.markers,
+    this.clockwise,
   });
 
   /// A photo already online (`listing_media`), when editing a listing.
@@ -32,6 +34,18 @@ class Shot {
 
   bool get isRemote => mediaId != null;
 
+  /// Walk-around clip: ms from its start at 0°, 90°, 180°, 270° and the
+  /// end (5 values), so one quarter can be shot again. null when the walk
+  /// was stopped early (the whole walk can still be redone).
+  final List<int>? markers;
+
+  /// Walk-around clip: walked clockwise seen from above (front → right
+  /// side → rear), else front → left side.
+  final bool? clockwise;
+
+  /// The four quarters are known.
+  bool get hasQuarters => markers != null && markers!.length == 5;
+
   /// Small preview .jpg for the summary (videos); photos show themselves.
   final String? thumb;
   final DateTime? takenAt;
@@ -44,6 +58,8 @@ class Shot {
         'taken_at': takenAt?.toIso8601String(),
         'media_id': ?mediaId,
         'remote_path': ?remotePath,
+        'markers': ?markers,
+        'clockwise': ?clockwise,
       };
 
   Shot copyWithStep(String id) => Shot(
@@ -54,6 +70,8 @@ class Shot {
         takenAt: takenAt,
         mediaId: mediaId,
         remotePath: remotePath,
+        markers: markers,
+        clockwise: clockwise,
       );
 
   factory Shot.fromJson(Map<String, dynamic> json) => Shot(
@@ -64,6 +82,8 @@ class Shot {
         takenAt: DateTime.tryParse((json['taken_at'] as String?) ?? ''),
         mediaId: json['media_id'] as String?,
         remotePath: json['remote_path'] as String?,
+        markers: (json['markers'] as List?)?.map((e) => (e as num).toInt()).toList(),
+        clockwise: json['clockwise'] as bool?,
       );
 }
 
@@ -340,6 +360,44 @@ class SellDraft {
           if (shots[step.id]?.kind == ShotKind.video) shots[step.id]!,
       ];
 
+  /// Key in [shots] of a walk-around quarter shot again (1..4).
+  static String quarterKey(String stepId, int quarter) => '$stepId#$quarter';
+
+  static String baseStepOf(String key) => key.split('#').first;
+
+  Shot? quarterShot(String stepId, int quarter) => shots[quarterKey(stepId, quarter)];
+
+  /// What the video is made of, in order: each step's clip; a walk-around
+  /// with quarters shot again is cut at its markers and the new quarters
+  /// take their place (untouched quarters next to each other stay one
+  /// piece, so no cut where nothing changed).
+  List<ClipPart> clipsIn(List<CaptureStep> steps) {
+    final parts = <ClipPart>[];
+    for (final step in steps) {
+      final shot = shots[step.id];
+      if (shot?.kind != ShotKind.video) continue;
+      final redone = [for (var q = 1; q <= 4; q++) quarterShot(step.id, q)];
+      if (!shot!.hasQuarters || redone.every((r) => r == null)) {
+        parts.add(ClipPart(shot.file));
+        continue;
+      }
+      final m = shot.markers!;
+      int? from;
+      for (var q = 1; q <= 4; q++) {
+        final r = redone[q - 1];
+        if (r == null) {
+          from ??= m[q - 1];
+          continue;
+        }
+        if (from != null) parts.add(ClipPart(shot.file, startMs: from, endMs: m[q - 1]));
+        from = null;
+        parts.add(ClipPart(r.file));
+      }
+      if (from != null) parts.add(ClipPart(shot.file, startMs: from, endMs: m[4]));
+    }
+    return parts;
+  }
+
   Shot? photoFor(String slotId) => photos.where((p) => p.stepId == slotId).firstOrNull;
 
   List<Shot> get extraPhotos => [for (final p in photos) if (p.stepId == PhotoSlot.extra) p];
@@ -363,7 +421,7 @@ class SellDraft {
 
   /// Steps renamed in the catalog (migration 15: 'front_three_quarter'
   /// became 'front').
-  static const renamedSteps = {'front_three_quarter': 'front'};
+  static const renamedSteps = {'front_three_quarter': 'front', 'interior_dashboard': 'interior_front'};
 
   /// A draft started with an older app or catalog: a renamed step keeps
   /// its clip, and a step shot as a photo (steps were video or photo
@@ -378,6 +436,9 @@ class SellDraft {
       final renamed = renamedSteps[id];
       if (renamed != null && !ids.contains(id) && ids.contains(renamed) && !shots.containsKey(renamed)) id = renamed;
       if (shot.kind == ShotKind.video) {
+        // Clips of steps the catalog no longer has (the 4 sides before the
+        // walk-around) go.
+        if (!ids.contains(baseStepOf(id))) continue;
         clips[id] = id == shot.stepId ? shot : shot.copyWithStep(id);
       } else {
         final slot = slotIds.contains(id) && photoFor(id) == null && !moved.any((p) => p.stepId == id)
@@ -386,7 +447,9 @@ class SellDraft {
         moved.add(shot.copyWithStep(slot));
       }
     }
-    final changed = moved.isNotEmpty || clips.keys.toSet().difference(shots.keys.toSet()).isNotEmpty;
+    final changed = moved.isNotEmpty ||
+        clips.length != shots.length ||
+        clips.keys.toSet().difference(shots.keys.toSet()).isNotEmpty;
     if (!changed) return this;
     return copyWith(shots: clips, photos: [...photos, ...moved]);
   }
@@ -461,4 +524,24 @@ class SellDraft {
       initialMediaIds: List<String>.from((json['initial_media_ids'] as List?) ?? const []),
     );
   }
+}
+
+/// One piece of the final video: a clip of the draft folder, whole or
+/// cut ([startMs] / [endMs]).
+class ClipPart {
+  const ClipPart(this.file, {this.startMs, this.endMs});
+
+  final String file;
+  final int? startMs;
+  final int? endMs;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ClipPart && other.file == file && other.startMs == startMs && other.endMs == endMs;
+
+  @override
+  int get hashCode => Object.hash(file, startMs, endMs);
+
+  @override
+  String toString() => 'ClipPart($file, $startMs, $endMs)';
 }

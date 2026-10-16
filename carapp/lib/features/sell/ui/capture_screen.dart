@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/storage/preferences.dart';
 import '../../../core/media/media_url.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/router/routes.dart';
@@ -17,9 +18,11 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../data/capture_step.dart';
 import '../data/sell_draft.dart';
 import '../data/sell_media.dart';
+import '../data/walkaround.dart';
 import '../state/sell_controller.dart';
 import 'sell_labels.dart';
 import 'silhouette.dart';
+import 'walk_guide.dart';
 
 /// `/sell/capture` (screen 2): one step at a time, always a video (5 s,
 /// stops by itself), with the step's outline over the camera. With
@@ -27,12 +30,22 @@ import 'silhouette.dart';
 /// per [PhotoSlot], all optional). After a shot it moves to the next one
 /// still missing; with `single` (a retake from the summary) it goes back.
 class CaptureScreen extends ConsumerStatefulWidget {
-  const CaptureScreen({super.key, this.stepId, this.photos = false, this.single = false, this.provider});
+  const CaptureScreen({
+    super.key,
+    this.stepId,
+    this.photos = false,
+    this.single = false,
+    this.provider,
+    this.quarter,
+  });
 
   /// Step id, or slot id with [photos].
   final String? stepId;
   final bool photos;
   final bool single;
+
+  /// Walk-around: shoot this quarter (1..4) again instead of the whole walk.
+  final int? quarter;
 
   /// The session: a new listing (default) or [mediaEditControllerProvider]
   /// ("Foto e video" of an online listing: every exit goes back).
@@ -68,6 +81,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   bool _saving = false;
   bool _torch = false;
 
+  // Walk-around: the rotation while recording, and the "how to" card.
+  WalkaroundTracker? _walk;
+  StreamSubscription<double>? _rotation;
+  final _clock = Stopwatch();
+  bool _showDemo = false;
+
   @override
   void initState() {
     super.initState();
@@ -83,6 +102,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     }
     final targets = _targetsOf(s);
     _stepId = widget.stepId ?? targets.where((x) => !_isDone(s, x.id)).firstOrNull?.id ?? targets.first.id;
+    _showDemo = _walkMode && widget.quarter == null && !(ref.read(sharedPreferencesProvider).getBool(PrefKeys.walkDemoSeen) ?? false);
     _initCamera();
   }
 
@@ -90,6 +110,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopTimer?.cancel();
+    _rotation?.cancel();
     _progress.dispose();
     _camera?.dispose();
     super.dispose();
@@ -102,6 +123,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
       if (camera == null) return;
       // An interrupted clip is thrown away: it would be shorter than 5 s.
       _stopTimer?.cancel();
+      _rotation?.cancel();
+      _rotation = null;
+      _walk = null;
       _progress.stop();
       _camera = null;
       camera.dispose();
@@ -118,6 +142,27 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
   NotifierProvider<SellController, SellState> get _provider => widget.provider ?? sellControllerProvider;
 
   bool get _editing => ref.read(_provider).draft?.editing ?? false;
+
+  CaptureStep? get _currentStep =>
+      _photoMode ? null : ref.read(_provider).steps.where((x) => x.id == _stepId).firstOrNull;
+
+  /// The current step is the walk-around (whole or one quarter).
+  bool get _walkMode => _currentStep?.isWalkaround ?? false;
+
+  /// The walk being shot again: its direction, from the clip.
+  bool get _walkClockwise =>
+      _walk?.clockwise ?? ref.read(_provider).draft?.shots[_stepId]?.clockwise ?? true;
+
+  /// Where along the walk the phone is (0..360): the outline and the map.
+  double get _walkPosition {
+    final start = widget.quarter == null ? 0.0 : 90.0 * (widget.quarter! - 1);
+    return start + (_walk?.position ?? 0);
+  }
+
+  void _closeDemo() {
+    ref.read(sharedPreferencesProvider).setBool(PrefKeys.walkDemoSeen, true);
+    setState(() => _showDemo = false);
+  }
 
   List<_Target> _targetsOf(SellState s) => _photoMode
       ? [for (final slot in s.slots) _Target(id: slot.id, silhouette: slot.silhouette, plateTip: slot.plateTip)]
@@ -234,6 +279,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     }
 
     final seconds = ref.read(_provider).steps.firstWhere((x) => x.id == _stepId).seconds;
+    final rotation = ref.read(rotationWatchProvider);
     try {
       await camera.startVideoRecording();
     } on CameraException {
@@ -242,33 +288,95 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     }
     if (!mounted) return;
     setState(() => _recording = true);
-    _progress
-      ..duration = Duration(seconds: seconds)
-      ..forward(from: 0);
+    if (_walkMode) {
+      // Guided by the phone's rotation; stops by itself after the turn.
+      final walk = _walk = WalkaroundTracker(target: widget.quarter == null ? 360 : 90);
+      _progress.value = 0;
+      _clock
+        ..reset()
+        ..start();
+      _rotation = rotation().listen((angle) {
+        if (!mounted || !_recording) return;
+        walk.update(angle, _clock.elapsed);
+        _progress.value = walk.progress;
+        setState(() {});
+        if (walk.done) _stopRecording();
+      });
+    } else {
+      _progress
+        ..duration = Duration(seconds: seconds)
+        ..forward(from: 0);
+    }
     _stopTimer = Timer(Duration(seconds: seconds), _stopRecording);
   }
 
   Future<void> _stopRecording() async {
     final camera = _camera;
     if (camera == null || !_recording) return;
+    _stopTimer?.cancel();
+    final rotation = _rotation;
+    _rotation = null;
+    unawaited(rotation?.cancel());
+    _clock.stop();
     setState(() {
       _recording = false;
       _saving = true;
     });
     try {
       final file = await camera.stopVideoRecording();
+      final walk = _walk;
+      if (walk != null && !walk.done && !await _keepShortWalk(walk)) {
+        // "Rifai": the clip goes, the camera is ready again.
+        unawaited(File(file.path).delete().catchError((_) => File(file.path)));
+        if (!mounted) return;
+        setState(() {
+          _saving = false;
+          _walk = null;
+        });
+        _progress.reset();
+        return;
+      }
       await _save(file.path);
     } on CameraException {
       _failed();
     }
   }
 
+  /// A walk stopped before the end: keep it or shoot it again.
+  Future<bool> _keepShortWalk(WalkaroundTracker walk) async {
+    if (!mounted) return false;
+    final t = AppLocalizations.of(context);
+    final keep = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(t.walkShortTitle),
+        content: Text(t.walkShortBody(walk.degrees.round(), walk.target.round())),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(t.walkShortRedo)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(t.walkShortKeep)),
+        ],
+      ),
+    );
+    return keep ?? false;
+  }
+
   Future<void> _save(String path) async {
     final controller = ref.read(_provider.notifier);
     final id = _stepId!;
+    final walk = _walk;
     try {
       if (_photoMode) {
         await controller.addPhoto(id, path, fromCamera: true);
+      } else if (walk != null && widget.quarter != null) {
+        await controller.addClip(SellDraft.quarterKey(id, widget.quarter!), path);
+      } else if (walk != null) {
+        await controller.addClip(
+          id,
+          path,
+          markers: walk.markersAt(_clock.elapsed),
+          clockwise: walk.clockwise ?? true,
+        );
       } else {
         await controller.addClip(id, path);
       }
@@ -277,7 +385,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
       return;
     }
     if (!mounted) return;
-    setState(() => _saving = false);
+    setState(() {
+      _saving = false;
+      _walk = null;
+    });
     HapticFeedback.lightImpact();
     _advance();
   }
@@ -312,6 +423,27 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
     final next = _recording || _saving ? null : _nextMissing();
     String label(String id) => _photoMode ? t.photoSlotLabel(id) : t.stepLabel(id);
     final done = {for (final x in targets) if (_isDone(s, x.id)) x.id};
+    final walking = _walkMode;
+    final quarter = widget.quarter;
+    final walk = _walk;
+    final title = walking && quarter != null
+        ? t.walkRedoing(t.walkQuarterLabel(quarter, clockwise: _walkClockwise))
+        : label(target.id);
+    final silhouette = walking ? walkSilhouette(_walkPosition, clockwise: _walkClockwise) : target.silhouette;
+    String status() {
+      if (walking && _recording && walk != null) {
+        return switch (walk.warning) {
+          WalkWarning.tooFast => t.walkTooFast,
+          WalkWarning.backwards => t.walkBackwards,
+          null => quarter == null ? t.walkDegrees(walk.degrees.round()) : t.walkQuarterDegrees(walk.degrees.round()),
+        };
+      }
+      if (_recording) {
+        return t.captureRecording((seconds * (1 - _progress.value)).ceil().clamp(1, seconds));
+      }
+      if (walking) return t.walkStart;
+      return target.plateTip ? t.capturePlateTip : t.captureHoldStill;
+    }
 
     return PopScope(
       canPop: !_recording,
@@ -324,7 +456,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                 fit: StackFit.expand,
                 children: [
                   _Preview(camera: _camera, issue: _issue, onRetry: _initCamera),
-                  if (_camera != null) Silhouette(name: target.silhouette),
+                  if (_camera != null) Silhouette(name: silhouette),
                   const _TopScrim(),
                   SafeArea(
                     bottom: false,
@@ -337,22 +469,41 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                           torch: _torch,
                           onClose: _recording ? null : _close,
                           onTorch: _camera == null ? null : _toggleTorch,
+                          onHelp: walking && !_recording ? () => setState(() => _showDemo = true) : null,
                         ),
                         _Segments(ids: [for (final x in targets) x.id], current: index, done: done),
                         const SizedBox(height: AppSpacing.l),
-                        Text(
-                          label(target.id),
-                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                          child: Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.xxs),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
                           child: Text(
-                            step == null ? t.photoSlotHint(target.id) : t.stepInstruction(step, draft.categoryId),
+                            step == null
+                                ? t.photoSlotHint(target.id)
+                                : _recording && walking
+                                    ? t.walkTapToStop
+                                    : t.stepInstruction(step, draft.categoryId),
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: AppColors.onFeedSecondary, fontSize: 14),
                           ),
                         ),
+                        if (walking) ...[
+                          const SizedBox(height: AppSpacing.m),
+                          WalkMap(
+                            key: const ValueKey('walk-map'),
+                            position: _walkPosition,
+                            walked: walk?.degrees ?? 0,
+                            from: quarter == null ? 0 : 90.0 * (quarter - 1),
+                            clockwise: _walkClockwise,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -364,28 +515,32 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen>
                       child: AnimatedBuilder(
                         animation: _progress,
                         builder: (context, _) => _StatusPill(
-                          text: _recording
-                              ? t.captureRecording(
-                                  (seconds * (1 - _progress.value)).ceil().clamp(1, seconds),
-                                )
-                              : target.plateTip
-                                  ? t.capturePlateTip
-                                  : t.captureHoldStill,
+                          text: status(),
                           live: _recording,
+                          warning: walking && _recording && walk?.warning != null,
                         ),
                       ),
                     ),
                   ),
+                  if (_showDemo)
+                    Positioned.fill(
+                      child: ColoredBox(
+                        color: const Color(0x99000000),
+                        child: Center(child: SingleChildScrollView(child: WalkDemo(onDone: _closeDemo))),
+                      ),
+                    ),
                 ],
               ),
             ),
             _BottomPanel(
               photo: _photoMode,
+              modeLabel: walking ? t.sellStepWalkaround : null,
+              onStop: walking && _recording ? _stopRecording : null,
               seconds: seconds,
               recording: _recording,
               saving: _saving,
               progress: _progress,
-              enabled: _camera != null,
+              enabled: _camera != null && !_showDemo,
               lastShot: _lastShot(_photoMode ? draft.photos : draft.shots.values),
               draftId: draft.id,
               doneCount: done.length,
@@ -493,12 +648,15 @@ class _TopScrim extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.stepLabel, required this.torch, this.onClose, this.onTorch});
+  const _TopBar({required this.stepLabel, required this.torch, this.onClose, this.onTorch, this.onHelp});
 
   final String stepLabel;
   final bool torch;
   final VoidCallback? onClose;
   final VoidCallback? onTorch;
+
+  /// Walk-around: "Come si fa" (the demo again).
+  final VoidCallback? onHelp;
 
   @override
   Widget build(BuildContext context) {
@@ -526,6 +684,10 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (onHelp != null) ...[
+            _GlassButton(icon: Icons.help_outline, tooltip: t.walkDemoAgain, onTap: onHelp),
+            const SizedBox(width: AppSpacing.s),
+          ],
           _GlassButton(
             icon: torch ? Icons.flash_on : Icons.flash_off,
             tooltip: t.captureTorch,
@@ -591,16 +753,19 @@ class _Segments extends StatelessWidget {
 }
 
 class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.text, required this.live});
+  const _StatusPill({required this.text, required this.live, this.warning = false});
 
   final String text;
   final bool live;
+
+  /// Walk-around: too fast or the wrong way.
+  final bool warning;
 
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.xs),
         decoration: BoxDecoration(
-          color: const Color(0xCC000000),
+          color: warning ? const Color(0xE6B45309) : const Color(0xCC000000),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -624,6 +789,8 @@ class _StatusPill extends StatelessWidget {
 class _BottomPanel extends ConsumerWidget {
   const _BottomPanel({
     required this.photo,
+    this.modeLabel,
+    this.onStop,
     required this.seconds,
     required this.recording,
     required this.saving,
@@ -641,6 +808,12 @@ class _BottomPanel extends ConsumerWidget {
 
   /// Guided photos instead of the video steps.
   final bool photo;
+
+  /// Instead of "Video · 5 s" (the walk-around).
+  final String? modeLabel;
+
+  /// Walk-around while recording: the shutter stops it.
+  final VoidCallback? onStop;
   final int seconds;
   final bool recording;
   final bool saving;
@@ -669,7 +842,7 @@ class _BottomPanel extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _ModeLabel(label: photo ? t.capturePhoto : t.captureVideo(seconds)),
+              _ModeLabel(label: modeLabel ?? (photo ? t.capturePhoto : t.captureVideo(seconds))),
               const SizedBox(height: AppSpacing.l),
               Row(
                 children: [
@@ -686,7 +859,7 @@ class _BottomPanel extends ConsumerWidget {
                     recording: recording,
                     saving: saving,
                     progress: progress,
-                    onTap: enabled && !busy ? onShoot : null,
+                    onTap: onStop ?? (enabled && !busy ? onShoot : null),
                   ),
                   const Spacer(),
                   SizedBox.square(

@@ -155,7 +155,7 @@ class _SellStartScreenState extends ConsumerState<SellStartScreen> {
                           const SizedBox(height: AppSpacing.xxs),
                           Text(
                             '${saved.categoryId == 'motorcycle' ? t.sellMoto : t.sellCar} · '
-                            '${t.sellDraftBody(saved.shots.length)}',
+                            '${t.sellDraftBody(saved.shots.keys.where((k) => !k.contains('#')).length)}',
                             style: text.bodyMedium,
                           ),
                           const SizedBox(height: AppSpacing.s),

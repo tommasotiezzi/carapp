@@ -8,6 +8,7 @@ import '../../../core/l10n/vehicle_labels.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/user_avatar.dart';
+import '../../../core/media/playback_speed.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../onboarding/data/catalog_repository.dart';
 import '../data/feed_filters.dart';
@@ -159,6 +160,8 @@ class _SideActions extends StatelessWidget {
           onTap: onContact,
           highlighted: true,
         ),
+        const SizedBox(height: 18),
+        const SpeedButton(),
       ],
     );
   }

@@ -2272,6 +2272,12 @@ abstract class AppLocalizations {
   /// **'Cambia foto e video'**
   String get editListingMedia;
 
+  /// No description provided for @playbackSpeed.
+  ///
+  /// In it, this message translates to:
+  /// **'Velocità {speed}'**
+  String playbackSpeed(String speed);
+
   /// No description provided for @inboxTitle.
   ///
   /// In it, this message translates to:
@@ -2901,6 +2907,234 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Ripresa non salvata, riprova.'**
   String get captureSaveError;
+
+  /// No description provided for @sellStepWalkaround.
+  ///
+  /// In it, this message translates to:
+  /// **'Giro a 360°'**
+  String get sellStepWalkaround;
+
+  /// No description provided for @sellStepInteriorFront.
+  ///
+  /// In it, this message translates to:
+  /// **'Interni anteriori e cruscotto'**
+  String get sellStepInteriorFront;
+
+  /// No description provided for @sellStepInteriorRear.
+  ///
+  /// In it, this message translates to:
+  /// **'Interni posteriori'**
+  String get sellStepInteriorRear;
+
+  /// No description provided for @captureWalkHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Parti davanti all\'auto, a 2–3 metri. Poi cammina piano intorno tenendola al centro'**
+  String get captureWalkHint;
+
+  /// No description provided for @captureHintInteriorFront.
+  ///
+  /// In it, this message translates to:
+  /// **'Motore acceso: volante, cruscotto con i km leggibili e sedili davanti'**
+  String get captureHintInteriorFront;
+
+  /// No description provided for @captureHintInteriorRear.
+  ///
+  /// In it, this message translates to:
+  /// **'Dalla portiera posteriore: sedili e spazio dietro'**
+  String get captureHintInteriorRear;
+
+  /// No description provided for @walkFront.
+  ///
+  /// In it, this message translates to:
+  /// **'muso'**
+  String get walkFront;
+
+  /// No description provided for @walkRear.
+  ///
+  /// In it, this message translates to:
+  /// **'posteriore'**
+  String get walkRear;
+
+  /// No description provided for @walkRightSide.
+  ///
+  /// In it, this message translates to:
+  /// **'fianco destro'**
+  String get walkRightSide;
+
+  /// No description provided for @walkLeftSide.
+  ///
+  /// In it, this message translates to:
+  /// **'fianco sinistro'**
+  String get walkLeftSide;
+
+  /// No description provided for @walkQuarter.
+  ///
+  /// In it, this message translates to:
+  /// **'Dal {from} al {to}'**
+  String walkQuarter(String from, String to);
+
+  /// No description provided for @walkDegrees.
+  ///
+  /// In it, this message translates to:
+  /// **'{degrees}° di 360°'**
+  String walkDegrees(int degrees);
+
+  /// No description provided for @walkQuarterDegrees.
+  ///
+  /// In it, this message translates to:
+  /// **'{degrees}° di 90°'**
+  String walkQuarterDegrees(int degrees);
+
+  /// No description provided for @walkTooFast.
+  ///
+  /// In it, this message translates to:
+  /// **'Più piano: così il video è fluido'**
+  String get walkTooFast;
+
+  /// No description provided for @walkBackwards.
+  ///
+  /// In it, this message translates to:
+  /// **'Gira sempre nello stesso verso'**
+  String get walkBackwards;
+
+  /// No description provided for @walkStart.
+  ///
+  /// In it, this message translates to:
+  /// **'Premi e inizia a camminare'**
+  String get walkStart;
+
+  /// No description provided for @walkTapToStop.
+  ///
+  /// In it, this message translates to:
+  /// **'Si ferma da solo a fine giro · tocca per fermare'**
+  String get walkTapToStop;
+
+  /// No description provided for @walkDemoTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Come fare il giro a 360°'**
+  String get walkDemoTitle;
+
+  /// No description provided for @walkDemoTip1.
+  ///
+  /// In it, this message translates to:
+  /// **'Mettiti davanti all\'auto, a 2–3 metri'**
+  String get walkDemoTip1;
+
+  /// No description provided for @walkDemoTip2.
+  ///
+  /// In it, this message translates to:
+  /// **'Premi e cammina piano intorno, sempre nello stesso verso'**
+  String get walkDemoTip2;
+
+  /// No description provided for @walkDemoTip3.
+  ///
+  /// In it, this message translates to:
+  /// **'Tieni l\'auto al centro: la sagoma ti dice dove sei'**
+  String get walkDemoTip3;
+
+  /// No description provided for @walkDemoTip4.
+  ///
+  /// In it, this message translates to:
+  /// **'Il video si ferma da solo quando hai fatto il giro'**
+  String get walkDemoTip4;
+
+  /// No description provided for @walkDemoOk.
+  ///
+  /// In it, this message translates to:
+  /// **'Ho capito'**
+  String get walkDemoOk;
+
+  /// No description provided for @walkDemoAgain.
+  ///
+  /// In it, this message translates to:
+  /// **'Come si fa'**
+  String get walkDemoAgain;
+
+  /// No description provided for @walkShortTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Giro incompleto'**
+  String get walkShortTitle;
+
+  /// No description provided for @walkShortBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Hai fatto {degrees}° su {target}°. Vuoi tenerlo così o rifarlo?'**
+  String walkShortBody(int degrees, int target);
+
+  /// No description provided for @walkShortKeep.
+  ///
+  /// In it, this message translates to:
+  /// **'Tienilo'**
+  String get walkShortKeep;
+
+  /// No description provided for @walkShortRedo.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai'**
+  String get walkShortRedo;
+
+  /// No description provided for @walkRedoAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai tutto il giro'**
+  String get walkRedoAll;
+
+  /// No description provided for @walkRedoPart.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai un tratto'**
+  String get walkRedoPart;
+
+  /// No description provided for @walkRedoPartTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Quale tratto vuoi rifare?'**
+  String get walkRedoPartTitle;
+
+  /// No description provided for @walkRedoPartBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai solo quel quarto di giro: nel video prende il posto di quello vecchio.'**
+  String get walkRedoPartBody;
+
+  /// No description provided for @walkPartRedone.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifatto'**
+  String get walkPartRedone;
+
+  /// No description provided for @walkPartUseOriginal.
+  ///
+  /// In it, this message translates to:
+  /// **'Usa l\'originale'**
+  String get walkPartUseOriginal;
+
+  /// No description provided for @walkRedoing.
+  ///
+  /// In it, this message translates to:
+  /// **'Rifai: {quarter}'**
+  String walkRedoing(String quarter);
+
+  /// No description provided for @shotsWalkDone.
+  ///
+  /// In it, this message translates to:
+  /// **'Video · {seconds} s · giro completo'**
+  String shotsWalkDone(int seconds);
+
+  /// No description provided for @shotsWalkPartial.
+  ///
+  /// In it, this message translates to:
+  /// **'Video · giro incompleto'**
+  String get shotsWalkPartial;
+
+  /// No description provided for @shotsWalkParts.
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 tratto rifatto} other{{count} tratti rifatti}}'**
+  String shotsWalkParts(int count);
 
   /// No description provided for @sellStepFront.
   ///
