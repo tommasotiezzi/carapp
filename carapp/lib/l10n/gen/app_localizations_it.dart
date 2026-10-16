@@ -1275,6 +1275,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String get editListingMedia => 'Cambia foto e video';
 
   @override
+  String playbackSpeed(String speed) {
+    return 'Velocità $speed';
+  }
+
+  @override
   String get inboxTitle => 'Messaggi';
 
   @override
@@ -1637,6 +1642,148 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get captureSaveError => 'Ripresa non salvata, riprova.';
+
+  @override
+  String get sellStepWalkaround => 'Giro a 360°';
+
+  @override
+  String get sellStepInteriorFront => 'Interni anteriori e cruscotto';
+
+  @override
+  String get sellStepInteriorRear => 'Interni posteriori';
+
+  @override
+  String get captureWalkHint =>
+      'Parti davanti all\'auto, a 2–3 metri. Poi cammina piano intorno tenendola al centro';
+
+  @override
+  String get captureHintInteriorFront =>
+      'Motore acceso: volante, cruscotto con i km leggibili e sedili davanti';
+
+  @override
+  String get captureHintInteriorRear =>
+      'Dalla portiera posteriore: sedili e spazio dietro';
+
+  @override
+  String get walkFront => 'muso';
+
+  @override
+  String get walkRear => 'posteriore';
+
+  @override
+  String get walkRightSide => 'fianco destro';
+
+  @override
+  String get walkLeftSide => 'fianco sinistro';
+
+  @override
+  String walkQuarter(String from, String to) {
+    return 'Dal $from al $to';
+  }
+
+  @override
+  String walkDegrees(int degrees) {
+    return '$degrees° di 360°';
+  }
+
+  @override
+  String walkQuarterDegrees(int degrees) {
+    return '$degrees° di 90°';
+  }
+
+  @override
+  String get walkTooFast => 'Più piano: così il video è fluido';
+
+  @override
+  String get walkBackwards => 'Gira sempre nello stesso verso';
+
+  @override
+  String get walkStart => 'Premi e inizia a camminare';
+
+  @override
+  String get walkTapToStop =>
+      'Si ferma da solo a fine giro · tocca per fermare';
+
+  @override
+  String get walkDemoTitle => 'Come fare il giro a 360°';
+
+  @override
+  String get walkDemoTip1 => 'Mettiti davanti all\'auto, a 2–3 metri';
+
+  @override
+  String get walkDemoTip2 =>
+      'Premi e cammina piano intorno, sempre nello stesso verso';
+
+  @override
+  String get walkDemoTip3 =>
+      'Tieni l\'auto al centro: la sagoma ti dice dove sei';
+
+  @override
+  String get walkDemoTip4 =>
+      'Il video si ferma da solo quando hai fatto il giro';
+
+  @override
+  String get walkDemoOk => 'Ho capito';
+
+  @override
+  String get walkDemoAgain => 'Come si fa';
+
+  @override
+  String get walkShortTitle => 'Giro incompleto';
+
+  @override
+  String walkShortBody(int degrees, int target) {
+    return 'Hai fatto $degrees° su $target°. Vuoi tenerlo così o rifarlo?';
+  }
+
+  @override
+  String get walkShortKeep => 'Tienilo';
+
+  @override
+  String get walkShortRedo => 'Rifai';
+
+  @override
+  String get walkRedoAll => 'Rifai tutto il giro';
+
+  @override
+  String get walkRedoPart => 'Rifai un tratto';
+
+  @override
+  String get walkRedoPartTitle => 'Quale tratto vuoi rifare?';
+
+  @override
+  String get walkRedoPartBody =>
+      'Rifai solo quel quarto di giro: nel video prende il posto di quello vecchio.';
+
+  @override
+  String get walkPartRedone => 'Rifatto';
+
+  @override
+  String get walkPartUseOriginal => 'Usa l\'originale';
+
+  @override
+  String walkRedoing(String quarter) {
+    return 'Rifai: $quarter';
+  }
+
+  @override
+  String shotsWalkDone(int seconds) {
+    return 'Video · $seconds s · giro completo';
+  }
+
+  @override
+  String get shotsWalkPartial => 'Video · giro incompleto';
+
+  @override
+  String shotsWalkParts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tratti rifatti',
+      one: '1 tratto rifatto',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get sellStepFront => 'Frontale';

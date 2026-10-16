@@ -240,16 +240,20 @@ class SellController extends Notifier<SellState> {
   }
 
   /// The clip for [stepId] (replaces the previous one). [tempPath] is the
-  /// camera's file; it is moved into the draft folder.
-  Future<void> addClip(String stepId, String tempPath) async {
+  /// camera's file; it is moved into the draft folder. A walk-around
+  /// brings its [markers] and direction; a new walk drops the quarters
+  /// shot again for the old one. [stepId] may be a quarter
+  /// ([SellDraft.quarterKey]).
+  Future<void> addClip(String stepId, String tempPath, {List<int>? markers, bool? clockwise}) async {
     final draft = state.draft;
     if (draft == null) return;
     final dir = await _media.draftDir(draft.id);
     final stamp = DateTime.now().millisecondsSinceEpoch;
-    final file = '$stepId-$stamp.mp4';
+    final name = stepId.replaceAll('#', '-q'); // walkaround#2 -> walkaround-q2
+    final file = '$name-$stamp.mp4';
     await _moveFile(tempPath, '${dir.path}/$file');
 
-    String? thumb = '$stepId-$stamp-thumb.jpg';
+    String? thumb = '$name-$stamp-thumb.jpg';
     try {
       await _media.thumbnail(video: '${dir.path}/$file', out: '${dir.path}/$thumb', size: thumbSize);
     } catch (e) {
@@ -259,11 +263,27 @@ class SellController extends Notifier<SellState> {
 
     final current = state.draft ?? draft;
     final previous = current.shots[stepId];
+    final isQuarter = stepId.contains('#');
+    final oldQuarters = isQuarter
+        ? const <Shot>[]
+        : [for (final e in current.shots.entries) if (e.key.startsWith('$stepId#')) e.value];
     _set(current.copyWith(shots: {
-      ...current.shots,
-      stepId: Shot(stepId: stepId, kind: ShotKind.video, file: file, thumb: thumb, takenAt: DateTime.now()),
+      for (final e in current.shots.entries)
+        if (!oldQuarters.contains(e.value)) e.key: e.value,
+      stepId: Shot(
+        stepId: stepId,
+        kind: ShotKind.video,
+        file: file,
+        thumb: thumb,
+        takenAt: DateTime.now(),
+        markers: markers,
+        clockwise: clockwise,
+      ),
     }));
-    if (previous != null) await _deleteFiles(dir, [previous.file, previous.thumb]);
+    await _deleteFiles(dir, [
+      if (previous != null) ...[previous.file, previous.thumb],
+      for (final q in oldQuarters) ...[q.file, q.thumb],
+    ]);
     _restartIfRunning();
   }
 
@@ -380,7 +400,9 @@ class SellController extends Notifier<SellState> {
     if (draft == null || draft.videoUpToDate) return;
     final dir = await _media.draftDir(draft.id);
     final key = draft.mediaKey;
-    final clips = [for (final s in draft.videosIn(state.steps)) '${dir.path}/${s.file}'];
+    final clips = [
+      for (final c in draft.clipsIn(state.steps)) ClipPart('${dir.path}/${c.file}', startMs: c.startMs, endMs: c.endMs),
+    ];
     if (clips.isEmpty) throw StateError('No video shot');
 
     state = state.copyWith(phase: MediaPhase.rendering, progress: 0);

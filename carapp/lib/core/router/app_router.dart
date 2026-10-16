@@ -111,6 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               stepId: state.uri.queryParameters['step'],
               photos: state.uri.queryParameters['photos'] == '1',
               single: state.uri.queryParameters['single'] == '1',
+              quarter: int.tryParse(state.uri.queryParameters['quarter'] ?? ''),
             ),
           ),
           GoRoute(
@@ -145,6 +146,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           stepId: state.uri.queryParameters['step'],
           photos: state.uri.queryParameters['photos'] == '1',
           single: state.uri.queryParameters['single'] == '1',
+          quarter: int.tryParse(state.uri.queryParameters['quarter'] ?? ''),
         ),
       ),
       GoRoute(

@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/analytics/event_tracker.dart';
 import '../../../core/media/media_url.dart';
+import '../../../core/media/playback_speed.dart';
 import '../../../core/media/shared_video.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../feed/ui/feed_video_view.dart';
@@ -92,7 +93,12 @@ class _ListingVideoHeaderState extends ConsumerState<ListingVideoHeader>
   void _updatePlayback() {
     final p = _player;
     if (p == null || !p.value.isInitialized) return;
-    _canPlay ? p.play() : p.pause();
+    if (_canPlay) {
+      p.setPlaybackSpeed(ref.read(playbackSpeedProvider));
+      p.play();
+    } else {
+      p.pause();
+    }
   }
 
   void _togglePause() {
@@ -102,17 +108,24 @@ class _ListingVideoHeaderState extends ConsumerState<ListingVideoHeader>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(playbackSpeedProvider, (_, _) => _updatePlayback());
     return SizedBox(
       height: widget.height,
       width: double.infinity,
-      child: FeedVideoView(
-        controller: _player,
-        coverUrl: MediaUrl.resolve(ref.read(supabaseProvider), widget.listing.coverPath),
-        pausedByUser: _pausedByUser,
-        onTogglePause: _togglePause,
-        onZoom: () => ref
-            .read(eventTrackerProvider)
-            .track(AnalyticsEvent.zoom, listingId: widget.listing.id),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FeedVideoView(
+            controller: _player,
+            coverUrl: MediaUrl.resolve(ref.read(supabaseProvider), widget.listing.coverPath),
+            pausedByUser: _pausedByUser,
+            onTogglePause: _togglePause,
+            onZoom: () => ref
+                .read(eventTrackerProvider)
+                .track(AnalyticsEvent.zoom, listingId: widget.listing.id),
+          ),
+          if (_player != null) const Positioned(right: 12, bottom: 12, child: SpeedButton()),
+        ],
       ),
     );
   }

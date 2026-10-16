@@ -33,6 +33,16 @@ class Silhouette extends StatelessWidget {
   }
 }
 
+/// The outline for a point of the walk-around ([position] 0..360 from the
+/// front): front, the first side, rear, the other side.
+String walkSilhouette(double position, {required bool clockwise}) =>
+    switch (((position + 45) % 360) ~/ 90) {
+      0 => 'car_front',
+      1 => clockwise ? 'car_side_r' : 'car_side_l',
+      2 => 'car_rear',
+      _ => clockwise ? 'car_side_l' : 'car_side_r',
+    };
+
 class _SilhouettePainter extends CustomPainter {
   _SilhouettePainter(this.name, this.color);
 

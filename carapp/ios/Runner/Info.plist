@@ -84,8 +84,10 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Per registrare il suono del motore nei video degli annunci.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Per scegliere la tua foto profilo.</string>
+	<string>Per scegliere la foto profilo e le foto dei tuoi annunci.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Per trovare il capoluogo più vicino a te e mostrarti gli annunci in zona.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Il giroscopio ti guida durante il giro a 360° intorno al veicolo.</string>
 </dict>
 </plist>

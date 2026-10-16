@@ -4,12 +4,15 @@ import '../data/capture_step.dart';
 /// Italian labels for the capture steps and the category fields.
 extension SellLabels on AppLocalizations {
   String stepLabel(String stepId) => switch (stepId) {
+        'walkaround' => sellStepWalkaround,
+        'interior_front' => sellStepInteriorFront,
+        'interior_rear' => sellStepInteriorRear,
         'front' => sellStepFront,
         'front_three_quarter' => sellStepFront3q, // drafts from before 15
         'right_side' => sellStepRightSide,
         'left_side' => sellStepLeftSide,
         'rear' => sellStepRear,
-        'interior_dashboard' => sellStepInterior,
+        'interior_dashboard' => sellStepInterior, // drafts from before 18
         'engine_bay' => sellStepEngineBay,
         'defects' => sellStepDefects,
         'tank_dashboard' => sellStepTank,
@@ -55,6 +58,9 @@ extension SellLabels on AppLocalizations {
 
   /// The line under the step title on the camera.
   String stepInstruction(CaptureStep step, String categoryId) {
+    if (step.isWalkaround) return captureWalkHint;
+    if (step.id == 'interior_front') return captureHintInteriorFront;
+    if (step.id == 'interior_rear') return captureHintInteriorRear;
     if (step.id == 'front') return captureAlignFront;
     if (step.silhouette != null) {
       return categoryId == 'motorcycle' ? captureAlignMoto : captureAlignCar;
@@ -67,6 +73,14 @@ extension SellLabels on AppLocalizations {
       'exhaust' => captureHintExhaust,
       _ => captureHoldStill,
     };
+  }
+
+  /// A quarter of the walk-around (1..4): "Dal muso al fianco destro".
+  String walkQuarterLabel(int quarter, {required bool clockwise}) {
+    final sideA = clockwise ? walkRightSide : walkLeftSide;
+    final sideB = clockwise ? walkLeftSide : walkRightSide;
+    final points = [walkFront, sideA, walkRear, sideB, walkFront];
+    return walkQuarter(points[quarter - 1], points[quarter]);
   }
 
   String bodyTypeLabel(String value) => switch (value) {

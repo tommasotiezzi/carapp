@@ -22,4 +22,8 @@ class PrefKeys {
   static const sellDraft = 'sell_draft_v1';
   /// "Foto e video" of an online listing being changed (one at a time).
   static const mediaEditDraft = 'media_edit_draft';
+  /// The walk-around "how to" card was seen.
+  static const walkDemoSeen = 'walk_demo_seen';
+  /// Video speed in the feed and on the listing (1, 1.5, 2).
+  static const playbackSpeed = 'playback_speed';
 }
