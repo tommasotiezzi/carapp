@@ -1,4 +1,4 @@
-package com.example.carapp
+package com.tommasotiezzi.carfeed
 
 import io.flutter.embedding.android.FlutterActivity
 
